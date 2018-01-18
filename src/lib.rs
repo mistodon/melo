@@ -26,7 +26,8 @@ fn compile_drums_to_abc(input: &str) -> String
 
         for line in input.lines()
         {
-            if line.trim().is_empty()
+            let line = line.trim();
+            if line.is_empty()
             {
                 continue
             }
