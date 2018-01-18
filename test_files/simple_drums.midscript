@@ -1,7 +1,6 @@
 X:1
-T:Blah
+T:Title
 K:C
-%
 V:Drums
 %%MIDI channel 10
 %%MIDI program 0
@@ -10,7 +9,6 @@ V:Drums
 D,,:  ..x...x. ; ..x...x.
 C,,:  x...x... ; x...xx..
 % ]MIDSCRIPT
-%
 V:Lead
 %%MIDI channel 0
 %%MIDI program 0
