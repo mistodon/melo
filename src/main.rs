@@ -155,15 +155,12 @@ fn compile(input: &str) -> String
         {
             for note in bar
             {
-                if note.len() == 1
+                match note.len()
                 {
-                    buffer.push_str(&note[0]);
+                    0 => buffer.push_str("z"),
+                    1 => buffer.push_str(&note[0]),
+                    _ => buffer.push_str(&format!("[{}]", note.join(" "))),
                 }
-                else
-                {
-                    buffer.push_str(&format!("[{}]", note.join(" ")));
-                }
-                buffer.push_str(" ");
             }
             buffer.push_str("|\n");
         }
