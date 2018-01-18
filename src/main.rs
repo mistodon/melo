@@ -86,6 +86,11 @@ fn compile(input: &str) -> String
 
         for line in input.lines()
         {
+            if line.trim().is_empty()
+            {
+                continue
+            }
+
             let divide = line.find(':').expect("Expected stave to begin with \"<note>:\"");
             let note = line[0..divide].to_owned();
             let rest = &line[(divide+1) ..];
@@ -94,6 +99,11 @@ fn compile(input: &str) -> String
 
             for bar_chars in rest.split(';')
             {
+                if bar_chars.trim().is_empty()
+                {
+                    continue
+                }
+
                 let mut bar = Vec::new();
                 for ch in bar_chars.chars()
                 {
