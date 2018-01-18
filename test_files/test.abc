@@ -1,0 +1,17 @@
+X:1
+T:Blah
+K:C
+%
+V:Drums
+%%MIDI channel 10
+%%MIDI program 0
+% MIDSCRIPT[
+^F,,: xxxxxxxx ; xxxxxxxx
+D,,:  ..x...x. ; ..x...x.
+C,,:  x...x... ; x...xx..
+% ]MIDSCRIPT
+%
+V:Lead
+%%MIDI channel 0
+%%MIDI program 0
+a b c d a b c d | a b c d e d c b |

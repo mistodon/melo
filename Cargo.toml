@@ -1,0 +1,9 @@
+[package]
+name = "midscript"
+version = "0.1.0"
+authors = ["Claire Harris <pirh.badger@gmail.com>"]
+
+[dependencies]
+regex = "~0.2.5"
+structopt = "~0.1.6"
+structopt-derive = "~0.1.6"
