@@ -50,3 +50,6 @@ fn test_drums_arg() { test_abc!("drums_arg") }
 
 #[test]
 fn test_mixed_barlines() { test_abc!("mixed_barlines") }
+
+#[test]
+fn test_octave_shift() { test_abc!("octave_shift") }
