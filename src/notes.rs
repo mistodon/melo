@@ -392,7 +392,7 @@ const ABC_NOTES: [&str; 128] = [
 ];
 
 
-pub fn note_to_midi(note: &str) -> u8
+pub fn note_to_midi(note: &str) -> i8
 {
     let mut chars = note.chars();
     let mut midi = match chars.next().unwrap()
@@ -437,7 +437,7 @@ pub fn note_to_midi(note: &str) -> u8
         }
     }
 
-    midi as u8
+    midi
 }
 
 pub fn note_to_abc(note: &str) -> &'static str
@@ -445,17 +445,17 @@ pub fn note_to_abc(note: &str) -> &'static str
     midi_to_abc(note_to_midi(note))
 }
 
-pub fn midi_to_flat(note: u8) -> &'static str
+pub fn midi_to_flat(note: i8) -> &'static str
 {
     MIDSCRIPT_FLATS[note as usize]
 }
 
-pub fn midi_to_sharp(note: u8) -> &'static str
+pub fn midi_to_sharp(note: i8) -> &'static str
 {
     MIDSCRIPT_SHARPS[note as usize]
 }
 
-pub fn midi_to_abc(note: u8) -> &'static str
+pub fn midi_to_abc(note: i8) -> &'static str
 {
     ABC_NOTES[note as usize]
 }
@@ -469,7 +469,7 @@ mod tests
     #[test]
     fn test_note_to_midi()
     {
-        fn test(note: &str, midi: u8) { assert_eq!(note_to_midi(note), midi); }
+        fn test(note: &str, midi: i8) { assert_eq!(note_to_midi(note), midi); }
 
         test("C,,,,,", 0);
         test("C", 60);
@@ -509,8 +509,9 @@ mod tests
     #[test]
     fn round_trip_sharp_conversions()
     {
-        for i in 0..128_u8
+        for i in 0..128
         {
+            let i = i as i8;
             assert_eq!(note_to_midi(midi_to_sharp(i)), i);
         }
     }
@@ -518,8 +519,9 @@ mod tests
     #[test]
     fn round_trip_flat_conversions()
     {
-        for i in 0..128_u8
+        for i in 0..128
         {
+            let i = i as i8;
             assert_eq!(note_to_midi(midi_to_flat(i)), i);
         }
     }
