@@ -22,43 +22,25 @@ fn test_compilation(before: &str, after: &str)
 
 
 #[test]
-fn test_simple_drums()
-{
-    test_abc!("simple_drums");
-}
+fn test_simple_drums() { test_abc!("simple_drums"); }
 
 #[test]
-fn test_variable_length_drum_bars()
-{
-    test_abc!("variable_drum_bars");
-}
+fn test_variable_length_drum_bars() { test_abc!("variable_drum_bars"); }
 
 #[test]
-fn test_variable_length_drum_staves()
-{
-    test_abc!("variable_stave_drum_bars");
-}
+fn test_variable_length_drum_staves() { test_abc!("variable_stave_drum_bars"); }
 
 #[test]
-fn test_triple_time_expansion()
-{
-    test_abc!("triple_time_expansion");
-}
+fn test_triple_time_expansion() { test_abc!("triple_time_expansion"); }
 
 #[test]
-fn test_automatic_triplets()
-{
-    test_abc!("triplets");
-}
+fn test_automatic_triplets() { test_abc!("triplets"); }
 
 #[test]
-fn test_automatic_quintuplets()
-{
-    test_abc!("quintuplets");
-}
+fn test_automatic_quintuplets() { test_abc!("quintuplets"); }
 
 #[test]
-fn test_triplets_and_not_sextuplets()
-{
-    test_abc!("not_sextuplets");
-}
+fn test_triplets_and_not_sextuplets() { test_abc!("not_sextuplets"); }
+
+#[test]
+fn test_voice_args() { test_abc!("voice_args") }

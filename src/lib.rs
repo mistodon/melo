@@ -191,9 +191,10 @@ fn compile_drums_to_abc(voice_name: &str, input: &str, options: &CompileDrumsOpt
 
     assert!(min_bar_len % options.beats == 0, "All bars must be aligned with the time signature");
 
-    let notes_per_beat = max_bar_len / options.beats;
+    let notes_per_beat = min_bar_len / options.beats;
     let (beat_division, tuplet) = match notes_per_beat
     {
+        1 => (8, None),
         n if n % 7 == 0 => ((n*8) / 7, Some(7)),
         n if n % 5 == 0 => ((n*8) / 5, Some(5)),
         n if n % 3 == 0 => ((n*8) / 3, Some(3)),
