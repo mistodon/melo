@@ -149,7 +149,7 @@ fn compile_drums_to_abc(voice_name: &str, input: &str, options: &CompileDrumsOpt
 
             let stave: &mut Stave = stave_map.entry(stave_note).or_insert_with(Stave::default);
 
-            let mut bars: Vec<Bar<Note>> = stave_bars.split(';')
+            let mut bars: Vec<Bar<Note>> = stave_bars.split([';', '|'].as_ref())
                 .filter(|bar| !bar.trim().is_empty())
                 .map(
                     |bar|
