@@ -16,108 +16,132 @@ pub fn compile_to_abc(input: &str) -> String
 }
 
 
+#[derive(Debug, Default, Clone)]
+struct Stave<'a>
+{
+    pub bars: Vec<Bar<Note<'a>>>,
+}
+
+type Bar<T> = Vec<T>;
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum Note<'a>
+{
+    Rest,
+    Note(&'a str),
+}
+
+impl<'a> Note<'a>
+{
+    pub fn as_abc(&self) -> &'a str
+    {
+        const REST: &str = "z";
+
+        match *self
+        {
+            Note::Rest => REST,
+            Note::Note(note) => note,
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+struct Chord<'a>
+{
+    notes: Vec<Note<'a>>,
+}
+
+
 fn compile_drums_to_abc(input: &str) -> String
 {
-    use std::collections::BTreeMap;
+    let staves: Vec<Stave> = {
+        use std::collections::BTreeMap;
 
-    type Beat = bool;
-    type DrumBar = Vec<Beat>;
-    type Stave = Vec<DrumBar>;
-
-    let staves: BTreeMap<String, Stave> = {
-        let mut staves = BTreeMap::new();
+        let mut stave_map = BTreeMap::new();
 
         for line in input.lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
         {
-            let line = line.trim();
-            if line.is_empty()
-            {
-                continue
-            }
-
             let divide = line.find(':').expect("Expected stave to begin with \"<note>:\"");
-            let note = line[0..divide].to_owned();
-            let rest = &line[(divide+1) ..];
+            let stave_note = &line[0..divide];
+            let stave_bars = &line[(divide+1) ..];
 
-            let stave: &mut Stave = staves.entry(note).or_insert(Vec::new());
+            let stave: &mut Stave = stave_map.entry(stave_note).or_insert_with(Stave::default);
 
-            for bar_chars in rest.split(';')
-            {
-                if bar_chars.trim().is_empty()
-                {
-                    continue
-                }
-
-                let mut bar = Vec::new();
-                for ch in bar_chars.chars()
-                {
-                    match ch
+            let mut bars: Vec<Bar<Note>> = stave_bars.split(';')
+                .filter(|bar| !bar.trim().is_empty())
+                .map(
+                    |bar|
                     {
-                        'x' => bar.push(true),
-                        '.' => bar.push(false),
-                        _ => ()
-                    }
-                }
-                stave.push(bar);
-            }
+                        bar.chars()
+                            .filter(|ch| !ch.is_whitespace())
+                            .map(
+                                |ch| match ch
+                                {
+                                    'x' => Note::Note(stave_note),
+                                    '-' => Note::Rest,
+                                    c => panic!("Invalid char {} in drum line", c)
+                                })
+                            .collect::<Bar<Note>>()
+                    })
+                .collect();
+
+            stave.bars.append(&mut bars);
         }
 
-        staves
+        stave_map.into_iter().map(|(_, value)| value).collect()
     };
 
-    type Note = Vec<String>;
-    type Bar = Vec<Note>;
+    let stave_length = staves.get(0).unwrap().bars.len();
+    assert!(staves.iter().all(|stave| stave.bars.len() == stave_length), "All staves must be the same length");
 
-    let bars: Vec<Bar> = {
-        let note_names: Vec<String> = staves.keys().map(String::to_owned).collect();
-        let staves: Vec<Stave> = staves.values().map(Vec::to_owned).collect();
-        let bar_count = staves[0].len();
-
-        let mut bars = Vec::with_capacity(bar_count);
-
-        for bar_index in 0..bar_count
-        {
-            let mut bar = Vec::new();
-
-            for beat_num in 0..8
+    let track: Vec<Bar<Chord>> = (0..stave_length).into_iter()
+        .map(
+            |bar_index|
             {
-                let mut note = Vec::new();
+                let bar_length = staves.iter().map(|stave| stave.bars[bar_index].len()).nth(0).unwrap();
+                let bars = staves.iter().map(|stave| &stave.bars[bar_index]);
 
-                for note_index in 0..note_names.len()
+                let mut chords: Bar<Chord> = vec![Chord::default(); bar_length];
+                for bar in bars
                 {
-                    let is_beat = staves[note_index][bar_index][beat_num];
-
-                    if is_beat
+                    for (index, &note) in bar.iter().enumerate().filter(|&(_, &note)| note != Note::Rest)
                     {
-                        note.push(note_names[note_index].clone());
+                        chords[index].notes.push(note);
                     }
                 }
 
-                bar.push(note);
-            }
+                chords
+            })
+        .collect();
 
-            bars.push(bar);
-        }
-
-        bars
-    };
 
     let mut buffer = String::new();
 
+    for bar in &track
     {
-        for bar in &bars
+        for chord in bar
         {
-            for note in bar
+            match chord.notes.len()
             {
-                match note.len()
-                {
-                    0 => buffer.push_str("z"),
-                    1 => buffer.push_str(&note[0]),
-                    _ => buffer.push_str(&format!("[{}]", note.join(" "))),
+                0 => buffer += Note::Rest.as_abc(),
+                1 => buffer += chord.notes[0].as_abc(),
+                _ => {
+                    buffer += "[";
+                    for (index, &note) in chord.notes.iter().enumerate()
+                    {
+                        if index != 0
+                        {
+                            buffer += " ";
+                        }
+                        buffer += note.as_abc();
+                    }
+                    buffer += "]";
                 }
             }
-            buffer.push_str("|\n");
         }
+        buffer += "|\n";
     }
 
     buffer
