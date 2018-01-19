@@ -6,6 +6,7 @@ V:Drums
 %%MIDI channel 10
 %%MIDI program 0
 %
+L:1/8
 [C,, ^F,,]^F,,[D,, ^F,,]^F,,[C,, ^F,,]^F,,[D,, ^F,,]^F,,|
 [C,, ^F,,]^F,,[D,, ^F,,]^F,,[C,, ^F,,][C,, ^F,,][D,, ^F,,]^F,,|
 [C,, D,, ^F,,]zzzC,,zzz|

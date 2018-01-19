@@ -1,6 +1,23 @@
 extern crate regex;
 
 
+struct CompileDrumsOptions
+{
+    pub beats: usize,
+}
+
+impl Default for CompileDrumsOptions
+{
+    fn default() -> Self
+    {
+        CompileDrumsOptions
+        {
+            beats: 4,
+        }
+    }
+}
+
+
 pub fn compile_to_abc(input: &str) -> String
 {
     use regex::{ Regex, Captures };
@@ -24,9 +41,11 @@ pub fn compile_to_abc(input: &str) -> String
                     params.insert(key, value);
                 }
 
-                let beats = params.get("beats").map(|value| value.parse::<usize>().unwrap()).unwrap_or(8);
+                let mut options = CompileDrumsOptions::default();
 
-                CompileDrumsOptions { beats }
+                options.beats = params.get("beats").map(|value| value.parse::<usize>().unwrap()).unwrap_or(options.beats);
+
+                options
             };
             let content = &captures[2];
             compile_drums_to_abc(content, &params)
@@ -93,11 +112,6 @@ struct Chord<'a>
     notes: Vec<Note<'a>>,
 }
 
-
-struct CompileDrumsOptions
-{
-    pub beats: usize,
-}
 
 fn compile_drums_to_abc(input: &str, options: &CompileDrumsOptions) -> String
 {
@@ -169,7 +183,7 @@ fn compile_drums_to_abc(input: &str, options: &CompileDrumsOptions) -> String
     let track = track.iter().map(|bar| bar.stretched(min_bar_len));
 
     assert!(min_bar_len % options.beats == 0, "All bars must be aligned with the time signature");
-    let beat_division = max_bar_len / options.beats;
+    let beat_division = (max_bar_len * 4) / options.beats;
 
     let mut buffer = String::new();
 
