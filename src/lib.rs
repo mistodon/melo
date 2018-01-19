@@ -30,7 +30,7 @@ pub fn compile_to_abc(input: &str) -> String
 {
     use regex::{ Regex, Captures };
 
-    let voice_pattern = Regex::new(r"(?m)voice\s+([a-zA-Z0-9_\- ]+)\s*\(([a-zA-Z0-9=, ]*)\)\s*\{([^{}]*)\}\n?").expect("Failed to compile voice regex");
+    let voice_pattern = Regex::new(r"(?m)voice\s+([a-zA-Z0-9_\- ]+)\s*\(([a-zA-Z0-9=+\-, ]*)\)\s*\{([^{}]*)\}\n?").expect("Failed to compile voice regex");
 
     let blank_line_pattern = Regex::new(r"\n\s*\n").expect("Failed to compile blank line regex");
 
