@@ -24,3 +24,14 @@ fn test_simple_drums()
     test_abc!("simple_drums");
 }
 
+#[test]
+fn test_variable_length_drum_bars()
+{
+    test_abc!("variable_drum_bars");
+}
+
+#[test]
+fn test_variable_length_drum_staves()
+{
+    test_abc!("variable_stave_drum_bars");
+}

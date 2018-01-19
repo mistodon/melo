@@ -1,0 +1,19 @@
+X:1
+T:Title
+K:C
+
+V:Drums
+%%MIDI channel 10
+%%MIDI program 0
+
+drumscript
+{
+    ^F,,: ; xxxxxxxx ; xxxxxxxx ; x ;
+    D,,:  ; -x-x ; --x---x- ; x ;
+    C,,:  ; x-x- ; x---xx-- ; xx ;
+}
+
+V:Lead
+%%MIDI channel 0
+%%MIDI program 0
+a b c d a b c d | a b c d e d c b |

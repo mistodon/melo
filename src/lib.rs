@@ -22,7 +22,26 @@ struct Stave<'a>
     pub bars: Vec<Bar<Note<'a>>>,
 }
 
-type Bar<T> = Vec<T>;
+#[derive(Debug, Default, Clone)]
+struct Bar<T>(pub Vec<T>);
+
+impl<T: Clone + Default> Bar<T>
+{
+    pub fn stretched(&self, beats: usize) -> Self
+    {
+        let prev_beats = self.0.len();
+        let can_stretch = beats % prev_beats == 0;
+        assert!(can_stretch, "Cannot stretch a bar from {} to {}", prev_beats, beats);
+
+        let stride = beats / prev_beats;
+
+        let result = (0..beats).into_iter()
+            .map(|beat| if beat % stride == 0 { self.0[beat / stride].clone() } else { T::default() })
+            .collect::<Vec<T>>();
+
+        Bar(result)
+    }
+}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 enum Note<'a>
@@ -30,6 +49,8 @@ enum Note<'a>
     Rest,
     Note(&'a str),
 }
+
+impl<'a> Default for Note<'a> { fn default() -> Self { Note::Rest } }
 
 impl<'a> Note<'a>
 {
@@ -74,7 +95,7 @@ fn compile_drums_to_abc(input: &str) -> String
                 .map(
                     |bar|
                     {
-                        bar.chars()
+                        let notes = bar.chars()
                             .filter(|ch| !ch.is_whitespace())
                             .map(
                                 |ch| match ch
@@ -83,7 +104,8 @@ fn compile_drums_to_abc(input: &str) -> String
                                     '-' => Note::Rest,
                                     c => panic!("Invalid char {} in drum line", c)
                                 })
-                            .collect::<Bar<Note>>()
+                            .collect::<Vec<Note>>();
+                        Bar(notes)
                     })
                 .collect();
 
@@ -96,32 +118,34 @@ fn compile_drums_to_abc(input: &str) -> String
     let stave_length = staves.get(0).unwrap().bars.len();
     assert!(staves.iter().all(|stave| stave.bars.len() == stave_length), "All staves must be the same length");
 
-    let track: Vec<Bar<Chord>> = (0..stave_length).into_iter()
+    const BEATS_PER_BAR: usize = 8;
+
+    let track = (0..stave_length).into_iter()
         .map(
             |bar_index|
             {
-                let bar_length = staves.iter().map(|stave| stave.bars[bar_index].len()).nth(0).unwrap();
-                let bars = staves.iter().map(|stave| &stave.bars[bar_index]);
+                let bar_length = staves.iter().map(|stave| stave.bars[bar_index].0.len()).max().unwrap();
+                let bars = staves.iter().map(|stave| stave.bars[bar_index].stretched(bar_length));
 
-                let mut chords: Bar<Chord> = vec![Chord::default(); bar_length];
+                let mut chords: Bar<Chord> = Bar(vec![Chord::default(); bar_length]);
                 for bar in bars
                 {
-                    for (index, &note) in bar.iter().enumerate().filter(|&(_, &note)| note != Note::Rest)
+                    for (index, &note) in bar.0.iter().enumerate().filter(|&(_, &note)| note != Note::Rest)
                     {
-                        chords[index].notes.push(note);
+                        chords.0[index].notes.push(note);
                     }
                 }
 
                 chords
             })
-        .collect();
+        .map(|bar| bar.stretched(BEATS_PER_BAR));
 
 
     let mut buffer = String::new();
 
-    for bar in &track
+    for bar in track
     {
-        for chord in bar
+        for chord in &bar.0
         {
             match chord.notes.len()
             {
