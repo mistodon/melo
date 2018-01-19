@@ -39,10 +39,22 @@ pub fn compile_to_abc(input: &str) -> String
                 let mut params = BTreeMap::new();
                 for param in captures[2].split(',').map(str::trim).filter(|arg| !arg.is_empty())
                 {
-                    let divide = param.find('=').unwrap();
-                    let key = param[0..divide].trim();
-                    let value = param[(divide+1)..].trim();
-                    params.insert(key, value);
+                    let divide = param.find('=');
+                    match divide
+                    {
+                        Some(divide) => {
+                            let key = param[0..divide].trim();
+                            let value = param[(divide+1)..].trim();
+                            params.insert(key, value);
+                        }
+                        None => match param
+                        {
+                            "drums" => {
+                                params.insert("channel", "10");
+                            }
+                            s => panic!("Unrecognized option '{}'", s)
+                        }
+                    }
                 }
 
                 let mut options = CompileDrumsOptions::default();
@@ -194,7 +206,7 @@ fn compile_drums_to_abc(voice_name: &str, input: &str, options: &CompileDrumsOpt
     let notes_per_beat = min_bar_len / options.beats;
     let (beat_division, tuplet) = match notes_per_beat
     {
-        1 => (8, None),
+        1 => (options.beats, None),
         n if n % 7 == 0 => ((n*8) / 7, Some(7)),
         n if n % 5 == 0 => ((n*8) / 5, Some(5)),
         n if n % 3 == 0 => ((n*8) / 3, Some(3)),
