@@ -1,5 +1,7 @@
 extern crate regex;
 
+pub mod notes;
+
 
 struct CompileDrumsOptions
 {
