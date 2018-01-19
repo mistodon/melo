@@ -22,18 +22,18 @@ pub fn compile_to_abc(input: &str) -> String
 {
     use regex::{ Regex, Captures };
 
-    let drumscript_pattern = Regex::new(r"(?m)drumscript\s*\(([a-zA-Z0-9= ]*)\)\s*\{([^{}]*)\}\n?").expect("Failed to compile drumscript regex");
+    let voice_pattern = Regex::new(r"(?m)voice\s+([a-zA-Z0-9_\- ]+)\s*\(([a-zA-Z0-9= ]*)\)\s*\{([^{}]*)\}\n?").expect("Failed to compile voice regex");
 
     let blank_line_pattern = Regex::new(r"\n\s*\n").expect("Failed to compile blank line regex");
 
-    let result = drumscript_pattern.replace_all(input,
+    let result = voice_pattern.replace_all(input,
         |captures: &Captures|
         {
             let params = {
                 use std::collections::BTreeMap;
 
                 let mut params = BTreeMap::new();
-                for param in captures[1].split(',').map(str::trim).filter(|arg| !arg.is_empty())
+                for param in captures[2].split(',').map(str::trim).filter(|arg| !arg.is_empty())
                 {
                     let divide = param.find('=').unwrap();
                     let key = param[0..divide].trim();
@@ -47,8 +47,9 @@ pub fn compile_to_abc(input: &str) -> String
 
                 options
             };
-            let content = &captures[2];
-            compile_drums_to_abc(content, &params)
+            let voice_name = &captures[1];
+            let content = &captures[3];
+            compile_drums_to_abc(voice_name, content, &params)
         });
     let result = blank_line_pattern.replace_all(&result, "\n%\n");
 
@@ -113,7 +114,7 @@ struct Chord<'a>
 }
 
 
-fn compile_drums_to_abc(input: &str, options: &CompileDrumsOptions) -> String
+fn compile_drums_to_abc(voice_name: &str, input: &str, options: &CompileDrumsOptions) -> String
 {
     let staves: Vec<Stave> = {
         use std::collections::BTreeMap;
@@ -199,6 +200,7 @@ fn compile_drums_to_abc(input: &str, options: &CompileDrumsOptions) -> String
     {
         use std::fmt::Write;
 
+        writeln!(buffer, "V:{}", voice_name).unwrap();
         writeln!(buffer, "L:1/{}", beat_division).unwrap();
 
         for bar in track

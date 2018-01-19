@@ -4,11 +4,10 @@ M:4/4
 L:1/8
 K:C
 
-V:Drums
 %%MIDI channel 10
 %%MIDI program 0
 
-drumscript()
+voice Drums()
 {
     ^F,,    : xxxxxxxx ; xxxxxxxx ;
     D,,     : --x---x- ; --x---x- ;

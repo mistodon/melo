@@ -4,11 +4,10 @@ Q:1/4=60
 M:4/4
 K:C
 
-V:Drums
 %%MIDI channel 10
 %%MIDI program 0
 
-drumscript(beats = 4)
+voice Drums(beats = 4)
 {
     ^F,,    : xxxxxx xxxxxx xxxxxx xxxxxx ;
     C,,     : xxxx ;
