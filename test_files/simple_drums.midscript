@@ -1,12 +1,14 @@
 X:1
 T:Title
+M:4/4
+L:1/8
 K:C
 
 V:Drums
 %%MIDI channel 10
 %%MIDI program 0
 
-drumscript()
+drumscript(beats = 8)
 {
     ^F,,: ; xxxxxxxx ; xxxxxxxx ;
     D,,:  ; --x---x- ; --x---x- ;

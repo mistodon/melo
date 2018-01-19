@@ -162,34 +162,46 @@ fn compile_drums_to_abc(input: &str, options: &CompileDrumsOptions) -> String
 
                 chords
             })
-        .map(|bar| bar.stretched(options.beats));
+        .collect::<Vec<Bar<Chord>>>();
 
+    let max_bar_len = track.iter().map(|bar| bar.0.len()).max().unwrap();
+    let min_bar_len = std::cmp::max(max_bar_len, options.beats);
+    let track = track.iter().map(|bar| bar.stretched(min_bar_len));
+
+    assert!(min_bar_len % options.beats == 0, "All bars must be aligned with the time signature");
+    let beat_division = max_bar_len / options.beats;
 
     let mut buffer = String::new();
 
-    for bar in track
     {
-        for chord in &bar.0
+        use std::fmt::Write;
+
+        writeln!(buffer, "L:1/{}", beat_division).unwrap();
+
+        for bar in track
         {
-            match chord.notes.len()
+            for chord in &bar.0
             {
-                0 => buffer += Note::Rest.as_abc(),
-                1 => buffer += chord.notes[0].as_abc(),
-                _ => {
-                    buffer += "[";
-                    for (index, &note) in chord.notes.iter().enumerate()
-                    {
-                        if index != 0
+                match chord.notes.len()
+                {
+                    0 => buffer += Note::Rest.as_abc(),
+                    1 => buffer += chord.notes[0].as_abc(),
+                    _ => {
+                        buffer += "[";
+                        for (index, &note) in chord.notes.iter().enumerate()
                         {
-                            buffer += " ";
+                            if index != 0
+                            {
+                                buffer += " ";
+                            }
+                            buffer += note.as_abc();
                         }
-                        buffer += note.as_abc();
+                        buffer += "]";
                     }
-                    buffer += "]";
                 }
             }
+            buffer += "|\n";
         }
-        buffer += "|\n";
     }
 
     buffer
