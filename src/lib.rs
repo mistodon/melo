@@ -4,6 +4,8 @@ extern crate regex;
 struct CompileDrumsOptions
 {
     pub beats: usize,
+    pub channel: usize,
+    pub program: usize,
 }
 
 impl Default for CompileDrumsOptions
@@ -13,6 +15,8 @@ impl Default for CompileDrumsOptions
         CompileDrumsOptions
         {
             beats: 4,
+            channel: 0,
+            program: 0,
         }
     }
 }
@@ -22,7 +26,7 @@ pub fn compile_to_abc(input: &str) -> String
 {
     use regex::{ Regex, Captures };
 
-    let voice_pattern = Regex::new(r"(?m)voice\s+([a-zA-Z0-9_\- ]+)\s*\(([a-zA-Z0-9= ]*)\)\s*\{([^{}]*)\}\n?").expect("Failed to compile voice regex");
+    let voice_pattern = Regex::new(r"(?m)voice\s+([a-zA-Z0-9_\- ]+)\s*\(([a-zA-Z0-9=, ]*)\)\s*\{([^{}]*)\}\n?").expect("Failed to compile voice regex");
 
     let blank_line_pattern = Regex::new(r"\n\s*\n").expect("Failed to compile blank line regex");
 
@@ -44,6 +48,8 @@ pub fn compile_to_abc(input: &str) -> String
                 let mut options = CompileDrumsOptions::default();
 
                 options.beats = params.get("beats").map(|value| value.parse::<usize>().unwrap()).unwrap_or(options.beats);
+                options.channel = params.get("channel").map(|value| value.parse::<usize>().unwrap()).unwrap_or(options.channel);
+                options.program = params.get("program").map(|value| value.parse::<usize>().unwrap()).unwrap_or(options.program);
 
                 options
             };
@@ -201,6 +207,8 @@ fn compile_drums_to_abc(voice_name: &str, input: &str, options: &CompileDrumsOpt
         use std::fmt::Write;
 
         writeln!(buffer, "V:{}", voice_name).unwrap();
+        writeln!(buffer, "%%MIDI channel {}", options.channel).unwrap();
+        writeln!(buffer, "%%MIDI program {}", options.program).unwrap();
         writeln!(buffer, "L:1/{}", beat_division).unwrap();
 
         for bar in track

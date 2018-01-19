@@ -3,10 +3,7 @@ T:Title
 K:C
 M:12/8
 
-%%MIDI channel 10
-%%MIDI program 0
-
-voice Drums(beats = 6)
+voice Drums(beats = 6, channel = 10)
 {
     ^F,,    : xxx xxx xxx xxx ;
     D,,     : xxx ;
