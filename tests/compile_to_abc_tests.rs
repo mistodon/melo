@@ -44,3 +44,6 @@ fn test_triplets_and_not_sextuplets() { test_abc!("not_sextuplets"); }
 
 #[test]
 fn test_voice_args() { test_abc!("voice_args") }
+
+#[test]
+fn test_drums_arg() { test_abc!("drums_arg") }
