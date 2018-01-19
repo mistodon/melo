@@ -125,7 +125,7 @@ fn compile_drums_to_abc(input: &str, options: &CompileDrumsOptions) -> String
             .filter(|line| !line.is_empty())
         {
             let divide = line.find(':').expect("Expected stave to begin with \"<note>:\"");
-            let stave_note = &line[0..divide];
+            let stave_note = line[0..divide].trim();
             let stave_bars = &line[(divide+1) ..];
 
             let stave: &mut Stave = stave_map.entry(stave_note).or_insert_with(Stave::default);
