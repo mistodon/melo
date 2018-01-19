@@ -2,11 +2,10 @@ X:1
 T:Title
 K:C
 
-V:Drums
 %%MIDI channel 10
 %%MIDI program 0
 
-drumscript()
+voice Drums()
 {
     ^F,,    : xxxx ; xxxxxxxx ; x ;
     D,,     : -x-x ; --x---x- ; x ;
