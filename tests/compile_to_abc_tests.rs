@@ -1,5 +1,8 @@
 extern crate midscript;
 
+#[macro_use]
+extern crate pretty_assertions;
+
 
 macro_rules! test_abc
 {
@@ -40,4 +43,22 @@ fn test_variable_length_drum_staves()
 fn test_triple_time_expansion()
 {
     test_abc!("triple_time_expansion");
+}
+
+#[test]
+fn test_automatic_triplets()
+{
+    test_abc!("triplets");
+}
+
+#[test]
+fn test_automatic_quintuplets()
+{
+    test_abc!("quintuplets");
+}
+
+#[test]
+fn test_triplets_and_not_sextuplets()
+{
+    test_abc!("not_sextuplets");
 }

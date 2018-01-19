@@ -183,7 +183,16 @@ fn compile_drums_to_abc(input: &str, options: &CompileDrumsOptions) -> String
     let track = track.iter().map(|bar| bar.stretched(min_bar_len));
 
     assert!(min_bar_len % options.beats == 0, "All bars must be aligned with the time signature");
-    let beat_division = (max_bar_len * 4) / options.beats;
+
+    let notes_per_beat = max_bar_len / options.beats;
+    let (beat_division, tuplet) = match notes_per_beat
+    {
+        n if n % 7 == 0 => ((n*8) / 7, Some(7)),
+        n if n % 5 == 0 => ((n*8) / 5, Some(5)),
+        n if n % 3 == 0 => ((n*8) / 3, Some(3)),
+        n if n % 2 == 0 => ((n*8) / 2, None),
+        _ => unimplemented!("Unsupported tuplet")
+    };
 
     let mut buffer = String::new();
 
@@ -194,8 +203,16 @@ fn compile_drums_to_abc(input: &str, options: &CompileDrumsOptions) -> String
 
         for bar in track
         {
-            for chord in &bar.0
+            for (index, chord) in bar.0.iter().enumerate()
             {
+                if let Some(tuplet) = tuplet
+                {
+                    if index % tuplet == 0
+                    {
+                        write!(buffer, "({}", tuplet).unwrap();
+                    }
+                }
+
                 match chord.notes.len()
                 {
                     0 => buffer += Note::Rest.as_abc(),
