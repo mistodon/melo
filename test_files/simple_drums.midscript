@@ -8,7 +8,7 @@ V:Drums
 %%MIDI channel 10
 %%MIDI program 0
 
-drumscript(beats = 8)
+drumscript()
 {
     ^F,,: ; xxxxxxxx ; xxxxxxxx ;
     D,,:  ; --x---x- ; --x---x- ;
