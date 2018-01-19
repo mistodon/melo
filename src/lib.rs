@@ -6,8 +6,9 @@ pub mod notes;
 struct CompileDrumsOptions
 {
     pub beats: usize,
-    pub channel: usize,
-    pub program: usize,
+    pub channel: u8,
+    pub program: u8,
+    pub octave: i8,
 }
 
 impl Default for CompileDrumsOptions
@@ -19,6 +20,7 @@ impl Default for CompileDrumsOptions
             beats: 4,
             channel: 0,
             program: 0,
+            octave: 0,
         }
     }
 }
@@ -62,8 +64,9 @@ pub fn compile_to_abc(input: &str) -> String
                 let mut options = CompileDrumsOptions::default();
 
                 options.beats = params.get("beats").map(|value| value.parse::<usize>().unwrap()).unwrap_or(options.beats);
-                options.channel = params.get("channel").map(|value| value.parse::<usize>().unwrap()).unwrap_or(options.channel);
-                options.program = params.get("program").map(|value| value.parse::<usize>().unwrap()).unwrap_or(options.program);
+                options.channel = params.get("channel").map(|value| value.parse::<u8>().unwrap()).unwrap_or(options.channel);
+                options.program = params.get("program").map(|value| value.parse::<u8>().unwrap()).unwrap_or(options.program);
+                options.octave = params.get("octave").map(|value| value.parse::<i8>().unwrap()).unwrap_or(options.octave);
 
                 options
             };
@@ -108,7 +111,7 @@ impl<T: Clone + Default> Bar<T>
 enum Note
 {
     Rest,
-    Note(u8),
+    Note(i8),
 }
 
 impl Default for Note { fn default() -> Self { Note::Rest } }
@@ -146,7 +149,7 @@ fn compile_drums_to_abc(voice_name: &str, input: &str, options: &CompileDrumsOpt
             .filter(|line| !line.is_empty())
         {
             let divide = line.find(':').expect("Expected stave to begin with \"<note>:\"");
-            let stave_note = notes::note_to_midi(line[0..divide].trim());
+            let stave_note = notes::note_to_midi(line[0..divide].trim()) + (options.octave * 12);
             let stave_bars = &line[(divide+1) ..];
 
             let stave: &mut Stave = stave_map.entry(stave_note).or_insert_with(Stave::default);
