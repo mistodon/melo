@@ -8,9 +8,9 @@ V:Drums
 
 drumscript()
 {
-    ^F,,: ; xxxx ; xxxxxxxx ; x ;
-    D,,:  ; -x-x ; --x---x- ; x ;
-    C,,:  ; x-x- ; x---xx-- ; x ;
+    ^F,,    : xxxx ; xxxxxxxx ; x ;
+    D,,     : -x-x ; --x---x- ; x ;
+    C,,     : x-x- ; x---xx-- ; x ;
 }
 
 V:Lead

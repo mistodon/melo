@@ -10,6 +10,6 @@ V:Drums
 
 drumscript(beats = 4)
 {
-    ^F,,: ; xxx xxx xxx xxx ;
-    C,,:  ; xxxx ;
+    ^F,,    : xxx xxx xxx xxx ;
+    C,,     : xxxx ;
 }
