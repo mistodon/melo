@@ -1,0 +1,16 @@
+X:1
+T:Title
+K:C
+%
+V:Drums
+%%MIDI channel 10
+%%MIDI program 0
+%
+[C,, ^F,,]z[D,, ^F,,]z[C,, ^F,,]z[D,, ^F,,]z|
+[C,, ^F,,]^F,,[D,, ^F,,]^F,,[C,, ^F,,][C,, ^F,,][D,, ^F,,]^F,,|
+[C,, D,, ^F,,]zzzzzzz|
+%
+V:Lead
+%%MIDI channel 0
+%%MIDI program 0
+a b c d a b c d | a b c d e d c b |
