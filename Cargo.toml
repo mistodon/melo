@@ -7,3 +7,7 @@ authors = ["Claire Harris <pirh.badger@gmail.com>"]
 regex = "~0.2.5"
 structopt = "~0.1.6"
 structopt-derive = "~0.1.6"
+
+[dev-dependencies]
+pretty_assertions = "~0.4.1"
+
