@@ -47,3 +47,6 @@ fn test_voice_args() { test_abc!("voice_args") }
 
 #[test]
 fn test_drums_arg() { test_abc!("drums_arg") }
+
+#[test]
+fn test_mixed_barlines() { test_abc!("mixed_barlines") }
