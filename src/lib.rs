@@ -5,9 +5,12 @@ pub fn compile_to_abc(input: &str) -> String
 {
     use regex::{ Regex, Captures };
 
-    let drumscript_pattern = Regex::new(r"(?m)drumscript\s*\{([^{}]*)\}\n?").expect("Failed to compile regex");
+    let drumscript_pattern = Regex::new(r"(?m)drumscript\s*\{([^{}]*)\}\n?").expect("Failed to compile drumscript regex");
+
+    let blank_line_pattern = Regex::new(r"\n\s*\n").expect("Failed to compile blank line regex");
 
     let result = drumscript_pattern.replace_all(input, |captures: &Captures| compile_drums_to_abc(&captures[1]));
+    let result = blank_line_pattern.replace_all(&result, "\n%\n");
 
     result.into_owned()
 }
