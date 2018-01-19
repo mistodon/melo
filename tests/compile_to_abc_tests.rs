@@ -35,3 +35,9 @@ fn test_variable_length_drum_staves()
 {
     test_abc!("variable_stave_drum_bars");
 }
+
+#[test]
+fn test_triple_time_expansion()
+{
+    test_abc!("triple_time_expansion");
+}

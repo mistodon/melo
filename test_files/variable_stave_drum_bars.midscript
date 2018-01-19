@@ -6,7 +6,7 @@ V:Drums
 %%MIDI channel 10
 %%MIDI program 0
 
-drumscript
+drumscript()
 {
     ^F,,: ; xxxxxxxx ; xxxxxxxx ; x ;
     D,,:  ; -x-x ; --x---x- ; x ;

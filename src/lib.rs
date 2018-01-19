@@ -5,11 +5,32 @@ pub fn compile_to_abc(input: &str) -> String
 {
     use regex::{ Regex, Captures };
 
-    let drumscript_pattern = Regex::new(r"(?m)drumscript\s*\{([^{}]*)\}\n?").expect("Failed to compile drumscript regex");
+    let drumscript_pattern = Regex::new(r"(?m)drumscript\s*\(([a-zA-Z0-9= ]*)\)\s*\{([^{}]*)\}\n?").expect("Failed to compile drumscript regex");
 
     let blank_line_pattern = Regex::new(r"\n\s*\n").expect("Failed to compile blank line regex");
 
-    let result = drumscript_pattern.replace_all(input, |captures: &Captures| compile_drums_to_abc(&captures[1]));
+    let result = drumscript_pattern.replace_all(input,
+        |captures: &Captures|
+        {
+            let params = {
+                use std::collections::BTreeMap;
+
+                let mut params = BTreeMap::new();
+                for param in captures[1].split(',').map(str::trim).filter(|arg| !arg.is_empty())
+                {
+                    let divide = param.find('=').unwrap();
+                    let key = param[0..divide].trim();
+                    let value = param[(divide+1)..].trim();
+                    params.insert(key, value);
+                }
+
+                let beats = params.get("beats").map(|value| value.parse::<usize>().unwrap()).unwrap_or(8);
+
+                CompileDrumsOptions { beats }
+            };
+            let content = &captures[2];
+            compile_drums_to_abc(content, &params)
+        });
     let result = blank_line_pattern.replace_all(&result, "\n%\n");
 
     result.into_owned()
@@ -73,7 +94,12 @@ struct Chord<'a>
 }
 
 
-fn compile_drums_to_abc(input: &str) -> String
+struct CompileDrumsOptions
+{
+    pub beats: usize,
+}
+
+fn compile_drums_to_abc(input: &str, options: &CompileDrumsOptions) -> String
 {
     let staves: Vec<Stave> = {
         use std::collections::BTreeMap;
@@ -118,8 +144,6 @@ fn compile_drums_to_abc(input: &str) -> String
     let stave_length = staves.get(0).unwrap().bars.len();
     assert!(staves.iter().all(|stave| stave.bars.len() == stave_length), "All staves must be the same length");
 
-    const BEATS_PER_BAR: usize = 8;
-
     let track = (0..stave_length).into_iter()
         .map(
             |bar_index|
@@ -138,7 +162,7 @@ fn compile_drums_to_abc(input: &str) -> String
 
                 chords
             })
-        .map(|bar| bar.stretched(BEATS_PER_BAR));
+        .map(|bar| bar.stretched(options.beats));
 
 
     let mut buffer = String::new();
