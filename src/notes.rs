@@ -501,6 +501,9 @@ mod tests
         test("e", "e");
         test("G^", "^G");
         test("G_", "^F");
+        test("C,,", "C,,");
+        test("D,,", "D,,");
+        test("F^,,", "^F,,");
     }
 
     #[test]

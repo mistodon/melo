@@ -6,7 +6,7 @@ K:C
 
 voice Drums(channel = 10)
 {
-    ^F,,    : xxxxxxxx ; xxxxxxxx ;
+    F^,,    : xxxxxxxx ; xxxxxxxx ;
     D,,     : --x---x- ; --x---x- ;
     C,,     : x---x--- ; x---xx-- ;
 }

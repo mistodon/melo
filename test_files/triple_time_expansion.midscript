@@ -5,7 +5,7 @@ M:12/8
 
 voice Drums(beats = 6, channel = 10)
 {
-    ^F,,    : xxx xxx xxx xxx ;
+    F^,,    : xxx xxx xxx xxx ;
     D,,     : xxx ;
     C,,     : xxxx ;
 }
