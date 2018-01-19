@@ -78,9 +78,9 @@ pub fn compile_to_abc(input: &str) -> String
 
 
 #[derive(Debug, Default, Clone)]
-struct Stave<'a>
+struct Stave
 {
-    pub bars: Vec<Bar<Note<'a>>>,
+    pub bars: Vec<Bar<Note>>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -105,32 +105,32 @@ impl<T: Clone + Default> Bar<T>
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-enum Note<'a>
+enum Note
 {
     Rest,
-    Note(&'a str),
+    Note(u8),
 }
 
-impl<'a> Default for Note<'a> { fn default() -> Self { Note::Rest } }
+impl Default for Note { fn default() -> Self { Note::Rest } }
 
-impl<'a> Note<'a>
+impl Note
 {
-    pub fn as_abc(&self) -> &'a str
+    pub fn as_abc(&self) -> &'static str
     {
         const REST: &str = "z";
 
         match *self
         {
             Note::Rest => REST,
-            Note::Note(note) => note,
+            Note::Note(note) => notes::midi_to_abc(note),
         }
     }
 }
 
 #[derive(Debug, Default, Clone)]
-struct Chord<'a>
+struct Chord
 {
-    notes: Vec<Note<'a>>,
+    notes: Vec<Note>,
 }
 
 
@@ -146,7 +146,7 @@ fn compile_drums_to_abc(voice_name: &str, input: &str, options: &CompileDrumsOpt
             .filter(|line| !line.is_empty())
         {
             let divide = line.find(':').expect("Expected stave to begin with \"<note>:\"");
-            let stave_note = line[0..divide].trim();
+            let stave_note = notes::note_to_midi(line[0..divide].trim());
             let stave_bars = &line[(divide+1) ..];
 
             let stave: &mut Stave = stave_map.entry(stave_note).or_insert_with(Stave::default);
