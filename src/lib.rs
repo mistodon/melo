@@ -149,29 +149,59 @@ fn compile_drums_to_abc(voice_name: &str, input: &str, options: &CompileDrumsOpt
             .filter(|line| !line.is_empty())
         {
             let divide = line.find(':').expect("Expected stave to begin with \"<note>:\"");
-            let stave_note = notes::note_to_midi(line[0..divide].trim()) + (options.octave * 12);
+            let stave_prefix = line[0..divide].trim();
             let stave_bars = &line[(divide+1) ..];
 
-            let stave: &mut Stave = stave_map.entry(stave_note).or_insert_with(Stave::default);
+            let stave: &mut Stave = stave_map.entry(stave_prefix).or_insert_with(Stave::default);
 
-            let mut bars: Vec<Bar<Note>> = stave_bars.split([';', '|'].as_ref())
-                .filter(|bar| !bar.trim().is_empty())
-                .map(
-                    |bar|
-                    {
-                        let notes = bar.chars()
-                            .filter(|ch| !ch.is_whitespace())
-                            .map(
-                                |ch| match ch
-                                {
-                                    'x' => Note::Note(stave_note),
-                                    '-' => Note::Rest,
-                                    c => panic!("Invalid char {} in drum line", c)
-                                })
-                            .collect::<Vec<Note>>();
-                        Bar(notes)
-                    })
-                .collect();
+            fn parse_bars<F>(stave_bars: &str, parser: F) -> Vec<Bar<Note>>
+            where
+                F: Fn(&str) -> Bar<Note>
+            {
+                stave_bars.split([';', '|'].as_ref())
+                    .filter(|bar| !bar.trim().is_empty())
+                    .map(parser)
+                    .collect()
+            }
+
+            let mut bars = {
+                if stave_prefix.is_empty()
+                {
+                    parse_bars(stave_bars,
+                        |bar|
+                        {
+                            let notes = bar.split_whitespace()
+                                .map(
+                                    |token| match token
+                                    {
+                                        "-" => Note::Rest,
+                                        note => Note::Note(notes::note_to_midi(note) + (options.octave * 12)),
+                                    })
+                                .collect::<Vec<Note>>();
+
+                            Bar(notes)
+                        })
+                }
+                else
+                {
+                    parse_bars(stave_bars,
+                        |bar|
+                        {
+                            let notes = bar.chars()
+                                .filter(|ch| !ch.is_whitespace())
+                                .map(
+                                    |ch| match ch
+                                    {
+                                        'x' => Note::Note(notes::note_to_midi(stave_prefix) + (options.octave * 12)),
+                                        '-' => Note::Rest,
+                                        c => panic!("Invalid char {} in drum line", c)
+                                    })
+                                .collect::<Vec<Note>>();
+
+                            Bar(notes)
+                        })
+                }
+            };
 
             stave.bars.append(&mut bars);
         }
