@@ -203,10 +203,16 @@ fn compile_drums_to_abc(voice_name: &str, input: &str, options: &CompileDrumsOpt
         .collect::<Vec<Bar<Chord>>>();
 
     let max_bar_len = track.iter().map(|bar| bar.0.len()).max().unwrap();
-    let min_bar_len = std::cmp::max(max_bar_len, options.beats);
-    let track = track.iter().map(|bar| bar.stretched(min_bar_len));
 
-    assert!(min_bar_len % options.beats == 0, "All bars must be aligned with the time signature");
+    let min_bar_len = {
+        // TODO(***realname***): This should really be the LCM of max_bar_len and options.beats
+        let min_bar_len = std::cmp::max(max_bar_len, options.beats);
+        let min_bar_len = if min_bar_len % options.beats == 0 { min_bar_len } else { min_bar_len * options.beats };
+        assert!(min_bar_len % options.beats == 0, "All bars must be aligned with the time signature");
+        min_bar_len
+    };
+
+    let track = track.iter().map(|bar| bar.stretched(min_bar_len));
 
     let notes_per_beat = min_bar_len / options.beats;
     let (beat_division, tuplet) = match notes_per_beat
