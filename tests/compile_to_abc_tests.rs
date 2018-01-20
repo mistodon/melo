@@ -57,3 +57,5 @@ fn test_octave_shift() { test_abc!("octave_shift") }
 #[test]
 fn test_untidy_triplets() { test_abc!("untidy_triplets") }
 
+#[test]
+fn test_simple_melody() { test_abc!("simple_melody") }
