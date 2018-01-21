@@ -143,14 +143,29 @@ fn compile_midscript_to_abc(voice_name: &str, input: &str, options: &CompileDrum
         use std::collections::BTreeMap;
 
         let mut stave_map = BTreeMap::new();
+        let mut previous_stave = None;
 
         for line in input.lines()
             .map(str::trim)
             .filter(|line| !line.is_empty())
         {
-            let divide = line.find(':').expect("Expected stave to begin with \"<note>:\"");
-            let stave_prefix = line[0..divide].trim();
-            let stave_bars = &line[(divide+1) ..];
+            let divide = line.find(':');
+
+            let (stave_prefix, stave_bars) = match divide
+            {
+                Some(divide) => {
+                    let stave_prefix = line[0..divide].trim();
+                    let stave_bars = &line[(divide+1) ..];
+                    (stave_prefix, stave_bars)
+                }
+                None => {
+                    let stave_prefix = previous_stave.expect("Expected stave to begin with \"[prefix]:\"");
+                    let stave_bars = line;
+                    (stave_prefix, stave_bars)
+                }
+            };
+
+            previous_stave = Some(stave_prefix);
 
             let stave: &mut Stave = stave_map.entry(stave_prefix).or_insert_with(Stave::default);
 
