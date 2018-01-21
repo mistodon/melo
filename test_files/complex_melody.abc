@@ -1,0 +1,11 @@
+X:1
+T:Title
+K:C
+%
+V:Lead
+%%MIDI channel 0
+%%MIDI program 33
+L:1/4
+C,zE,F,|
+^F,F,E,,D|
+C,,,zzz|

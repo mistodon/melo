@@ -1,0 +1,8 @@
+X:1
+T:Title
+K:C
+
+voice Lead(program = 33, octave = -1)
+{
+    : C-EF | G_FE,D' | C,, |
+}
