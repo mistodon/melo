@@ -65,3 +65,6 @@ fn test_complex_melody() { test_abc!("complex_melody") }
 
 #[test]
 fn test_longer_melody() { test_abc!("longer_melody") }
+
+#[test]
+fn test_fifths() { test_abc!("fifths") }

@@ -144,11 +144,26 @@ fn compile_midscript_to_abc(voice_name: &str, input: &str, options: &CompileDrum
 
         let mut stave_map = BTreeMap::new();
         let mut previous_stave = None;
+        let mut allow_new_staves = true;
+
+        const ANONYMOUS_STAVE_NAMES: &[&str] = &[
+            "V0", "V1", "V2", "V3", "V4", "V5", "V6", "V7",
+        ];
+        let mut anonymous_stave_count = 0;
 
         for line in input.lines()
             .map(str::trim)
-            .filter(|line| !line.is_empty())
         {
+            if line.is_empty()
+            {
+                if !stave_map.is_empty()
+                {
+                    allow_new_staves = false;
+                }
+                anonymous_stave_count = 0;
+                continue
+            }
+
             let divide = line.find(':');
 
             let (stave_prefix, stave_bars) = match divide
@@ -165,6 +180,21 @@ fn compile_midscript_to_abc(voice_name: &str, input: &str, options: &CompileDrum
                 }
             };
 
+            let stave_prefix = match stave_prefix
+            {
+                s if s.is_empty() => {
+                    let prefix = ANONYMOUS_STAVE_NAMES[anonymous_stave_count];
+                    anonymous_stave_count += 1;
+                    prefix
+                }
+                s => s
+            };
+
+            if !(allow_new_staves || stave_map.contains_key(stave_prefix))
+            {
+                panic!("All staves must be declared before first blank line");
+            }
+
             previous_stave = Some(stave_prefix);
 
             let stave: &mut Stave = stave_map.entry(stave_prefix).or_insert_with(Stave::default);
@@ -180,7 +210,7 @@ fn compile_midscript_to_abc(voice_name: &str, input: &str, options: &CompileDrum
             }
 
             let mut bars = {
-                if stave_prefix.is_empty()
+                if stave_prefix.starts_with('V')
                 {
                     parse_bars(stave_bars,
                         |bar|
