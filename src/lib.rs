@@ -72,7 +72,7 @@ pub fn compile_to_abc(input: &str) -> String
             };
             let voice_name = &captures[1];
             let content = &captures[3];
-            compile_drums_to_abc(voice_name, content, &params)
+            compile_midscript_to_abc(voice_name, content, &params)
         });
     let result = blank_line_pattern.replace_all(&result, "\n%\n");
 
@@ -137,7 +137,7 @@ struct Chord
 }
 
 
-fn compile_drums_to_abc(voice_name: &str, input: &str, options: &CompileDrumsOptions) -> String
+fn compile_midscript_to_abc(voice_name: &str, input: &str, options: &CompileDrumsOptions) -> String
 {
     let staves: Vec<Stave> = {
         use std::collections::BTreeMap;
@@ -170,14 +170,46 @@ fn compile_drums_to_abc(voice_name: &str, input: &str, options: &CompileDrumsOpt
                     parse_bars(stave_bars,
                         |bar|
                         {
-                            let notes = bar.split_whitespace()
-                                .map(
-                                    |token| match token
+                            let notes = {
+                                let oct = options.octave * 12;
+                                let mut notes = Vec::new();
+                                let mut token_start = 0;
+                                let mut in_note = false;
+
+                                for (index, ch) in bar.char_indices()
+                                {
+                                    let is_whitespace = ch.is_whitespace();
+                                    let is_rest = ch == '-';
+                                    let is_note_start = ('a' <= ch && ch <= 'g') || ('A' <= ch && ch <= 'G');
+                                    let ends_current_note = is_whitespace || is_rest || is_note_start;
+
+                                    if in_note && ends_current_note
                                     {
-                                        "-" => Note::Rest,
-                                        note => Note::Note(notes::note_to_midi(note) + (options.octave * 12)),
-                                    })
-                                .collect::<Vec<Note>>();
+                                        let note = notes::note_to_midi(&bar[token_start..index]) + oct;
+                                        notes.push(Note::Note(note));
+                                        in_note = false;
+                                    }
+
+                                    if is_rest
+                                    {
+                                        notes.push(Note::Rest);
+                                    }
+
+                                    if is_note_start
+                                    {
+                                        token_start = index;
+                                        in_note = true;
+                                    }
+                                }
+
+                                if in_note
+                                {
+                                    let note = notes::note_to_midi(&bar[token_start..]) + oct;
+                                    notes.push(Note::Note(note));
+                                }
+
+                                notes
+                            };
 
                             Bar(notes)
                         })
