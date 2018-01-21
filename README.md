@@ -23,27 +23,27 @@ section MainTheme
         // A part is a repeatable bit of music. The `%` symbol is there to repeat the previous bar on the current stave.
         part Rhythm
         {
-            F^  : x x x x | %. |
-            D   : - x - - | - x - x | % |
-            C   : x - x x | x - x - | % |
+            F^: | x x x x | %. |
+            D:  | - x - - | - x - x | % |
+            C:  | x - x x | x - x - | % |
         }
 
         // You can "dereference" parts to play them. The `"` ditto symbol is there to copy the bar from the above stave.
-        F^  : *Rhythm   | x x x x       | *Rhythm   | x x x x  |
-        D   : "         | - - - xxxx    | "         | -x---x-- |
-        C   : "         | x - x -       | "         | x-x-x--- |
+        F^: | *Rhythm   | x x x x       | *Rhythm   | x x x x  |
+        D:  | "         | - - - xxxx    | "         | -x---x-- |
+        C:  | "         | x - x -       | "         | x-x-x--- |
     }
 
     play Guitar
     {
         part Scale
         {
-            : cdefga'b'c' | b'a'gfedc. |
+            :| cdefga'b'c' | b'a'gfedc. |
         }
 
         // The `:` stave prefix represents all staves. It will only accept parts, sections, and repeat symbols. The contents will be combined with other staves if present.
-        :: *Scale | %.3 |
-        // : CCCC | %.7 |     // If we uncommented this, it would play that C as a pedal over the `Scale` section, using the same voice.
+        ::  | *Scale | %.3 |
+        // :| CCCC | %.7 |     // If we uncommented this, it would play that C as a pedal over the `Scale` section, using the same voice.
         // As a side note, we need a concise but clear syntax for "repeat the previous N things, M times". Currently thinking `N%.M` with abbreviations: %.M == 1%.M, % == 1%.1, N%. == N%.2
     }
 }
@@ -51,7 +51,7 @@ section MainTheme
 // A play block without instruments can only use the `::` stave type, described above.
 play
 {
-    :: *MainTheme | % |
+    ::  | *MainTheme | % |
 }
 
 /*

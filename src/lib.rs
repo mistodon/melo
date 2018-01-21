@@ -1,6 +1,14 @@
+#[cfg(test)]
+#[macro_use]
+extern crate pretty_assertions;
+
+#[macro_use]
+extern crate lazy_static;
+
 extern crate regex;
 
 pub mod notes;
+mod lexer;
 
 
 struct CompileDrumsOptions
