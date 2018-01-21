@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["***Realname*** ***Lastname*** <***redacted.email@redacted.nope***>"]
 
 [dependencies]
+lazy_static = "~1.0.0"
 regex = "~0.2.5"
 structopt = "~0.1.6"
 structopt-derive = "~0.1.6"
