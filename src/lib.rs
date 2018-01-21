@@ -8,7 +8,7 @@ extern crate lazy_static;
 extern crate regex;
 
 pub mod notes;
-mod lexer;
+pub mod lexer;
 
 
 struct CompileDrumsOptions
