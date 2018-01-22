@@ -4,6 +4,7 @@ use std::slice::Iter;
 
 use lexer::{ Token, MetaToken };
 use lexer::Token::*;
+use notes;
 
 
 type TokenStream<'a> = Peekable<Iter<'a, MetaToken<'a>>>;
@@ -59,7 +60,8 @@ pub struct BarNode
 #[derive(Debug, PartialEq, Eq)]
 pub enum NoteNode
 {
-    Rest
+    Rest,
+    Note(i8),
 }
 
 
@@ -246,6 +248,9 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> PlayNode<'a>
     let voice = try_parse_name(stream);
     let mut play_node = PlayNode { voice, .. Default::default() };
 
+    let mut anonymous_stave_count = 0;
+    let mut allow_new_staves = true;
+
     expect_token(stream, LeftBrace);
 
     loop
@@ -255,14 +260,55 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> PlayNode<'a>
             break
         }
 
-        match stream.next()
+        match stream.next().map(|meta| meta.token)
         {
-            Some(&MetaToken { token: Key(prefix), .. }) => {
+            Some(BlankLine) => {
+                let already_have_some_staves = !play_node.staves.is_empty();
+                if already_have_some_staves
+                {
+                    allow_new_staves = false;
+                    anonymous_stave_count = 0;
+                }
+            }
+            Some(Key(prefix)) => {
 
                 expect_token(stream, Barline);
 
-                let mut stave = StaveNode { prefix: Cow::Borrowed(prefix), ..  Default::default() };
+                let prefix = match prefix
+                {
+                    "" => {
+                        let anonymous_prefix = format!("V{}", anonymous_stave_count);
+                        anonymous_stave_count += 1;
+                        Cow::Owned(anonymous_prefix)
+                    }
+                    prefix => Cow::Borrowed(prefix)
+                };
 
+                let stave = {
+                    let existing_stave = play_node.staves.iter()
+                        .enumerate()
+                        .find(|&(_, stave)| stave.prefix == prefix)
+                        .map(|(i, _)| i);
+
+                    let stave_index = existing_stave.unwrap_or(play_node.staves.len());
+
+                    if existing_stave.is_none()
+                    {
+                        if allow_new_staves
+                        {
+                            play_node.staves.push(StaveNode { prefix, ..  Default::default() });
+                        }
+                        else
+                        {
+                            panic!("error: All staves must be declared before the first blank line in a `play` block");
+                        }
+                    }
+
+                    &mut play_node.staves[stave_index]
+                };
+
+
+                let stave_note = notes::note_to_midi(&stave.prefix);
                 let mut bar = BarNode::default();
 
                 loop
@@ -273,6 +319,14 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> PlayNode<'a>
                     match stream.peek().map(|meta| meta.token)
                     {
                         Some(Rest) => bar.notes.push(NoteNode::Rest),
+                        Some(Hit) => {
+                            let midi = stave_note.expect("error: Hit (`x`) notes are only valid on staves with a note prefix");
+                            bar.notes.push(NoteNode::Note(midi));
+                        }
+                        Some(Note(note)) => {
+                            let midi = notes::note_to_midi(note).unwrap_or_else(|| panic!("error: Note out of range: \"{}\"", note));
+                            bar.notes.push(NoteNode::Note(midi));
+                        }
                         Some(Barline) => bar_full = true,
                         Some(Key(_)) | Some(BlankLine) | Some(RightBrace) => stave_full = true,
                         None => panic!("error: Unexpected end of file, expected notes or end of `play` block"),
@@ -295,8 +349,6 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> PlayNode<'a>
 
                     stream.next();
                 }
-
-                play_node.staves.push(stave);
             }
             unexpected => panic!("error: Expected stave prefix, found {:?}", unexpected)
         }
@@ -335,6 +387,15 @@ mod tests
             .collect::<Vec<MetaToken>>();
         let result = parse(&meta_tokens);
         assert_eq!(result.pieces, expected);
+    }
+
+    fn stave(prefix: &str, notes: Vec<Vec<NoteNode>>) -> StaveNode
+    {
+        StaveNode
+        {
+            prefix: Cow::Borrowed(prefix),
+            bars: notes.into_iter().map(|bar| BarNode { notes: bar }).collect()
+        }
     }
 
     #[test]
@@ -480,7 +541,7 @@ mod tests
                     }
                 ],
                 .. Default::default()
-            })
+            });
     }
 
     #[test]
@@ -498,7 +559,7 @@ mod tests
                     }
                 ],
                 .. Default::default()
-            })
+            });
     }
 
     #[test]
@@ -511,18 +572,12 @@ mod tests
                 plays: vec![
                     PlayNode
                     {
-                        staves: vec![
-                            StaveNode
-                            {
-                                prefix: Cow::Borrowed(""),
-                                bars: vec![BarNode { notes: vec![NoteNode::Rest] }],
-                            }
-                        ],
+                        staves: vec![stave("V0", vec![vec![NoteNode::Rest]]) ],
                         .. Default::default()
                     }
                 ],
                 .. Default::default()
-            })
+            });
     }
 
     #[test]
@@ -535,18 +590,169 @@ mod tests
                 plays: vec![
                     PlayNode
                     {
+                        staves: vec![stave("V0", vec![vec![NoteNode::Rest]]) ],
+                        .. Default::default()
+                    }
+                ],
+                .. Default::default()
+            });
+    }
+
+    #[test]
+    fn parse_play_node_with_two_staves()
+    {
+        parsetest(
+            vec![Play, LeftBrace, Key("C"), Barline, Rest, Key("D"), Barline, Rest, RightBrace],
+            PieceNode
+            {
+                plays: vec![
+                    PlayNode
+                    {
                         staves: vec![
-                            StaveNode
-                            {
-                                prefix: Cow::Borrowed(""),
-                                bars: vec![BarNode { notes: vec![NoteNode::Rest] }],
-                            }
+                            stave("C", vec![vec![NoteNode::Rest]]),
+                            stave("D", vec![vec![NoteNode::Rest]])],
+                        .. Default::default()
+                    }
+                ],
+                .. Default::default()
+            });
+    }
+
+    #[test]
+    fn parse_play_node_with_percussive_notes()
+    {
+        parsetest(
+            vec![Play, LeftBrace, Key("C"), Barline, Hit, RightBrace],
+            PieceNode
+            {
+                plays: vec![
+                    PlayNode
+                    {
+                        staves: vec![stave("C", vec![vec![NoteNode::Note(60)]])],
+                        .. Default::default()
+                    }
+                ],
+                .. Default::default()
+            });
+    }
+
+    #[test]
+    fn parse_play_node_with_melody_notes()
+    {
+        parsetest(
+            vec![Play, LeftBrace, Key(""), Barline, Note("C"), Note("D"), RightBrace],
+            PieceNode
+            {
+                plays: vec![
+                    PlayNode
+                    {
+                        staves: vec![stave("V0", vec![vec![NoteNode::Note(60), NoteNode::Note(62)]])],
+                        .. Default::default()
+                    }
+                ],
+                .. Default::default()
+            });
+    }
+
+    #[test]
+    fn parse_stave_split_over_multiple_lines()
+    {
+        parsetest(
+            vec![Play, LeftBrace, Key("C"), Barline, Hit, Key("C"), Barline, Hit, RightBrace],
+            PieceNode
+            {
+                plays: vec![
+                    PlayNode
+                    {
+                        staves: vec![stave("C", vec![vec![NoteNode::Note(60)], vec![NoteNode::Note(60)]])],
+                        .. Default::default()
+                    }
+                ],
+                .. Default::default()
+            });
+    }
+
+    #[test]
+    fn parse_multiple_concurrent_melody_lines()
+    {
+        parsetest(
+            vec![Play, LeftBrace, Key(""), Barline, Note("C"), Key(""), Barline, Note("G"), RightBrace],
+            PieceNode
+            {
+                plays: vec![
+                    PlayNode
+                    {
+                        staves: vec![
+                            stave("V0", vec![vec![NoteNode::Note(60)]]),
+                            stave("V1", vec![vec![NoteNode::Note(67)]]),
                         ],
                         .. Default::default()
                     }
                 ],
                 .. Default::default()
-            })
+            });
+    }
+
+    #[test]
+    fn parse_multiple_concurrent_melody_lines_broken_up_by_blank_line()
+    {
+        parsetest(
+            vec![
+                Play,
+                LeftBrace,
+                Key(""),
+                Barline,
+                Note("C"),
+                Key(""),
+                Barline,
+                Note("G"),
+                BlankLine,
+
+                Key(""),
+                Barline,
+                Note("G"),
+                Key(""),
+                Barline,
+                Note("d"),
+                RightBrace
+            ],
+            PieceNode
+            {
+                plays: vec![
+                    PlayNode
+                    {
+                        staves: vec![
+                            stave("V0", vec![vec![NoteNode::Note(60)], vec![NoteNode::Note(67)]]),
+                            stave("V1", vec![vec![NoteNode::Note(67)], vec![NoteNode::Note(74)]]),
+                        ],
+                        .. Default::default()
+                    }
+                ],
+                .. Default::default()
+            });
+    }
+
+    #[test]
+    #[should_panic]
+    fn fail_parsing_too_many_staves_after_blank_line()
+    {
+        parsefailtest(
+            vec![
+                Play,
+                LeftBrace,
+                Key(""),
+                Barline,
+                Note("C"),
+                BlankLine,
+
+                Key(""),
+                Barline,
+                Note("G"),
+                Key(""),
+                Barline,
+                Note("d"),
+                RightBrace
+            ]);
     }
 }
 

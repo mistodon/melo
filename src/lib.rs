@@ -137,7 +137,7 @@ impl Note
         match *self
         {
             Note::Rest => REST,
-            Note::Note(note) => notes::midi_to_abc(note),
+            Note::Note(note) => notes::midi_to_abc(note).unwrap(),
         }
     }
 }
@@ -242,7 +242,7 @@ fn compile_midscript_to_abc(voice_name: &str, input: &str, options: &CompileDrum
 
                                     if in_note && ends_current_note
                                     {
-                                        let note = notes::note_to_midi(&bar[token_start..index]) + oct;
+                                        let note = notes::note_to_midi(&bar[token_start..index]).unwrap() + oct;
                                         notes.push(Note::Note(note));
                                         in_note = false;
                                     }
@@ -261,7 +261,7 @@ fn compile_midscript_to_abc(voice_name: &str, input: &str, options: &CompileDrum
 
                                 if in_note
                                 {
-                                    let note = notes::note_to_midi(&bar[token_start..]) + oct;
+                                    let note = notes::note_to_midi(&bar[token_start..]).unwrap() + oct;
                                     notes.push(Note::Note(note));
                                 }
 
@@ -281,7 +281,7 @@ fn compile_midscript_to_abc(voice_name: &str, input: &str, options: &CompileDrum
                                 .map(
                                     |ch| match ch
                                     {
-                                        'x' => Note::Note(notes::note_to_midi(stave_prefix) + (options.octave * 12)),
+                                        'x' => Note::Note(notes::note_to_midi(stave_prefix).unwrap() + (options.octave * 12)),
                                         '-' => Note::Rest,
                                         c => panic!("Invalid char {} in drum line", c)
                                     })
