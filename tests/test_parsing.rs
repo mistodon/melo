@@ -5,15 +5,15 @@ extern crate pretty_assertions;
 
 
 #[test]
-fn test_parser()
+fn test_parsing()
 {
-    use midscript::lexer;
-    use midscript::parser;
+    use midscript::lexing;
+    use midscript::parsing;
 
-    let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/test_files/parser_test.midscript"));
+    let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/test_files/parsing_test.midscript"));
 
-    let tokens = lexer::lex(source);
-    let result = parser::parse(&tokens);
+    let tokens = lexing::lex(source);
+    let result = parsing::parse(&tokens);
 
     let piece = &result.pieces[0];
     assert_eq!(piece.title.unwrap(), "Parser Test");
