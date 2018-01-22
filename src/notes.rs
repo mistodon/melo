@@ -392,10 +392,10 @@ const ABC_NOTES: [&str; 128] = [
 ];
 
 
-pub fn note_to_midi(note: &str) -> i8
+pub fn note_to_midi(note: &str) -> Option<i8>
 {
     let mut chars = note.chars();
-    let mut midi = match chars.next().unwrap()
+    let mut midi = match chars.next().unwrap_or_default()
     {
         'A' => 57,
         'B' => 59,
@@ -411,7 +411,7 @@ pub fn note_to_midi(note: &str) -> i8
         'e' => 76,
         'f' => 77,
         'g' => 79,
-        c => panic!("No such note exists: '{}'", c)
+        _ => return None
     };
 
     let delta = match chars.next()
@@ -422,7 +422,7 @@ pub fn note_to_midi(note: &str) -> i8
         Some(',') => -12,
         Some('=') => 0,
         None => 0,
-        Some(c) => panic!("Unexpected character: '{}'", c)
+        Some(_) => return None
     };
 
     midi += delta;
@@ -433,31 +433,31 @@ pub fn note_to_midi(note: &str) -> i8
         {
             '\'' => midi += 12,
             ',' => midi -= 12,
-            c => panic!("Unexpected character: '{}'", c)
+            _ => return None
         }
     }
 
-    midi
+    if midi >= 0 { Some(midi) } else { None }
 }
 
-pub fn note_to_abc(note: &str) -> &'static str
+pub fn note_to_abc(note: &str) -> Option<&'static str>
 {
-    midi_to_abc(note_to_midi(note))
+    note_to_midi(note).and_then(midi_to_abc)
 }
 
-pub fn midi_to_flat(note: i8) -> &'static str
+pub fn midi_to_flat(note: i8) -> Option<&'static str>
 {
-    MIDSCRIPT_FLATS[note as usize]
+    MIDSCRIPT_FLATS.get(note as usize).cloned()
 }
 
-pub fn midi_to_sharp(note: i8) -> &'static str
+pub fn midi_to_sharp(note: i8) -> Option<&'static str>
 {
-    MIDSCRIPT_SHARPS[note as usize]
+    MIDSCRIPT_SHARPS.get(note as usize).cloned()
 }
 
-pub fn midi_to_abc(note: i8) -> &'static str
+pub fn midi_to_abc(note: i8) -> Option<&'static str>
 {
-    ABC_NOTES[note as usize]
+    ABC_NOTES.get(note as usize).cloned()
 }
 
 
@@ -469,7 +469,7 @@ mod tests
     #[test]
     fn test_note_to_midi()
     {
-        fn test(note: &str, midi: i8) { assert_eq!(note_to_midi(note), midi); }
+        fn test(note: &str, midi: i8) { assert_eq!(note_to_midi(note).unwrap(), midi); }
 
         test("C,,,,,", 0);
         test("C", 60);
@@ -487,7 +487,7 @@ mod tests
     #[test]
     fn test_note_to_abc()
     {
-        fn test(note: &str, abc: &str) { assert_eq!(note_to_abc(note), abc); }
+        fn test(note: &str, abc: &str) { assert_eq!(note_to_abc(note).unwrap(), abc); }
 
         test("A", "A,");
         test("B", "B,");
@@ -512,7 +512,7 @@ mod tests
         for i in 0..128
         {
             let i = i as i8;
-            assert_eq!(note_to_midi(midi_to_sharp(i)), i);
+            assert_eq!(note_to_midi(midi_to_sharp(i).unwrap()).unwrap(), i);
         }
     }
 
@@ -522,7 +522,7 @@ mod tests
         for i in 0..128
         {
             let i = i as i8;
-            assert_eq!(note_to_midi(midi_to_flat(i)), i);
+            assert_eq!(note_to_midi(midi_to_flat(i).unwrap()).unwrap(), i);
         }
     }
 }
