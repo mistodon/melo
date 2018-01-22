@@ -9,6 +9,7 @@ extern crate regex;
 
 pub mod lexer;
 pub mod parser;
+pub mod validator;
 pub mod notes;
 
 #[cfg(test)]
