@@ -40,6 +40,22 @@ pub enum Token<'a>
 }
 
 
+fn line_col_at(source: &str, position: usize) -> (usize, usize)
+{
+    let mut bytes = 0;
+    for (line_no, line) in source.lines().enumerate()
+    {
+        if position >= bytes && position < bytes + line.len()
+        {
+            let col = position - bytes;
+            return (line_no + 1, col + 1)
+        }
+        bytes += line.len();
+    }
+    (0, source.len())
+}
+
+
 pub fn lex<'a>(source: &'a str) -> Vec<MetaToken<'a>>
 {
     use self::Token::*;
@@ -151,8 +167,9 @@ pub fn lex<'a>(source: &'a str) -> Vec<MetaToken<'a>>
 
                 else if let Some(m) = capture.name("error")
                 {
-                    println!("{:?}", tokens);
-                    panic!("error: Invalid token '{}' at {}", m.as_str(), m.start())
+                    let (line, col) = line_col_at(source, start + m.start());
+                    println!("{} in {}", start, text);
+                    panic!("error: Invalid character in stave: '{}' at {}:{}", m.as_str(), line, col)
                 }
             }
         }
@@ -169,7 +186,8 @@ pub fn lex<'a>(source: &'a str) -> Vec<MetaToken<'a>>
 
         else if let Some(m) = capture.name("error")
         {
-            panic!("error: Invalid token '{}' at {}", m.as_str(), m.start())
+            let (line, col) = line_col_at(source, m.start());
+            panic!("error: Invalid character: '{}' at {}:{}", m.as_str(), line, col)
         }
 
         else
@@ -190,10 +208,10 @@ lazy_static!
         (?P<string>\"((\\\\\")|[^\"])*\")|\
         (?P<number>[+\\-]?\\d+)|\
         (?P<delim>[{},])|\
-        (?P<staveline>[\\|;](.*))|\
-        (?P<comment>//.*)|\
+        (?P<staveline>\\|([^;}\n]*))|\
+        (?P<comment>//[^\n]*)|\
         (?P<blank>\n\\s*\n)|\
-        (?P<whitespace>\\s+)|\
+        (?P<whitespace>(\\s+|;))|\
         (?P<error>.)\
         ").unwrap();
 }
@@ -205,9 +223,9 @@ lazy_static!
         (?P<part>\\*[a-zA-Z_][a-zA-Z0-9_]*)|\
         (?P<symbol>[\\-x\"%])|\
         (?P<length>\\.(\\d+|\\.*))|\
-        (?P<barline>[|;])|\
+        (?P<barline>\\|)|\
         (?P<comment>//.*)|\
-        (?P<whitespace>\\s+)|\
+        (?P<whitespace>(\\s|;)+)|\
         (?P<error>.)\
         ").unwrap();
 }
@@ -464,6 +482,31 @@ mod tests
                 mt(Key(""), (0,1)),
                 mt(Barline, (1,2)),
                 mt(PlayPart("Theme"), (3,9)),
+        ]);
+    }
+
+    #[test]
+    fn semicolon_can_break_stave_within_one_line()
+    {
+        lextest("A:|x;B:|x;", vec![
+                mt(Key("A"), (0,2)),
+                mt(Barline, (2,3)),
+                mt(Hit, (3,4)),
+                mt(Key("B"), (5,7)),
+                mt(Barline, (7,8)),
+                mt(Hit, (8,9)),
+        ]);
+    }
+
+    #[test]
+    fn right_brace_can_break_stave_within_one_line()
+    {
+        lextest("{ A:|x }", vec![
+                mt(LeftBrace, (0,1)),
+                mt(Key("A"), (2,4)),
+                mt(Barline, (4,5)),
+                mt(Hit, (5,6)),
+                mt(RightBrace, (7,8)),
         ]);
     }
 }
