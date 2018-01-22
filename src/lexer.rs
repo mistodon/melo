@@ -34,7 +34,7 @@ pub enum Token<'a>
     Hit,
     Ditto,
     Repeat,
-    Length(usize),
+    Length(u64),
     Note(&'a str),
     PlayPart(&'a str),
 }
@@ -141,7 +141,7 @@ pub fn lex<'a>(source: &'a str) -> Vec<MetaToken<'a>>
                         s if s.as_bytes()[1] == b'.' => s.len() + 1,
                         s => s[1..].parse().unwrap()
                     };
-                    tokens.push(MetaToken { token: Length(size), span: Span(start + m.start(), start + m.end()) });
+                    tokens.push(MetaToken { token: Length(size as u64), span: Span(start + m.start(), start + m.end()) });
                 }
 
                 else if capture.name("whitespace").is_some() || capture.name("comment").is_some()
@@ -227,11 +227,12 @@ mod tests
         assert_eq!(lex(source), result)
     }
 
+
     #[test]
     #[should_panic]
     fn invalid_tokens()
     {
-        lextest("@", vec![])
+        lex("@");
     }
 
     #[test]
