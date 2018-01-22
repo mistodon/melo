@@ -219,11 +219,8 @@ mod tests
     use super::*;
     use super::Token::*;
 
-    fn mt(token: Token, span: (usize, usize)) -> MetaToken
-    {
-        let span = Span(span.0, span.1);
-        MetaToken { token, span }
-    }
+    use test_helpers::mt;
+
 
     fn lextest(source: &str, result: Vec<MetaToken>)
     {

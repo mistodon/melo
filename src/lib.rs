@@ -7,8 +7,12 @@ extern crate lazy_static;
 
 extern crate regex;
 
-pub mod notes;
 pub mod lexer;
+pub mod parser;
+pub mod notes;
+
+#[cfg(test)]
+mod test_helpers;
 
 
 struct CompileDrumsOptions
