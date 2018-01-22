@@ -5,14 +5,14 @@ extern crate pretty_assertions;
 
 
 #[test]
-fn test_lexer()
+fn test_lexing()
 {
-    use midscript::lexer::{ self, Token };
-    use midscript::lexer::Token::*;
+    use midscript::lexing::{ self, Token };
+    use midscript::lexing::Token::*;
 
-    let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/test_files/lexer_test.midscript"));
+    let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/test_files/lexing_test.midscript"));
 
-    let result = lexer::lex(source);
+    let result = lexing::lex(source);
 
     let token_types = result.iter().map(|meta_token| meta_token.token).collect::<Vec<Token>>();
 

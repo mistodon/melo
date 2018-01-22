@@ -44,7 +44,7 @@ fn main()
         content
     };
 
-    let processed = midscript::compile_to_abc(&input_text);
+    let processed = midscript::compile_to_abc_new(&input_text).unwrap();
 
     {
         use std::io::Write;

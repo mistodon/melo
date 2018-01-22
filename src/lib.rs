@@ -7,9 +7,10 @@ extern crate lazy_static;
 
 extern crate regex;
 
-pub mod lexer;
-pub mod parser;
-pub mod validator;
+pub mod abc_generation;
+pub mod lexing;
+pub mod parsing;
+pub mod validation;
 pub mod notes;
 
 #[cfg(test)]
@@ -38,6 +39,23 @@ impl Default for CompileDrumsOptions
     }
 }
 
+
+pub fn compile_to_abc_new(input: &str) -> Option<String>
+{
+    let tokens = lexing::lex(input);
+    let mut parse_tree = parsing::parse(&tokens);
+    let valid = validation::adjust_and_validate(&mut parse_tree);
+
+    if !valid
+    {
+        eprintln!("Validation failed!");
+        None
+    }
+    else
+    {
+        abc_generation::generate_abc(&parse_tree)
+    }
+}
 
 pub fn compile_to_abc(input: &str) -> String
 {
@@ -212,13 +230,13 @@ fn compile_midscript_to_abc(voice_name: &str, input: &str, options: &CompileDrum
 
             let stave: &mut Stave = stave_map.entry(stave_prefix).or_insert_with(Stave::default);
 
-            fn parse_bars<F>(stave_bars: &str, parser: F) -> Vec<Bar<Note>>
+            fn parse_bars<F>(stave_bars: &str, parsing: F) -> Vec<Bar<Note>>
             where
                 F: Fn(&str) -> Bar<Note>
             {
                 stave_bars.split([';', '|'].as_ref())
                     .filter(|bar| !bar.trim().is_empty())
-                    .map(parser)
+                    .map(parsing)
                     .collect()
             }
 

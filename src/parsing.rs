@@ -2,8 +2,8 @@ use std::borrow::Cow;
 use std::iter::Peekable;
 use std::slice::Iter;
 
-use lexer::{ Token, MetaToken };
-use lexer::Token::*;
+use lexing::{ Token, MetaToken };
+use lexing::Token::*;
 use notes;
 
 
@@ -57,7 +57,7 @@ pub struct BarNode
     pub notes: Vec<NoteNode>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum NoteNode
 {
     Rest,
@@ -363,7 +363,8 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> PlayNode<'a>
 mod tests
 {
     use super::*;
-    use lexer::Span;
+    use lexing::Span;
+    use test_helpers::stave;
 
 
     fn parsetest(tokens: Vec<Token>, expected: PieceNode)
@@ -390,14 +391,6 @@ mod tests
         assert_eq!(result.pieces, expected);
     }
 
-    fn stave(prefix: &str, notes: Vec<Vec<NoteNode>>) -> StaveNode
-    {
-        StaveNode
-        {
-            prefix: Cow::Borrowed(prefix),
-            bars: notes.into_iter().map(|bar| BarNode { notes: bar }).collect()
-        }
-    }
 
     #[test]
     fn parse_empty_file()
