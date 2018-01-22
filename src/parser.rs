@@ -130,12 +130,13 @@ fn parse_piece_from_body<'a>(stream: &mut TokenStream<'a>) -> PieceNode<'a>
 
     loop
     {
-        match stream.peek()
+        match stream.peek().map(|meta| meta.token)
         {
-            Some(&&MetaToken { token: RightBrace, .. }) => break,
+            Some(BlankLine) => expect_token(stream, BlankLine),
+            Some(RightBrace) => break,
             None => break,
-            Some(&&MetaToken { token: Voice, ..}) => piece_node.voices.push(parse_voice(stream)),
-            Some(&&MetaToken { token: Play, ..}) => piece_node.plays.push(parse_play(stream)),
+            Some(Voice) => piece_node.voices.push(parse_voice(stream)),
+            Some(Play) => piece_node.plays.push(parse_play(stream)),
             _ => {
                 let attribute_key = parse_attribute_key(stream);
                 match attribute_key
