@@ -395,7 +395,7 @@ const ABC_NOTES: [&str; 128] = [
 pub fn note_to_midi(note: &str) -> Option<i8>
 {
     let mut chars = note.chars();
-    let mut midi = match chars.next().unwrap_or_default()
+    let mut midi: i64 = match chars.next().unwrap_or_default()
     {
         'A' => 57,
         'B' => 59,
@@ -437,7 +437,7 @@ pub fn note_to_midi(note: &str) -> Option<i8>
         }
     }
 
-    if midi >= 0 { Some(midi) } else { None }
+    if midi >= 0 && midi < 128{ Some(midi as i8) } else { None }
 }
 
 pub fn note_to_abc(note: &str) -> Option<&'static str>

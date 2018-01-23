@@ -46,7 +46,7 @@ impl Default for CompileDrumsOptions
 pub fn compile_to_abc_new(input: &str) -> Result<String, Error>
 {
     let tokens = lexing::lex(input)?;
-    let mut parse_tree = parsing::parse(&tokens);
+    let mut parse_tree = parsing::parse(&tokens)?;
     let valid = validation::adjust_and_validate(&mut parse_tree);
 
     if !valid
@@ -56,7 +56,7 @@ pub fn compile_to_abc_new(input: &str) -> Result<String, Error>
     }
     else
     {
-        Ok(abc_generation::generate_abc(&parse_tree).unwrap())
+        Ok(abc_generation::generate_abc(&parse_tree).expect("We aren't handling generation errors yet!"))
     }
 }
 

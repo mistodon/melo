@@ -44,7 +44,14 @@ fn main()
         content
     };
 
-    let processed = midscript::compile_to_abc_new(&input_text).unwrap();
+    let processed = match midscript::compile_to_abc_new(&input_text)
+    {
+        Err(err) => {
+            eprintln!("Compilation failed:\nerror: {}", err);
+            std::process::exit(1)
+        },
+        Ok(p) => p
+    };
 
     {
         use std::io::Write;
