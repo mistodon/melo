@@ -1,0 +1,42 @@
+Percussion notes
+===
+
+Note that if you're using the `drums` attribute, the notes
+are dropped two octaves by default. This means you can use
+"F^" for a closed hi-hat instead of "F^,,".
+
+B,,  :  Acoustic Bass Drum          B    :  Ride Cymbal 2
+C,,  :  Bass Drum 1                 C    :  Hi Bongo
+C^,, :  Side Stick                  C^   :  Low Bongo
+D,,  :  Acoustic Snare              D    :  Mute Hi Conga
+D^,, :  Hand Clap                   D^   :  Open Hi Conga
+E,,  :  Electric Snare              E    :  Low Conga
+F,,  :  Low Floor Tom               F    :  High Timbale
+F^,, :  Closed Hi Hat               F^   :  Low Timbale
+G,,  :  High Floor Tom              G    :  High Agogo
+G^,, :  Pedal Hi-Hat                G^   :  Low Agogo
+A,   :  Low Tom                     a    :  Cabasa
+A^,  :  Open Hi-Hat                 a^   :  Maracas
+B,   :  Low-Mid Tom                 b    :  Short Whistle
+C,   :  Hi Mid Tom                  c    :  Long Whistle
+C^,  :  Crash Cymbal 1              c^   :  Short Guiro
+D,   :  High Tom                    d    :  Long Guiro
+D^,  :  Ride Cymbal 1               d^   :  Claves
+E,   :  Chinese Cymbal              e    :  Hi Wood Block
+F,   :  Ride Bell                   f    :  Low Wood Block
+F^,  :  Tambourine                  f^   :  Mute Cuica
+G,   :  Splash Cymbal               g    :  Open Cuica
+G^,  :  Cowbell                     g^   :  Mute Triangle
+A    :  Crash Cymbal 2              a'   :  Open Triangle
+A^   :  Vibraslap
+
+
+Melodic notes
+===
+
+The highest possible note is: g''''
+The lowest possible note is: C,,,,,
+
+Bear in mind that if a voice has an octave offset, the
+range of values you can use will change.
+
