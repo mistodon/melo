@@ -1,9 +1,8 @@
 #[cfg(test)]
-#[macro_use]
-extern crate pretty_assertions;
+#[macro_use] extern crate pretty_assertions;
 
-#[macro_use]
-extern crate lazy_static;
+#[macro_use] extern crate failure;
+#[macro_use] extern crate lazy_static;
 
 extern crate regex;
 
@@ -12,9 +11,13 @@ pub mod lexing;
 pub mod parsing;
 pub mod validation;
 pub mod notes;
+pub mod trust;
 
 #[cfg(test)]
 mod test_helpers;
+
+
+use failure::Error;
 
 
 struct CompileDrumsOptions
@@ -40,20 +43,20 @@ impl Default for CompileDrumsOptions
 }
 
 
-pub fn compile_to_abc_new(input: &str) -> Option<String>
+pub fn compile_to_abc_new(input: &str) -> Result<String, Error>
 {
-    let tokens = lexing::lex(input);
+    let tokens = lexing::lex(input)?;
     let mut parse_tree = parsing::parse(&tokens);
     let valid = validation::adjust_and_validate(&mut parse_tree);
 
     if !valid
     {
         eprintln!("Validation failed!");
-        None
+        panic!("Validation failed and not correctly handling errors yet!")
     }
     else
     {
-        abc_generation::generate_abc(&parse_tree)
+        Ok(abc_generation::generate_abc(&parse_tree).unwrap())
     }
 }
 

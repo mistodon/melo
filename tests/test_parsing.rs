@@ -12,7 +12,7 @@ fn test_parsing()
 
     let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/test_files/parsing_test.midscript"));
 
-    let tokens = lexing::lex(source);
+    let tokens = lexing::lex(source).unwrap();
     let result = parsing::parse(&tokens);
 
     let piece = &result.pieces[0];

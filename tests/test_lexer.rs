@@ -12,7 +12,7 @@ fn test_lexing()
 
     let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/test_files/lexing_test.midscript"));
 
-    let result = lexing::lex(source);
+    let result = lexing::lex(source).unwrap();
 
     let token_types = result.iter().map(|meta_token| meta_token.token).collect::<Vec<Token>>();
 
