@@ -135,9 +135,11 @@ pub fn parse<'a>(tokens: &'a [MetaToken<'a>]) -> Result<ParseTree<'a>, ParsingEr
         }
     }
 
-    assert!(stream.next().is_none());
-
-    Ok(ParseTree { pieces })
+    match stream.next().map(|meta| meta.token)
+    {
+        Some(token) => Err(ParsingError::unexpected(format!("{}", token), "after `piece`", "end of file".to_owned())),
+        None => Ok(ParseTree { pieces })
+    }
 }
 
 
