@@ -1,10 +1,9 @@
-use parsing::{ StaveNode, NoteNode };
+use parsing::data::*;
 
 
 pub fn stave(prefix: &str, notes: Vec<Vec<NoteNode>>) -> StaveNode
 {
     use std::borrow::Cow;
-    use parsing::{ BarNode };
 
     StaveNode
     {
