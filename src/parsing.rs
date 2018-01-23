@@ -79,11 +79,13 @@ pub enum ParsingError
         col: usize,
     },
 
-    #[fail(display = "error: Unexpected end of input {}. Expected {}.", context, expected)]
+    #[fail(display = "error:{}:{}: Unexpected end of input {}. Expected {}.", line, col, context, expected)]
     UnexpectedEOF
     {
         context: &'static str,
         expected: String,
+        line: usize,
+        col: usize,
     },
 
     #[fail(display = "error:{}:{}: Invalid note \"{}\" is out of range.", line, col, note)]
@@ -122,9 +124,10 @@ pub enum ParsingError
 
 impl ParsingError
 {
-    pub fn eof(context: &'static str, expected: String) -> ParsingError
+    pub fn eof(eof_token: &MetaToken, context: &'static str, expected: String) -> ParsingError
     {
-        ParsingError::UnexpectedEOF { context, expected }
+        let (line, col) = eof_token.line_col;
+        ParsingError::UnexpectedEOF { context, expected, line, col }
     }
 
     pub fn unexpected(token: &MetaToken, context: &'static str, expected: String) -> ParsingError
@@ -201,7 +204,7 @@ fn expect_token(
 
     let result = match meta.token
     {
-        EOF => return Err(ParsingError::eof(context, token.readable_type().to_owned())),
+        EOF => return Err(ParsingError::eof(meta, context, token.readable_type().to_owned())),
         found if found == token => Ok(()),
         _ => Err(ParsingError::unexpected(meta, context, token.readable_type().to_owned()))
     };
@@ -330,7 +333,7 @@ fn parse_attribute_key<'a>(
     let meta = stream.next().trust();
     match meta.token
     {
-        EOF => Err(ParsingError::eof(context, format!("{}", "an attribute key".to_owned()))),
+        EOF => Err(ParsingError::eof(meta, context, format!("{}", "an attribute key".to_owned()))),
         Key(_) | Ident(_) => Ok(meta.token),
         _ => Err(ParsingError::unexpected( meta, context, "an attribute key".to_owned()))
     }
@@ -344,7 +347,7 @@ fn try_parse_name<'a>(
 
     match meta.token
     {
-        EOF => Err(ParsingError::eof(context, "a name".to_owned())),
+        EOF => Err(ParsingError::eof(meta, context, "a name".to_owned())),
         Ident(s) => {
             stream.next();
             Ok(s)
@@ -365,7 +368,7 @@ fn try_parse_num<'a>(
 
     match meta.token
     {
-        EOF => Err(ParsingError::eof(context, "a number".to_owned())),
+        EOF => Err(ParsingError::eof(meta, context, "a number".to_owned())),
         Num(n) => {
             stream.next();
             Ok(n)
@@ -440,7 +443,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
 
         match meta.token
         {
-            EOF => return Err(ParsingError::eof("in `play`", "a stave prefix".to_owned())),
+            EOF => return Err(ParsingError::eof(meta, "in `play`", "a stave prefix".to_owned())),
             BlankLine => {
                 let already_have_some_staves = !play_node.staves.is_empty();
                 if already_have_some_staves
@@ -506,7 +509,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
 
                     match meta.token
                     {
-                        EOF => return Err(ParsingError::eof("in stave", "stave contents".to_owned())),
+                        EOF => return Err(ParsingError::eof(meta, "in stave", "stave contents".to_owned())),
                         Rest => bar.notes.push(NoteNode::Rest),
                         Hit => {
                             let midi = stave_note.expect("error: Hit (`x`) notes are only valid on staves with a note prefix");
