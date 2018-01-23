@@ -108,6 +108,7 @@ fn test_lexing()
 
         RightBrace,
         BlankLine,
+        EOF
     ];
 
     assert_eq!(token_types, expected);

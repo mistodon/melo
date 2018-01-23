@@ -117,7 +117,7 @@ pub enum ParsingError
         errors: Vec<ParsingError>,
         error_text: String,
         error_count: usize,
-    }
+    },
 }
 
 impl ParsingError
@@ -165,14 +165,16 @@ where
 
 pub fn parse<'a>(tokens: &'a [MetaToken<'a>]) -> Result<ParseTree<'a>, ParsingError>
 {
+    assert_eq!(tokens.last().map(|meta| meta.token), Some(EOF), "Missing EOF from token stream.");
+
     let mut stream = tokens.iter().peekable();
 
-    let pieces = match stream.peek().map(|meta| meta.token)
+    let pieces = match stream.peek().trust().token
     {
-        Some(Piece) => {
+        Piece => {
             let mut piece_results = Vec::new();
 
-            while stream.peek().is_some()
+            while stream.peek().trust().token != EOF
             {
                 piece_results.push(parse_piece(&mut stream));
             }
@@ -182,10 +184,10 @@ pub fn parse<'a>(tokens: &'a [MetaToken<'a>]) -> Result<ParseTree<'a>, ParsingEr
         _ => vec![parse_piece_from_body(&mut stream)?]
     };
 
-    match stream.next()
+    match stream.next().trust()
     {
-        Some(meta) => Err(ParsingError::unexpected(meta, "after `piece`", "end of file".to_owned())),
-        None => Ok(ParseTree { pieces })
+        meta if meta.token == EOF => Ok(ParseTree { pieces }),
+        meta => Err(ParsingError::unexpected(meta, "after `piece`", "end of file".to_owned())),
     }
 }
 
@@ -195,23 +197,23 @@ fn expect_token(
     token: Token,
     context: &'static str)-> Result<(), ParsingError>
 {
-    let found = stream.next();
+    let meta = *stream.peek().trust();
 
-    match found
+    let result = match meta.token
     {
-        Some(meta) => match meta.token
-        {
-            found if found == token => Ok(()),
-            _ =>
-                Err(ParsingError::unexpected(meta, context, format!("{}", "<please fix token display!>")))
-        }
-        None => Err(ParsingError::eof(context, format!("'{}'", "<please fix token display!>")))
-    }
+        EOF => return Err(ParsingError::eof(context, token.readable_type().to_owned())),
+        found if found == token => Ok(()),
+        _ => Err(ParsingError::unexpected(meta, context, token.readable_type().to_owned()))
+    };
+
+    stream.next();
+
+    result
 }
 
 fn skip_token(stream: &mut TokenStream, token: Token) -> bool
 {
-    if stream.peek().map(|meta| meta.token) == Some(token)
+    if stream.peek().trust().token == token
     {
         stream.next();
         true
@@ -228,13 +230,15 @@ fn poison_scope(stream: &mut TokenStream, open_delim: Token, close_delim: Token)
 
     while nest > 0
     {
-        match stream.next().map(|meta| meta.token)
+        match stream.peek().trust().token
         {
-            Some(t) if t == open_delim => nest += 1,
-            Some(t) if t == close_delim => nest -= 1,
-            Some(_) => (),
-            None => break
+            EOF => break,
+            t if t == open_delim => nest += 1,
+            t if t == close_delim => nest -= 1,
+            _ => (),
         }
+
+        stream.next();
     }
 }
 
@@ -265,44 +269,48 @@ fn parse_piece_from_body<'a>(stream: &mut TokenStream<'a>) -> Result<PieceNode<'
 
     loop
     {
-        match stream.peek().cloned()
+        let meta = *stream.peek().trust();
+        match meta.token
         {
-            Some(meta) => match meta.token
-            {
-                BlankLine => { stream.next(); () },
-                RightBrace => break,
-                Voice => {
-                    let voice = parse_voice(stream);
-                    if voice.is_err() { poison_scope(stream, LeftBrace, RightBrace); }
-                    voice_results.push(voice);
+            EOF => break,
+            BlankLine => { stream.next(); () },
+            RightBrace => break,
+            Voice => {
+                let voice = parse_voice(stream);
+                if voice.is_err()
+                {
+                    poison_scope(stream, LeftBrace, RightBrace);
                 }
-                Play => {
-                    let play = parse_play(stream);
-                    if play.is_err() { poison_scope(stream, LeftBrace, RightBrace); }
-                    play_results.push(play);
+                voice_results.push(voice);
+            }
+            Play => {
+                let play = parse_play(stream);
+                if play.is_err()
+                {
+                    poison_scope(stream, LeftBrace, RightBrace);
                 }
-                _ => {
-                    let attribute_key = parse_attribute_key(stream, "in `piece`")?;
-                    let (line, col) = meta.line_col;
-                    match attribute_key
-                    {
-                        Key("title") => piece_node.title = Some(try_parse_name(stream, "after `title:`")?),
-                        Key("composer") => piece_node.composer = Some(try_parse_name(stream, "after `composer:`")?),
-                        Key("tempo") => piece_node.tempo = Some(try_parse_num(stream, "after `tempo:`")? as u64),
-                        Key("beats") => piece_node.beats = Some(try_parse_num(stream, "after `beats:`")? as u64),
-                        Key(key) => return Err(ParsingError::InvalidAttribute { attribute: key.to_owned(), structure: "piece", line, col }),
-                        Ident(key) => return Err(ParsingError::InvalidAttribute { attribute: key.to_owned(), structure: "piece", line, col }),
-                        _ => unreachable!()
-                    }
+                play_results.push(play);
+            }
+            _ => {
+                let attribute_key = parse_attribute_key(stream, "in `piece`")?;
+                let (line, col) = meta.line_col;
+                match attribute_key
+                {
+                    Key("title") => piece_node.title = Some(try_parse_name(stream, "after `title:`")?),
+                    Key("composer") => piece_node.composer = Some(try_parse_name(stream, "after `composer:`")?),
+                    Key("tempo") => piece_node.tempo = Some(try_parse_num(stream, "after `tempo:`")? as u64),
+                    Key("beats") => piece_node.beats = Some(try_parse_num(stream, "after `beats:`")? as u64),
+                    Key(key) => return Err(ParsingError::InvalidAttribute { attribute: key.to_owned(), structure: "piece", line, col }),
+                    Ident(key) => return Err(ParsingError::InvalidAttribute { attribute: key.to_owned(), structure: "piece", line, col }),
+                    _ => unreachable!()
+                }
 
-                    let keep_finding_attributes = skip_token(stream, Comma);
-                    if !keep_finding_attributes
-                    {
-                        break
-                    }
+                let keep_finding_attributes = skip_token(stream, Comma);
+                if !keep_finding_attributes
+                {
+                    break
                 }
             }
-            None => break,
         }
     }
 
@@ -319,16 +327,12 @@ fn parse_attribute_key<'a>(
     stream: &mut TokenStream<'a>,
     context: &'static str) -> Result<Token<'a>, ParsingError>
 {
-    match stream.next()
+    let meta = stream.next().trust();
+    match meta.token
     {
-        Some(meta) => match meta.token
-        {
-            Key(_) | Ident(_) => Ok(meta.token),
-            _ =>
-                Err(ParsingError::unexpected(
-                        meta, context, "an attribute key".to_owned()))
-        }
-        None => Err(ParsingError::eof(context, format!("{}", "an attribute key".to_owned())))
+        EOF => Err(ParsingError::eof(context, format!("{}", "an attribute key".to_owned()))),
+        Key(_) | Ident(_) => Ok(meta.token),
+        _ => Err(ParsingError::unexpected( meta, context, "an attribute key".to_owned()))
     }
 }
 
@@ -336,22 +340,20 @@ fn try_parse_name<'a>(
     stream: &mut TokenStream<'a>,
     context: &'static str) -> Result<&'a str, ParsingError>
 {
-    match stream.peek().cloned()
+    let meta = *stream.peek().trust();
+
+    match meta.token
     {
-        Some(meta) => match meta.token
-        {
-            Ident(s) => {
-                stream.next();
-                Ok(s)
-            }
-            Str(s) => {
-                stream.next();
-                Ok(s)
-            }
-            _ =>
-                Err(ParsingError::unexpected(meta, context, "a name".to_owned())),
+        EOF => Err(ParsingError::eof(context, "a name".to_owned())),
+        Ident(s) => {
+            stream.next();
+            Ok(s)
         }
-        None => Err(ParsingError::eof(context, "a name".to_owned()))
+        Str(s) => {
+            stream.next();
+            Ok(s)
+        }
+        _ => Err(ParsingError::unexpected(meta, context, "a name".to_owned())),
     }
 }
 
@@ -359,18 +361,16 @@ fn try_parse_num<'a>(
     stream: &mut TokenStream,
     context: &'static str) -> Result<i64, ParsingError>
 {
-    match stream.peek().cloned()
+    let meta = *stream.peek().trust();
+
+    match meta.token
     {
-        Some(meta) => match meta.token
-        {
-            Num(n) => {
-                stream.next();
-                Ok(n)
-            }
-            _ =>
-                Err(ParsingError::unexpected(meta, context, "a number".to_owned())),
+        EOF => Err(ParsingError::eof(context, "a number".to_owned())),
+        Num(n) => {
+            stream.next();
+            Ok(n)
         }
-        None => Err(ParsingError::eof(context, "a number".to_owned()))
+        _ => Err(ParsingError::unexpected(meta, context, "a number".to_owned())),
     }
 }
 
@@ -390,9 +390,8 @@ fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, Parsin
             break
         }
 
-        let line_col = stream.peek().map(|meta| meta.line_col);
         let attribute_key = parse_attribute_key(stream, "in `voice`")?;
-        let (line, col) = line_col.trust();
+        let (line, col) = stream.peek().trust().line_col;
 
         match attribute_key
         {
@@ -437,117 +436,115 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
             break
         }
 
-        match stream.next()
+        let meta = stream.next().trust();
+
+        match meta.token
         {
-            Some(meta) => match meta.token
-            {
-                BlankLine => {
-                    let already_have_some_staves = !play_node.staves.is_empty();
-                    if already_have_some_staves
-                    {
-                        allow_new_staves = false;
-                        anonymous_stave_count = 0;
-                    }
+            EOF => return Err(ParsingError::eof("in `play`", "a stave prefix".to_owned())),
+            BlankLine => {
+                let already_have_some_staves = !play_node.staves.is_empty();
+                if already_have_some_staves
+                {
+                    allow_new_staves = false;
+                    anonymous_stave_count = 0;
                 }
-                Key(raw_prefix) => {
-
-                    expect_token(stream, Barline, "after stave prefix")?;
-
-                    let prefix = match raw_prefix
-                    {
-                        "" => {
-                            let anonymous_prefix = format!("V{}", anonymous_stave_count);
-                            anonymous_stave_count += 1;
-                            Cow::Owned(anonymous_prefix)
-                        }
-                        prefix => Cow::Borrowed(prefix)
-                    };
-
-                    let stave = {
-                        let existing_stave = play_node.staves.iter()
-                            .enumerate()
-                            .find(|&(_, stave)| stave.prefix == prefix)
-                            .map(|(i, _)| i);
-
-                        let stave_index = existing_stave.unwrap_or(play_node.staves.len());
-
-                        if existing_stave.is_none()
-                        {
-                            if allow_new_staves
-                            {
-                                play_node.staves.push(StaveNode { prefix, ..  Default::default() });
-                            }
-                            else
-                            {
-                                let (line, col) = meta.line_col;
-                                return Err(
-                                    ParsingError::UndeclaredStave
-                                    {
-                                        stave_prefix: raw_prefix.to_owned(),
-                                        line,
-                                        col,
-                                    })
-                            }
-                        }
-
-                        &mut play_node.staves[stave_index]
-                    };
-
-
-                    let stave_note = notes::note_to_midi(&stave.prefix);
-                    let mut bar = BarNode::default();
-
-                    loop
-                    {
-                        let mut bar_full = false;
-                        let mut stave_full = false;
-
-                        match stream.peek()
-                        {
-                            Some(meta) => match meta.token
-                            {
-                                Rest => bar.notes.push(NoteNode::Rest),
-                                Hit => {
-                                    let midi = stave_note.expect("error: Hit (`x`) notes are only valid on staves with a note prefix");
-                                    bar.notes.push(NoteNode::Note(midi));
-                                }
-                                Note(note) => {
-                                    let (line, col) = meta.line_col;
-                                    let midi = notes::note_to_midi(note)
-                                        .ok_or_else(|| ParsingError::InvalidNote { note: note.to_owned(), line, col })?;
-                                    bar.notes.push(NoteNode::Note(midi));
-                                }
-                                Barline => bar_full = true,
-                                Key(_) | BlankLine | RightBrace => stave_full = true,
-                                _ => return Err(
-                                    ParsingError::unexpected(
-                                        meta, "in stave", "stave contents".to_owned())),
-                            }
-                            None => return Err(ParsingError::eof("in stave", "stave contents".to_owned()))
-                        }
-
-                        if bar_full || stave_full
-                        {
-                            if !bar.notes.is_empty()
-                            {
-                                let complete_bar = ::std::mem::replace(&mut bar, BarNode::default());
-                                stave.bars.push(complete_bar);
-                            }
-                        }
-
-                        if stave_full
-                        {
-                            break
-                        }
-
-                        stream.next();
-                    }
-                }
-                _ => return Err(
-                    ParsingError::unexpected(
-                        meta, "in `play`", "a stave prefix".to_owned())),
             }
-            None => return Err(ParsingError::eof("in `play`", "a stave prefix".to_owned()))
+            Key(raw_prefix) => {
+
+                expect_token(stream, Barline, "after stave prefix")?;
+
+                let prefix = match raw_prefix
+                {
+                    "" => {
+                        let anonymous_prefix = format!("V{}", anonymous_stave_count);
+                        anonymous_stave_count += 1;
+                        Cow::Owned(anonymous_prefix)
+                    }
+                    prefix => Cow::Borrowed(prefix)
+                };
+
+                let stave = {
+                    let existing_stave = play_node.staves.iter()
+                        .enumerate()
+                        .find(|&(_, stave)| stave.prefix == prefix)
+                        .map(|(i, _)| i);
+
+                    let stave_index = existing_stave.unwrap_or(play_node.staves.len());
+
+                    if existing_stave.is_none()
+                    {
+                        if allow_new_staves
+                        {
+                            play_node.staves.push(StaveNode { prefix, ..  Default::default() });
+                        }
+                        else
+                        {
+                            let (line, col) = meta.line_col;
+                            return Err(
+                                ParsingError::UndeclaredStave
+                                {
+                                    stave_prefix: raw_prefix.to_owned(),
+                                    line,
+                                    col,
+                                })
+                        }
+                    }
+
+                    &mut play_node.staves[stave_index]
+                };
+
+
+                let stave_note = notes::note_to_midi(&stave.prefix);
+                let mut bar = BarNode::default();
+
+                loop
+                {
+                    let mut bar_full = false;
+                    let mut stave_full = false;
+
+                    let meta = *stream.peek().trust();
+
+                    match meta.token
+                    {
+                        EOF => return Err(ParsingError::eof("in stave", "stave contents".to_owned())),
+                        Rest => bar.notes.push(NoteNode::Rest),
+                        Hit => {
+                            let midi = stave_note.expect("error: Hit (`x`) notes are only valid on staves with a note prefix");
+                            bar.notes.push(NoteNode::Note(midi));
+                        }
+                        Note(note) => {
+                            let (line, col) = meta.line_col;
+                            let midi = notes::note_to_midi(note)
+                                .ok_or_else(|| ParsingError::InvalidNote { note: note.to_owned(), line, col })?;
+                            bar.notes.push(NoteNode::Note(midi));
+                        }
+                        Barline => bar_full = true,
+                        Key(_) | BlankLine | RightBrace => stave_full = true,
+                        _ => return Err(
+                            ParsingError::unexpected(
+                                meta, "in stave", "stave contents".to_owned())),
+                    }
+
+                    if bar_full || stave_full
+                    {
+                        if !bar.notes.is_empty()
+                        {
+                            let complete_bar = ::std::mem::replace(&mut bar, BarNode::default());
+                            stave.bars.push(complete_bar);
+                        }
+                    }
+
+                    if stave_full
+                    {
+                        break
+                    }
+
+                    stream.next();
+                }
+            }
+            _ => return Err(
+                ParsingError::unexpected(
+                    meta, "in `play`", "a stave prefix".to_owned())),
         }
     }
 
@@ -563,8 +560,9 @@ mod tests
     use test_helpers::stave;
 
 
-    fn parsetest(tokens: Vec<Token>, expected: PieceNode)
+    fn parsetest(mut tokens: Vec<Token>, expected: PieceNode)
     {
+        tokens.push(EOF);
         let meta_tokens = tokens.into_iter().map(|token| MetaToken { token, span: Span(0, ""), line_col: (0, 0) })
             .collect::<Vec<MetaToken>>();
         let result = parse(&meta_tokens).unwrap();
@@ -572,15 +570,17 @@ mod tests
         assert_eq!(result.pieces[0], expected);
     }
 
-    fn parsefailtest(tokens: Vec<Token>)
+    fn parsefailtest(mut tokens: Vec<Token>)
     {
+        tokens.push(EOF);
         let meta_tokens = tokens.into_iter().map(|token| MetaToken { token, span: Span(0, ""), line_col: (0, 0) })
             .collect::<Vec<MetaToken>>();
         assert!(parse(&meta_tokens).is_err());
     }
 
-    fn multiparsetest(tokens: Vec<Token>, expected: Vec<PieceNode>)
+    fn multiparsetest(mut tokens: Vec<Token>, expected: Vec<PieceNode>)
     {
+        tokens.push(EOF);
         let meta_tokens = tokens.into_iter().map(|token| MetaToken { token, span: Span(0, ""), line_col: (0, 0) })
             .collect::<Vec<MetaToken>>();
         let result = parse(&meta_tokens).unwrap();

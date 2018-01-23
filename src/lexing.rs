@@ -39,6 +39,42 @@ pub enum Token<'a>
     Length(u64),
     Note(&'a str),
     PlayPart(&'a str),
+
+    EOF,
+}
+
+impl<'a> Token<'a>
+{
+    pub fn readable_type(&self) -> &'static str
+    {
+        use self::Token::*;
+
+        match *self
+        {
+            Piece => "'piece'",
+            Voice => "'voice'",
+            Section => "'section'",
+            Part => "'part'",
+            Play => "'play'",
+            LeftBrace => "'{'",
+            RightBrace => "'}'",
+            Comma => "','",
+            BlankLine => "<blank_line>",
+            Num(_) => "<number>",
+            Key(_) => "<key>:",
+            Ident(_) => "<identifier>",
+            Str(_) => "<string>",
+            Barline => "'|'",
+            Rest => "'-'",
+            Hit => "'x'",
+            Ditto => "'\"'",
+            Repeat => "'%'",
+            Length(_) => "<length_specifier>",
+            Note(_) => "<note>",
+            PlayPart(_) => "'*<part>'",
+            EOF => "<end_of_file>",
+        }
+    }
 }
 
 
@@ -212,6 +248,14 @@ pub fn lex<'a>(source: &'a str) -> Result<Vec<MetaToken<'a>>, LexingError>
         }
     }
 
+    tokens.push(
+        MetaToken
+        {
+            token: EOF,
+            span: Span(source.len(), ""),
+            line_col: line_col_at(source, source.len()),
+        });
+
     Ok(tokens)
 }
 
@@ -254,8 +298,9 @@ mod tests
     use super::Token::*;
 
 
-    fn lextest(source: &str, result: Vec<Token>)
+    fn lextest(source: &str, mut result: Vec<Token>)
     {
+        result.push(EOF);
         assert_eq!(
             lex(source).unwrap().into_iter().map(|meta| meta.token).collect::<Vec<_>>(),
             result
