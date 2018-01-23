@@ -1,4 +1,4 @@
-use parsing::{ ParseTree, NoteNode };
+use parsing::data::*;
 use notes;
 
 

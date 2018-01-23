@@ -2,67 +2,74 @@ use std::borrow::Cow;
 use std::iter::Peekable;
 use std::slice::Iter;
 
-use lexing::{ Token, MetaToken };
-use lexing::Token::*;
+use lexing::data::*;
+use lexing::data::Token::*;
 use trust::Trust;
 use notes;
+
+use self::data::*;
 
 
 type TokenStream<'a> = Peekable<Iter<'a, MetaToken<'a>>>;
 
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct ParseTree<'a>
+pub mod data
 {
-    pub pieces: Vec<PieceNode<'a>>,
-}
+    use std::borrow::Cow;
 
-#[derive(Debug, Default, PartialEq, Eq)]
-pub struct PieceNode<'a>
-{
-    pub title: Option<&'a str>,
-    pub composer: Option<&'a str>,
-    pub tempo: Option<u64>,
-    pub beats: Option<u64>,
+    #[derive(Debug, PartialEq, Eq)]
+    pub struct ParseTree<'a>
+    {
+        pub pieces: Vec<PieceNode<'a>>,
+    }
 
-    pub voices: Vec<VoiceNode<'a>>,
-    pub plays: Vec<PlayNode<'a>>,
-}
+    #[derive(Debug, Default, PartialEq, Eq)]
+    pub struct PieceNode<'a>
+    {
+        pub title: Option<&'a str>,
+        pub composer: Option<&'a str>,
+        pub tempo: Option<u64>,
+        pub beats: Option<u64>,
 
-#[derive(Debug, Default, PartialEq, Eq)]
-pub struct VoiceNode<'a>
-{
-    pub name: &'a str,
-    pub program: Option<u8>,
-    pub channel: Option<u8>,
-    pub octave: Option<i8>,
-}
+        pub voices: Vec<VoiceNode<'a>>,
+        pub plays: Vec<PlayNode<'a>>,
+    }
 
-#[derive(Debug, Default, PartialEq, Eq)]
-pub struct PlayNode<'a>
-{
-    pub voice: Option<&'a str>,
-    pub staves: Vec<StaveNode<'a>>,
-}
+    #[derive(Debug, Default, PartialEq, Eq)]
+    pub struct VoiceNode<'a>
+    {
+        pub name: &'a str,
+        pub program: Option<u8>,
+        pub channel: Option<u8>,
+        pub octave: Option<i8>,
+    }
 
-#[derive(Debug, Default, PartialEq, Eq)]
-pub struct StaveNode<'a>
-{
-    pub prefix: Cow<'a, str>,
-    pub bars: Vec<BarNode>,
-}
+    #[derive(Debug, Default, PartialEq, Eq)]
+    pub struct PlayNode<'a>
+    {
+        pub voice: Option<&'a str>,
+        pub staves: Vec<StaveNode<'a>>,
+    }
 
-#[derive(Debug, Default, PartialEq, Eq)]
-pub struct BarNode
-{
-    pub notes: Vec<NoteNode>,
-}
+    #[derive(Debug, Default, PartialEq, Eq)]
+    pub struct StaveNode<'a>
+    {
+        pub prefix: Cow<'a, str>,
+        pub bars: Vec<BarNode>,
+    }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum NoteNode
-{
-    Rest,
-    Note(i8),
+    #[derive(Debug, Default, PartialEq, Eq)]
+    pub struct BarNode
+    {
+        pub notes: Vec<NoteNode>,
+    }
+
+    #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+    pub enum NoteNode
+    {
+        Rest,
+        Note(i8),
+    }
 }
 
 
@@ -559,7 +566,6 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
 mod tests
 {
     use super::*;
-    use lexing::Span;
     use test_helpers::stave;
 
 

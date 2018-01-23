@@ -1,4 +1,4 @@
-use parsing::{ ParseTree, BarNode, NoteNode };
+use parsing::data::*;
 
 
 pub fn adjust_and_validate(parse_tree: &mut ParseTree) -> bool
@@ -55,8 +55,6 @@ fn staves_all_same_length(parse_tree: &ParseTree) -> bool
 
 fn apply_octave_offsets(parse_tree: &mut ParseTree)
 {
-    use parsing::NoteNode;
-
     for piece in &mut parse_tree.pieces
     {
         for play in &mut piece.plays
@@ -169,7 +167,6 @@ fn normalize_bar_lengths(parse_tree: &mut ParseTree) -> bool
 mod tests
 {
     use super::*;
-    use parsing::*;
     use test_helpers::stave;
 
 

@@ -10,6 +10,7 @@ pub mod notes;
 mod abc_generation;
 pub mod lexing;     // TODO(***realname***): These should be private
 pub mod parsing;    // TODO(***realname***): These should be private
+mod sequencing;
 mod validation;
 mod trust;
 

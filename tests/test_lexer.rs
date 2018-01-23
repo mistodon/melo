@@ -7,8 +7,9 @@ extern crate pretty_assertions;
 #[test]
 fn test_lexing()
 {
-    use midscript::lexing::{ self, Token };
-    use midscript::lexing::Token::*;
+    use midscript::lexing;
+    use midscript::lexing::data::*;
+    use midscript::lexing::data::Token::*;
 
     let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/test_files/lexing_test.midscript"));
 
