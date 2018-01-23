@@ -1,5 +1,7 @@
 use regex::{ Regex };
 
+use trust::Trust;
+
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MetaToken<'a>
@@ -40,6 +42,20 @@ pub enum Token<'a>
 }
 
 
+#[derive(Debug, Fail, PartialEq, Eq)]
+pub enum LexingError
+{
+    #[fail(display = "Unexpected character '{}' in {} at {}:{}", text, context, line, col)]
+    UnexpectedCharacter
+    {
+        text: String,
+        context: &'static str,
+        line: usize,
+        col: usize,
+    }
+}
+
+
 fn line_col_at(source: &str, position: usize) -> (usize, usize)
 {
     let mut bytes = 0;
@@ -56,147 +72,147 @@ fn line_col_at(source: &str, position: usize) -> (usize, usize)
 }
 
 
-pub fn lex<'a>(source: &'a str) -> Vec<MetaToken<'a>>
+pub fn lex<'a>(source: &'a str) -> Result<Vec<MetaToken<'a>>, LexingError>
 {
     use self::Token::*;
 
     let mut tokens = Vec::new();
 
+    const CAPTURE_PRIORITIES: &[&str] = &[
+        "key", "ident", "string", "number", "delim", "staveline",
+        "blank", "whitespace", "comment", "error"
+    ];
+
+    const STAVE_CAPTURE_PRIORITIES: &[&str] = &[
+        "note", "part", "barline", "symbol", "length", "whitespace", "comment", "error"
+    ];
+
     for capture in STRUCTURE_REGEX.captures_iter(source)
     {
-        if let Some(m) = capture.name("key")
-        {
-            let text = m.as_str();
-            let len = text.len();
-            let text = text[..(len-1)].trim();
-            tokens.push(MetaToken { token: Key(text), span: Span(m.start(), m.end()) });
-        }
+        let mut group = None;
 
-        else if let Some(m) = capture.name("ident")
+        for group_name in CAPTURE_PRIORITIES
         {
-            let token = match m.as_str()
+            if let Some(m) = capture.name(group_name)
             {
-                "piece" => Piece,
-                "voice" => Voice,
-                "part" => Part,
-                "section" => Section,
-                "play" => Play,
-                s => Ident(s),
-            };
-            tokens.push(MetaToken { token, span: Span(m.start(), m.end()) });
-        }
-
-        else if let Some(m) = capture.name("string")
-        {
-            let text = m.as_str();
-            let len = text.len();
-            let text = &text[1..(len-1)];
-            tokens.push(MetaToken { token: Str(text), span: Span(m.start(), m.end()) });
-        }
-
-        else if let Some(m) = capture.name("number")
-        {
-            let number = m.as_str().parse().unwrap();
-            tokens.push(MetaToken { token: Num(number), span: Span(m.start(), m.end()) });
-        }
-
-        else if let Some(m) = capture.name("delim")
-        {
-            let token = match m.as_str()
-            {
-                "{" => LeftBrace,
-                "}" => RightBrace,
-                ":" => Colon,
-                "," => Comma,
-                _ => unreachable!()
-            };
-            tokens.push(MetaToken { token, span: Span(m.start(), m.end()) });
-        }
-
-        else if let Some(m) = capture.name("staveline")
-        {
-            let start = m.start();
-            let text = m.as_str();
-
-            for capture in MUSIC_REGEX.captures_iter(text)
-            {
-                if let Some(m) = capture.name("note")
-                {
-                    tokens.push(MetaToken { token: Note(m.as_str()), span: Span(start + m.start(), start + m.end()) });
-                }
-
-                else if let Some(m) = capture.name("part")
-                {
-                    let text = &m.as_str()[1..];
-                    tokens.push(MetaToken { token: PlayPart(text), span: Span(start + m.start(), start + m.end()) });
-                }
-
-                else if let Some(m) = capture.name("barline")
-                {
-                    tokens.push(MetaToken { token: Barline, span: Span(start + m.start(), start + m.end()) });
-                }
-
-                else if let Some(m) = capture.name("symbol")
-                {
-                    let token = match m.as_str()
-                    {
-                        "-" => Rest,
-                        "x" => Hit,
-                        "\"" => Ditto,
-                        "%" => Repeat,
-                        _ => unreachable!()
-                    };
-                    tokens.push(MetaToken { token, span: Span(start + m.start(), start + m.end()) });
-                }
-
-                else if let Some(m) = capture.name("length")
-                {
-                    let size = match m.as_str()
-                    {
-                        "." => 2,
-                        s if s.as_bytes()[1] == b'.' => s.len() + 1,
-                        s => s[1..].parse().unwrap()
-                    };
-                    tokens.push(MetaToken { token: Length(size as u64), span: Span(start + m.start(), start + m.end()) });
-                }
-
-                else if capture.name("whitespace").is_some() || capture.name("comment").is_some()
-                {
-                    continue
-                }
-
-                else if let Some(m) = capture.name("error")
-                {
-                    let (line, col) = line_col_at(source, start + m.start());
-                    println!("{} in {}", start, text);
-                    panic!("error: Invalid character in stave: '{}' at {}:{}", m.as_str(), line, col)
-                }
+                group = group.or(Some((group_name, m)));
             }
         }
 
-        else if let Some(m) = capture.name("blank")
-        {
-            tokens.push(MetaToken { token: BlankLine, span: Span(m.start() + 1, m.end()) });
-        }
+        let (&group_name, m) = group.trust();
+        let text = m.as_str();
+        let text_len = text.len();
+        let span = Span(m.start(), m.end());
 
-        else if capture.name("whitespace").is_some() || capture.name("comment").is_some()
+        match group_name
         {
-            continue
-        }
+            "key" => tokens.push(MetaToken { token: Key(text[..(text_len-1)].trim()), span }),
+            "ident" => {
+                let token = match text
+                {
+                    "piece" => Piece,
+                    "voice" => Voice,
+                    "part" => Part,
+                    "section" => Section,
+                    "play" => Play,
+                    s => Ident(s),
+                };
+                tokens.push(MetaToken { token, span });
+            }
+            "string" => tokens.push(MetaToken { token: Str(&text[1..(text_len-1)]), span }),
+            "number" => {
+                let number = text.parse().trust();
+                tokens.push(MetaToken { token: Num(number), span });
+            }
+            "delim" => {
+                let token = match text
+                {
+                    "{" => LeftBrace,
+                    "}" => RightBrace,
+                    ":" => Colon,
+                    "," => Comma,
+                    _ => unreachable!()
+                };
+                tokens.push(MetaToken { token, span });
+            }
+            "staveline" => {
+                let start = span.0;
 
-        else if let Some(m) = capture.name("error")
-        {
-            let (line, col) = line_col_at(source, m.start());
-            panic!("error: Invalid character: '{}' at {}:{}", m.as_str(), line, col)
-        }
+                for capture in MUSIC_REGEX.captures_iter(text)
+                {
+                    let mut group = None;
 
-        else
-        {
-            unreachable!()
+                    for group_name in STAVE_CAPTURE_PRIORITIES
+                    {
+                        if let Some(m) = capture.name(group_name)
+                        {
+                            group = group.or(Some((group_name, m)));
+                        }
+                    }
+
+                    let (&group_name, m) = group.trust();
+                    let text = m.as_str();
+                    let span = Span(start + m.start(), start + m.end());
+
+                    match group_name
+                    {
+                        "note" => tokens.push(MetaToken { token: Note(text), span }),
+                        "part" => tokens.push(MetaToken { token: PlayPart(&text[1..]), span }),
+                        "barline" => tokens.push(MetaToken { token: Barline, span }),
+                        "symbol" => {
+                            let token = match text
+                            {
+                                "-" => Rest,
+                                "x" => Hit,
+                                "\"" => Ditto,
+                                "%" => Repeat,
+                                _ => unreachable!()
+                            };
+                            tokens.push(MetaToken { token, span });
+                        }
+                        "length" => {
+                            let size = match text
+                            {
+                                "." => 2,
+                                s if s.as_bytes()[1] == b'.' => s.len() + 1,
+                                s => s[1..].parse().trust()
+                            };
+                            tokens.push(MetaToken { token: Length(size as u64), span });
+                        }
+                        "whitespace" | "comment" => (),
+                        "error" => {
+                            let (line, col) = line_col_at(source, span.0);
+                            return Err(
+                                LexingError::UnexpectedCharacter
+                                {
+                                    text: text.to_owned(),
+                                    context: "stave",
+                                    line,
+                                    col,
+                                });
+                        }
+                        _ => unreachable!()
+                    }
+                }
+            }
+            "blank" => tokens.push(MetaToken { token: BlankLine, span: Span(span.0 + 1, span.1) }),
+            "whitespace" | "comment" => (),
+            "error" => {
+                let (line, col) = line_col_at(source, span.0);
+                return Err(
+                    LexingError::UnexpectedCharacter
+                    {
+                        text: text.to_owned(),
+                        context: "file",
+                        line,
+                        col,
+                    })
+            }
+            _ => unreachable!()
         }
     }
 
-    tokens
+    Ok(tokens)
 }
 
 
@@ -213,7 +229,7 @@ lazy_static!
         (?P<blank>\n\\s*\n)|\
         (?P<whitespace>(\\s+|;))|\
         (?P<error>.)\
-        ").unwrap();
+        ").trust();
 }
 
 lazy_static!
@@ -227,7 +243,7 @@ lazy_static!
         (?P<comment>//.*)|\
         (?P<whitespace>(\\s|;)+)|\
         (?P<error>.)\
-        ").unwrap();
+        ").trust();
 }
 
 
@@ -242,15 +258,41 @@ mod tests
 
     fn lextest(source: &str, result: Vec<MetaToken>)
     {
-        assert_eq!(lex(source), result)
+        assert_eq!(lex(source).unwrap(), result)
     }
 
+    #[test]
+    fn empty_file()
+    {
+        lextest("", vec![]);
+    }
 
     #[test]
-    #[should_panic]
     fn invalid_tokens()
     {
-        lex("@");
+        assert_eq!(
+            lex("@").unwrap_err(),
+            LexingError::UnexpectedCharacter
+            {
+                text: "@".to_owned(),
+                context: "file",
+                line: 1,
+                col: 1,
+            });
+    }
+
+    #[test]
+    fn invalid_tokens_in_stave()
+    {
+        assert_eq!(
+            lex("   :|{}|").unwrap_err(),
+            LexingError::UnexpectedCharacter
+            {
+                text: "{".to_owned(),
+                context: "stave",
+                line: 1,
+                col: 6,
+            });
     }
 
     #[test]
