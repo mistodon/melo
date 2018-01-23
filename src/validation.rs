@@ -35,6 +35,7 @@ fn play_voices_match(parse_tree: &ParseTree) -> bool
 }
 
 
+// TODO(***realname***): Could do this in parsing
 fn staves_all_same_length(parse_tree: &ParseTree) -> bool
 {
     for piece in &parse_tree.pieces
@@ -109,6 +110,7 @@ fn normalize_bar_lengths(parse_tree: &mut ParseTree) -> bool
     {
         let mut max_bar_len = 0;
 
+        // TODO(***realname***): Technically could do this in parse_play
         for play in &mut piece.plays
         {
             let staves = &mut play.staves;
