@@ -1,19 +1,17 @@
-use std::fmt::{ Display, Formatter, Error };
-
 use regex::{ Regex };
 
 use trust::Trust;
 
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct MetaToken<'a>
 {
     pub token: Token<'a>,
-    pub span: Span,
+    pub span: Span<'a>,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct Span(pub usize, pub usize);
+pub struct Span<'a>(pub usize, pub &'a str);
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Token<'a>
@@ -40,46 +38,6 @@ pub enum Token<'a>
     Length(u64),
     Note(&'a str),
     PlayPart(&'a str),
-}
-
-impl<'a> Display for Token<'a>
-{
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error>
-    {
-        use self::Token::*;
-
-        let s = match *self
-        {
-            Piece => "piece",
-            Voice => "voice",
-            Section => "section",
-            Part => "part",
-            Play => "play",
-            LeftBrace => "{",
-            RightBrace => "}",
-            Comma => ",",
-            BlankLine => "<blank_line>",
-            Num(n) => {
-                write!(f, "{}", n)?;
-                ""
-            }
-            Key(key) => {
-                write!(f, "{}:", key)?;
-                ""
-            },
-            Ident(ident) => ident,
-            Str(s) => s,
-            Barline => "|",
-            Rest => "-",
-            Hit => "x",
-            Ditto => "\"",
-            Repeat => "%",
-            Length(n) => if n == 1 { "." } else { write!(f, ".{}", n)?; "" },
-            Note(note) => note,
-            PlayPart(part) => part,
-        };
-        write!(f, "{}", s)
-    }
 }
 
 
@@ -143,7 +101,7 @@ pub fn lex<'a>(source: &'a str) -> Result<Vec<MetaToken<'a>>, LexingError>
         let (&group_name, m) = group.trust();
         let text = m.as_str();
         let text_len = text.len();
-        let span = Span(m.start(), m.end());
+        let span = Span(m.start(), text);
 
         match group_name
         {
@@ -192,7 +150,8 @@ pub fn lex<'a>(source: &'a str) -> Result<Vec<MetaToken<'a>>, LexingError>
 
                     let (&group_name, m) = group.trust();
                     let text = m.as_str();
-                    let span = Span(start + m.start(), start + m.end());
+                    let start = start + m.start();
+                    let span = Span(start, text);
 
                     match group_name
                     {
@@ -293,12 +252,13 @@ mod tests
     use super::*;
     use super::Token::*;
 
-    use test_helpers::mt;
 
-
-    fn lextest(source: &str, result: Vec<MetaToken>)
+    fn lextest(source: &str, result: Vec<Token>)
     {
-        assert_eq!(lex(source).unwrap(), result)
+        assert_eq!(
+            lex(source).unwrap().into_iter().map(|meta| meta.token).collect::<Vec<_>>(),
+            result
+        );
     }
 
     #[test]
@@ -338,31 +298,31 @@ mod tests
     #[test]
     fn lex_piece()
     {
-        lextest("piece{}", vec![mt(Piece, (0,5)), mt(LeftBrace, (5,6)), mt(RightBrace, (6,7))])
+        lextest("piece{}", vec![Piece, LeftBrace, RightBrace])
     }
 
     #[test]
     fn lex_section()
     {
-        lextest("section {}", vec![mt(Section, (0,7)), mt(LeftBrace, (8,9)), mt(RightBrace, (9,10))])
+        lextest("section {}", vec![Section, LeftBrace, RightBrace])
     }
 
     #[test]
     fn lex_voice()
     {
-        lextest("voice {}", vec![mt(Voice, (0,5)), mt(LeftBrace, (6,7)), mt(RightBrace, (7,8))])
+        lextest("voice {}", vec![Voice, LeftBrace, RightBrace])
     }
 
     #[test]
     fn lex_part()
     {
-        lextest("part {}", vec![mt(Part, (0,4)), mt(LeftBrace, (5,6)), mt(RightBrace, (6,7))])
+        lextest("part {}", vec![Part, LeftBrace, RightBrace])
     }
 
     #[test]
     fn lex_play()
     {
-        lextest("play {}", vec![mt(Play, (0,4)), mt(LeftBrace, (5,6)), mt(RightBrace, (6,7))])
+        lextest("play {}", vec![Play, LeftBrace, RightBrace])
     }
 
     #[test]
@@ -370,23 +330,23 @@ mod tests
     {
         lextest(
             "// This is a piece\npiece{}",
-            vec![mt(Piece, (19,24)), mt(LeftBrace, (24,25)), mt(RightBrace, (25,26))])
+            vec![Piece, LeftBrace, RightBrace])
     }
 
     #[test]
     fn insignificant_whitespace_ignored()
     {
-        lextest("piece {\n}", vec![mt(Piece, (0,5)), mt(LeftBrace, (6,7)), mt(RightBrace, (8,9))])
+        lextest("piece {\n}", vec![Piece, LeftBrace, RightBrace])
     }
 
     #[test]
     fn lex_name()
     {
         lextest("piece Heroine {}", vec![
-                mt(Piece, (0,5)),
-                mt(Ident("Heroine"), (6,13)),
-                mt(LeftBrace, (14,15)),
-                mt(RightBrace, (15,16)),
+                Piece,
+                Ident("Heroine"),
+                LeftBrace,
+                RightBrace,
         ]);
     }
 
@@ -394,10 +354,10 @@ mod tests
     fn lex_quoted_name()
     {
         lextest(r#"piece "Lust for Life" {}"#, vec![
-                mt(Piece, (0,5)),
-                mt(Str("Lust for Life"), (6,21)),
-                mt(LeftBrace, (22,23)),
-                mt(RightBrace, (23,24)),
+                Piece,
+                Str("Lust for Life"),
+                LeftBrace,
+                RightBrace,
         ]);
     }
 
@@ -405,10 +365,10 @@ mod tests
     fn lex_quoted_name_with_quotes_in_it()
     {
         lextest(r#"piece "\"Lust\" for \"Life\"" {}"#, vec![
-                mt(Piece, (0,5)),
-                mt(Str(r#"\"Lust\" for \"Life\""#), (6,29)),
-                mt(LeftBrace, (30,31)),
-                mt(RightBrace, (31,32)),
+                Piece,
+                Str(r#"\"Lust\" for \"Life\""#),
+                LeftBrace,
+                RightBrace,
         ]);
     }
 
@@ -416,10 +376,10 @@ mod tests
     fn lex_empty_key()
     {
         lextest("{ : A }", vec![
-                mt(LeftBrace, (0,1)),
-                mt(Key(""), (2,3)),
-                mt(Ident("A"), (4,5)),
-                mt(RightBrace, (6,7)),
+                LeftBrace,
+                Key(""),
+                Ident("A"),
+                RightBrace,
         ]);
     }
 
@@ -427,9 +387,9 @@ mod tests
     fn lex_all_staves_key()
     {
         lextest(":: | -", vec![
-                mt(Key(":"), (0,2)),
-                mt(Barline, (3,4)),
-                mt(Rest, (5,6)),
+                Key(":"),
+                Barline,
+                Rest,
         ]);
     }
 
@@ -437,12 +397,12 @@ mod tests
     fn lex_field_in_block()
     {
         lextest(r#"piece LFL { title: "Party Girl" }"#, vec![
-                mt(Piece, (0,5)),
-                mt(Ident("LFL"), (6,9)),
-                mt(LeftBrace, (10,11)),
-                mt(Key("title"), (12,18)),
-                mt(Str("Party Girl"), (19,31)),
-                mt(RightBrace, (32,33)),
+                Piece,
+                Ident("LFL"),
+                LeftBrace,
+                Key("title"),
+                Str("Party Girl"),
+                RightBrace,
         ]);
     }
 
@@ -450,12 +410,12 @@ mod tests
     fn lex_ridiculous_field_name()
     {
         lextest(r#"piece LFL { F^_=,,''   : "Party Girl" }"#, vec![
-                mt(Piece, (0,5)),
-                mt(Ident("LFL"), (6,9)),
-                mt(LeftBrace, (10,11)),
-                mt(Key("F^_=,,''"), (12,24)),
-                mt(Str("Party Girl"), (25,37)),
-                mt(RightBrace, (38,39)),
+                Piece,
+                Ident("LFL"),
+                LeftBrace,
+                Key("F^_=,,''"),
+                Str("Party Girl"),
+                RightBrace,
         ]);
     }
 
@@ -463,12 +423,12 @@ mod tests
     fn lex_multiple_fields()
     {
         lextest("{ drums, name: drum_voice }", vec![
-                mt(LeftBrace, (0,1)),
-                mt(Ident("drums"), (2,7)),
-                mt(Comma, (7,8)),
-                mt(Key("name"), (9,14)),
-                mt(Ident("drum_voice"), (15,25)),
-                mt(RightBrace, (26,27)),
+                LeftBrace,
+                Ident("drums"),
+                Comma,
+                Key("name"),
+                Ident("drum_voice"),
+                RightBrace,
         ]);
     }
 
@@ -476,13 +436,13 @@ mod tests
     fn lex_numbers()
     {
         lextest("{ channel: 0, octave: -1 }", vec![
-                mt(LeftBrace, (0,1)),
-                mt(Key("channel"), (2,10)),
-                mt(Num(0), (11,12)),
-                mt(Comma, (12,13)),
-                mt(Key("octave"), (14,21)),
-                mt(Num(-1), (22,24)),
-                mt(RightBrace, (25,26)),
+                LeftBrace,
+                Key("channel"),
+                Num(0),
+                Comma,
+                Key("octave"),
+                Num(-1),
+                RightBrace,
         ]);
     }
 
@@ -490,14 +450,14 @@ mod tests
     fn lex_blank_lines()
     {
         lextest("{ a: 0,\n\nb: 1 }", vec![
-                mt(LeftBrace, (0,1)),
-                mt(Key("a"), (2,4)),
-                mt(Num(0), (5,6)),
-                mt(Comma, (6,7)),
-                mt(BlankLine, (8,9)),
-                mt(Key("b"), (9,11)),
-                mt(Num(1), (12,13)),
-                mt(RightBrace, (14,15)),
+                LeftBrace,
+                Key("a"),
+                Num(0),
+                Comma,
+                BlankLine,
+                Key("b"),
+                Num(1),
+                RightBrace,
         ]);
     }
 
@@ -505,9 +465,9 @@ mod tests
     fn lex_note()
     {
         lextest(": | A", vec![
-                mt(Key(""), (0,1)),
-                mt(Barline, (2,3)),
-                mt(Note("A"), (4,5)),
+                Key(""),
+                Barline,
+                Note("A"),
         ]);
     }
 
@@ -515,11 +475,11 @@ mod tests
     fn lex_complex_notes()
     {
         lextest(": | B^,,c_''d=", vec![
-                mt(Key(""), (0,1)),
-                mt(Barline, (2,3)),
-                mt(Note("B^,,"), (4,8)),
-                mt(Note("c_''"), (8,12)),
-                mt(Note("d="), (12,14)),
+                Key(""),
+                Barline,
+                Note("B^,,"),
+                Note("c_''"),
+                Note("d="),
         ]);
     }
 
@@ -527,15 +487,15 @@ mod tests
     fn lex_note_length()
     {
         lextest(": | A... B.4 | C.", vec![
-                mt(Key(""), (0,1)),
-                mt(Barline, (2,3)),
-                mt(Note("A"), (4,5)),
-                mt(Length(4), (5,8)),
-                mt(Note("B"), (9,10)),
-                mt(Length(4), (10,12)),
-                mt(Barline, (13,14)),
-                mt(Note("C"), (15,16)),
-                mt(Length(2), (16,17)),
+                Key(""),
+                Barline,
+                Note("A"),
+                Length(4),
+                Note("B"),
+                Length(4),
+                Barline,
+                Note("C"),
+                Length(2),
         ]);
     }
 
@@ -543,17 +503,17 @@ mod tests
     fn lex_symbols()
     {
         lextest("C : | x - x-| % | \" |", vec![
-                mt(Key("C"), (0,3)),
-                mt(Barline, (4,5)),
-                mt(Hit, (6,7)),
-                mt(Rest, (8,9)),
-                mt(Hit, (10,11)),
-                mt(Rest, (11,12)),
-                mt(Barline, (12,13)),
-                mt(Repeat, (14,15)),
-                mt(Barline, (16,17)),
-                mt(Ditto, (18,19)),
-                mt(Barline, (20,21)),
+                Key("C"),
+                Barline,
+                Hit,
+                Rest,
+                Hit,
+                Rest,
+                Barline,
+                Repeat,
+                Barline,
+                Ditto,
+                Barline,
         ]);
     }
 
@@ -561,9 +521,9 @@ mod tests
     fn lex_play_part()
     {
         lextest(":| *Theme", vec![
-                mt(Key(""), (0,1)),
-                mt(Barline, (1,2)),
-                mt(PlayPart("Theme"), (3,9)),
+                Key(""),
+                Barline,
+                PlayPart("Theme"),
         ]);
     }
 
@@ -571,12 +531,12 @@ mod tests
     fn semicolon_can_break_stave_within_one_line()
     {
         lextest("A:|x;B:|x;", vec![
-                mt(Key("A"), (0,2)),
-                mt(Barline, (2,3)),
-                mt(Hit, (3,4)),
-                mt(Key("B"), (5,7)),
-                mt(Barline, (7,8)),
-                mt(Hit, (8,9)),
+                Key("A"),
+                Barline,
+                Hit,
+                Key("B"),
+                Barline,
+                Hit,
         ]);
     }
 
@@ -584,11 +544,11 @@ mod tests
     fn right_brace_can_break_stave_within_one_line()
     {
         lextest("{ A:|x }", vec![
-                mt(LeftBrace, (0,1)),
-                mt(Key("A"), (2,4)),
-                mt(Barline, (4,5)),
-                mt(Hit, (5,6)),
-                mt(RightBrace, (7,8)),
+                LeftBrace,
+                Key("A"),
+                Barline,
+                Hit,
+                RightBrace,
         ]);
     }
 }
