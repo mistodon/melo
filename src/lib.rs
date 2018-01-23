@@ -6,12 +6,12 @@
 
 extern crate regex;
 
-pub mod abc_generation;
-pub mod lexing;
-pub mod parsing;
-pub mod validation;
 pub mod notes;
-pub mod trust;
+mod abc_generation;
+pub mod lexing;     // TODO(***realname***): These should be private
+pub mod parsing;    // TODO(***realname***): These should be private
+mod validation;
+mod trust;
 
 #[cfg(test)]
 mod test_helpers;
