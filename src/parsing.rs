@@ -219,7 +219,8 @@ fn poison_scope(stream: &mut TokenStream, open_delim: Token, close_delim: Token)
         {
             Some(t) if t == open_delim => nest += 1,
             Some(t) if t == close_delim => nest -= 1,
-            _ => ()
+            Some(_) => (),
+            None => break
         }
     }
 }
@@ -246,6 +247,9 @@ fn parse_piece_from_body<'a>(stream: &mut TokenStream<'a>) -> Result<PieceNode<'
 {
     let mut piece_node = PieceNode::default();
 
+    let mut voice_results = Vec::new();
+    let mut play_results = Vec::new();
+
     loop
     {
         match stream.peek().map(|meta| meta.token)
@@ -253,8 +257,16 @@ fn parse_piece_from_body<'a>(stream: &mut TokenStream<'a>) -> Result<PieceNode<'
             Some(BlankLine) => { stream.next(); () },
             Some(RightBrace) => break,
             None => break,
-            Some(Voice) => piece_node.voices.push(parse_voice(stream)?),
-            Some(Play) => piece_node.plays.push(parse_play(stream)?),
+            Some(Voice) => {
+                let voice = parse_voice(stream);
+                if voice.is_err() { poison_scope(stream, LeftBrace, RightBrace); }
+                voice_results.push(voice);
+            }
+            Some(Play) => {
+                let play = parse_play(stream);
+                if play.is_err() { poison_scope(stream, LeftBrace, RightBrace); }
+                play_results.push(play);
+            }
             _ => {
                 let attribute_key = parse_attribute_key(stream, "in `piece`")?;
                 match attribute_key
@@ -276,6 +288,12 @@ fn parse_piece_from_body<'a>(stream: &mut TokenStream<'a>) -> Result<PieceNode<'
             }
         }
     }
+
+    let voice_nodes = error_swizzle(voice_results)?;
+    let play_nodes = error_swizzle(play_results)?;
+
+    piece_node.voices = voice_nodes;
+    piece_node.plays = play_nodes;
 
     Ok(piece_node)
 }
