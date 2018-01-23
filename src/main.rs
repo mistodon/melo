@@ -72,7 +72,7 @@ fn main()
             let processed = match midscript::compile_to_abc_new(&input_text)
             {
                 Err(err) => {
-                    eprintln!("Compilation failed:\nerror: {}", err);
+                    eprintln!("Compilation failed:\n{}", err);
                     std::process::exit(1)
                 },
                 Ok(p) => p

@@ -68,7 +68,7 @@ pub enum NoteNode
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub enum ParsingError
 {
-    #[fail(display = "Unexpected token '{}' {}. Expected {}.", token, context, expected)]
+    #[fail(display = "error: Unexpected token '{}' {}. Expected {}.", token, context, expected)]
     UnexpectedToken
     {
         token: String,
@@ -76,30 +76,38 @@ pub enum ParsingError
         expected: String,
     },
 
-    #[fail(display = "Unexpected end of input {}. Expected {}.", context, expected)]
+    #[fail(display = "error: Unexpected end of input {}. Expected {}.", context, expected)]
     UnexpectedEOF
     {
         context: &'static str,
         expected: String,
     },
 
-    #[fail(display = "Invalid note \"{}\" is out of range.", note)]
+    #[fail(display = "error: Invalid note \"{}\" is out of range.", note)]
     InvalidNote
     {
         note: String,
     },
 
-    #[fail(display = "Invalid attribute \"{}\" for `{}`.", attribute, structure)]
+    #[fail(display = "error: Invalid attribute \"{}\" for `{}`.", attribute, structure)]
     InvalidAttribute
     {
         attribute: String,
         structure: &'static str,
     },
 
-    #[fail(display = "Undeclared stave \"{}\". All staves in a play block must be declared before the first blank line.", stave_prefix)]
+    #[fail(display = "error: Undeclared stave \"{}\". All staves in a play block must be declared before the first blank line.", stave_prefix)]
     UndeclaredStave
     {
         stave_prefix: String,
+    },
+
+    #[fail(display = "{}\nerror: Encountered {} parsing errors shown above.", error_text, error_count)]
+    MultipleParsingErrors
+    {
+        errors: Vec<ParsingError>,
+        error_text: String,
+        error_count: usize,
     }
 }
 
@@ -116,24 +124,53 @@ impl ParsingError
     }
 }
 
+impl From<Vec<ParsingError>> for ParsingError
+{
+    fn from(errors: Vec<ParsingError>) -> Self
+    {
+        let text = errors.iter().map(ParsingError::to_string).collect::<Vec<_>>().join("\n");
+        let error_count = errors.len();
+        ParsingError::MultipleParsingErrors { error_text: text, error_count, errors }
+    }
+}
+
+
+fn error_swizzle<T, E>(results: Vec<Result<T, E>>) -> Result<Vec<T>, Vec<E>>
+where
+    T: ::std::fmt::Debug,
+    E: ::std::fmt::Debug,
+{
+    let any_errors = results.iter().any(Result::is_err);
+
+    if any_errors
+    {
+        Err(results.into_iter().filter_map(Result::err).collect())
+    }
+    else
+    {
+        Ok(results.into_iter().map(Result::unwrap).collect())
+    }
+}
+
 
 pub fn parse<'a>(tokens: &'a [MetaToken<'a>]) -> Result<ParseTree<'a>, ParsingError>
 {
-    let mut pieces = Vec::new();
     let mut stream = tokens.iter().peekable();
 
-    match stream.peek().map(|meta| meta.token)
+    let pieces = match stream.peek().map(|meta| meta.token)
     {
         Some(Piece) => {
+            let mut piece_results = Vec::new();
+
             while stream.peek().is_some()
             {
-                pieces.push(parse_piece(&mut stream)?);
+                piece_results.push(parse_piece(&mut stream));
             }
+
+            error_swizzle(piece_results)?
         }
-        _ => {
-            pieces.push(parse_piece_from_body(&mut stream)?);
-        }
-    }
+        _ => vec![parse_piece_from_body(&mut stream)?]
+    };
 
     match stream.next().map(|meta| meta.token)
     {
@@ -155,7 +192,7 @@ fn expect_token(
         Some(found) if found == token => Ok(()),
         Some(found) =>
             Err(ParsingError::unexpected( format!("{}", found), context, format!("{}", token))),
-        None => Err(ParsingError::eof(context, format!("{}", token)))
+        None => Err(ParsingError::eof(context, format!("'{}'", token)))
     }
 }
 
@@ -172,13 +209,33 @@ fn skip_token(stream: &mut TokenStream, token: Token) -> bool
     }
 }
 
+fn poison_scope(stream: &mut TokenStream, open_delim: Token, close_delim: Token)
+{
+    let mut nest = 1;
+
+    while nest > 0
+    {
+        match stream.next().map(|meta| meta.token)
+        {
+            Some(t) if t == open_delim => nest += 1,
+            Some(t) if t == close_delim => nest -= 1,
+            _ => ()
+        }
+    }
+}
+
 
 fn parse_piece<'a>(stream: &mut TokenStream<'a>) -> Result<PieceNode<'a>, ParsingError>
 {
     expect_token(stream, Piece, "in top-level of file")?;
     expect_token(stream, LeftBrace, "at `piece`")?;
 
-    let piece_node = parse_piece_from_body(stream)?;
+    let piece_node = parse_piece_from_body(stream);
+    if piece_node.is_err()
+    {
+        poison_scope(stream, LeftBrace, RightBrace);
+    }
+    let piece_node = piece_node?;
 
     expect_token(stream, RightBrace, "after `piece`")?;
 

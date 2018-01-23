@@ -86,7 +86,7 @@ impl<'a> Display for Token<'a>
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub enum LexingError
 {
-    #[fail(display = "Unexpected character '{}' in {} at {}:{}.", text, context, line, col)]
+    #[fail(display = "error: Unexpected character '{}' in {} at {}:{}.", text, context, line, col)]
     UnexpectedCharacter
     {
         text: String,
