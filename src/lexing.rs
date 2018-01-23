@@ -1,3 +1,5 @@
+use std::fmt::{ Display, Formatter, Error };
+
 use regex::{ Regex };
 
 use trust::Trust;
@@ -23,7 +25,6 @@ pub enum Token<'a>
     Play,
     LeftBrace,
     RightBrace,
-    Colon,
     Comma,
     BlankLine,
     Num(i64),
@@ -41,11 +42,51 @@ pub enum Token<'a>
     PlayPart(&'a str),
 }
 
+impl<'a> Display for Token<'a>
+{
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error>
+    {
+        use self::Token::*;
+
+        let s = match *self
+        {
+            Piece => "piece",
+            Voice => "voice",
+            Section => "section",
+            Part => "part",
+            Play => "play",
+            LeftBrace => "{",
+            RightBrace => "}",
+            Comma => ",",
+            BlankLine => "<blank_line>",
+            Num(n) => {
+                write!(f, "{}", n)?;
+                ""
+            }
+            Key(key) => {
+                write!(f, "{}:", key)?;
+                ""
+            },
+            Ident(ident) => ident,
+            Str(s) => s,
+            Barline => "|",
+            Rest => "-",
+            Hit => "x",
+            Ditto => "\"",
+            Repeat => "%",
+            Length(n) => if n == 1 { "." } else { write!(f, ".{}", n)?; "" },
+            Note(note) => note,
+            PlayPart(part) => part,
+        };
+        write!(f, "{}", s)
+    }
+}
+
 
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub enum LexingError
 {
-    #[fail(display = "Unexpected character '{}' in {} at {}:{}", text, context, line, col)]
+    #[fail(display = "Unexpected character '{}' in {} at {}:{}.", text, context, line, col)]
     UnexpectedCharacter
     {
         text: String,
@@ -129,7 +170,6 @@ pub fn lex<'a>(source: &'a str) -> Result<Vec<MetaToken<'a>>, LexingError>
                 {
                     "{" => LeftBrace,
                     "}" => RightBrace,
-                    ":" => Colon,
                     "," => Comma,
                     _ => unreachable!()
                 };
