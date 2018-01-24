@@ -1,9 +1,8 @@
-X:1
-T:Title
-K:C
+voice Lead { program: 33, octave: -1 }
 
-voice Lead(program = 33, octave = -1)
+play Lead
 {
-    : C D E F | G a b c |
-    | b a G F | E D C - |
+    :   | C D E F | G a b c |
+        | b a G F | E D C - |
 }
+

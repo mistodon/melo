@@ -1,11 +1,11 @@
 X:1
-T:Title
 M:4/4
+Q:1/4=120
 K:C
-%
 V:Drums
-%%MIDI channel 10
+%%MIDI channel 1
 %%MIDI program 0
 L:1/8
-[C,, ^F,,]^F,,[D,, ^F,,]^F,,[C,, ^F,,]^F,,[D,, ^F,,]^F,,|
-[C,, ^F,,]^F,,[D,, ^F,,]^F,,[C,, ^F,,][C,, ^F,,][D,, ^F,,]^F,,|
+[^f'c']^f'[^f'd']^f'[^f'c']^f'[^f'd']^f'|
+[^f'c']^f'[^f'd']^f'[^f'c'][^f'c'][^f'd']^f'|
+

@@ -1,4 +1,4 @@
-beats: 6
+beats: 6,
 
 voice Drums { drums }
 
