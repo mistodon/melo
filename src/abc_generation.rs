@@ -51,9 +51,11 @@ pub fn generate_abc(pieces: &[Piece]) -> Option<String>
 
             let stave_text = write_bars(&voice.bars, piece.beats)?;
 
-            writeln!(buffer, "{}", stave_text).ok()?;
+            write!(buffer, "{}", stave_text).ok()?;
         }
     }
+
+    writeln!(buffer).ok()?;
 
     Some(buffer)
 }
