@@ -4,11 +4,20 @@
 
 ### Syntax
 
-1.  Requiring commas after every attribute is error-prone
+1.  Requiring commas after every attribute is error-prone - take newlines into account
 2.  Requiring you to quote strings also sucks
 
-### Internals
+### Errors
 
-1.  Too many grab-bag things done in validation - validate as early as possible
-2.  We shouldn't generate code from the parse-tree directly
-3.  Or alternatively - the parse tree should be a cleaner, stronger model of a fully _correct_ piece
+1.  Sequencing and generation phases need proper errors
+
+### Features
+
+1.  Urgently need note lengths supported
+2.  Voice volume would be useful
+
+### Bugs
+
+1.  Generation crashes when a voice contains no bars/notes.
+2.  Notes in tuplets are not split up properly
+
