@@ -1,11 +1,10 @@
-X:1
-T:Title
-K:C
-M:12/8
+beats: 6
 
-voice Drums(beats = 6, channel = 10)
+voice Drums { drums }
+
+play Drums
 {
-    F^,,    : xxx xxx xxx xxx ;
-    D,,     : xxx ;
-    C,,     : xxxx ;
+    F^: | xxx xxx xxx xxx |
+    D:  | x    x    x     |
+    C:  | x   x   x   x   |
 }

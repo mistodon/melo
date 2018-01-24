@@ -69,7 +69,7 @@ fn main()
                 content
             };
 
-            let processed = match midscript::compile_to_abc_new(&input_text)
+            let processed = match midscript::compile_to_abc(&input_text)
             {
                 Err(err) => {
                     eprintln!("Compilation failed:\n{}", err);

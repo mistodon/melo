@@ -4,5 +4,5 @@ K:C
 
 voice Drums(drums)
 {
-    C,, : x ;
+    C,, : x |
 }

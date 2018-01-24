@@ -4,5 +4,5 @@ K:C
 
 voice Drums(beats = 8, channel = 5, program = 1)
 {
-    C,, : x ;
+    C,, : x |
 }

@@ -5,7 +5,7 @@ K:C
 
 voice Drums(drums, octave = -2)
 {
-    F^  : xxxxxxxx ; xxxxxxxx ;
-    D   : --x---x- ; --x---x- ;
-    C   : x---x--- ; x---xx-- ;
+    F^  : xxxxxxxx | xxxxxxxx |
+    D   : --x---x- | --x---x- |
+    C   : x---x--- | x---xx-- |
 }
