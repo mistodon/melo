@@ -1,8 +1,0 @@
-X:1
-T:Title
-K:C
-
-voice Drums(drums, octave = -2)
-{
-    F^  : x | xx | xxx xxx |
-}

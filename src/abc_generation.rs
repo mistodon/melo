@@ -77,6 +77,7 @@ fn write_bars(bars: &[Bar], beats_per_bar: u64) -> Option<String>
     {
         let scale = notes_per_bar / bar.divisions;
         let mut scaled_last_end_position = 0;
+        let mut last_tuplet_marker = None;
 
         let mut chord = Vec::new();
         let mut chord_position = 0;
@@ -111,18 +112,22 @@ fn write_bars(bars: &[Bar], beats_per_bar: u64) -> Option<String>
                     let mut rest_position = scaled_last_end_position;
                     let rest_end = rest_position + rest_length;
 
+                    println!("{} -> {}", rest_position, rest_end);
+
                     while rest_position < rest_end
                     {
-                        if rest_position % tuplet == 0
+                        if rest_position % tuplet == 0 && Some(rest_position) != last_tuplet_marker
                         {
+                            last_tuplet_marker = Some(rest_position);
                             write!(buffer, "({}", tuplet).ok()?;
                         }
                         write!(buffer, "z{}", individual_rest_length).ok()?;
                         rest_position += individual_rest_length;
                     }
 
-                    if rest_end_position % tuplet == 0 && rest_end_position != notes_per_bar
+                    if rest_end_position % tuplet == 0 && Some(rest_end_position) != last_tuplet_marker && rest_end_position != notes_per_bar
                     {
+                        last_tuplet_marker = Some(rest_end_position);
                         write!(buffer, "({}", tuplet).ok()?;
                     }
                 }
@@ -310,5 +315,12 @@ mod tests
     {
         let source = "voice A {} play A { :| C - - - ; :| E - - - ; :| G - - - }";
         write_bars_test(source, "L:1/4\n[CEG]z3|\n", 4);
+    }
+
+    #[test]
+    fn triplet_chords()
+    {
+        let source = "voice A {} play A { :| C C C ; :| E E E ; :| G G G }";
+        write_bars_test(source, "L:1/8\n(3[CEG]4[CEG]4[CEG]4|\n", 4);
     }
 }

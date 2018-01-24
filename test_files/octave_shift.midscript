@@ -1,11 +1,9 @@
-X:1
-T:Title
-M:4/4
-K:C
+voice Drums { octave: 2 }
 
-voice Drums(drums, octave = -2)
+play Drums
 {
-    F^  : xxxxxxxx | xxxxxxxx |
-    D   : --x---x- | --x---x- |
-    C   : x---x--- | x---xx-- |
+    F^: | xxxxxxxx | xxxxxxxx |
+    D:  | --x---x- | --x---x- |
+    C:  | x---x--- | x---xx-- |
 }
+

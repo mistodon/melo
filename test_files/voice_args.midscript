@@ -1,8 +1,7 @@
-X:1
-T:Title
-K:C
+voice Drums { channel: 5, program: 1 }
 
-voice Drums(beats = 8, channel = 5, program = 1)
+play Drums
 {
-    C,, : x |
+    C:  | x |
 }
+

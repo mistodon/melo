@@ -1,11 +1,8 @@
-X:1
-T:Title
-Q:1/4=60
-M:4/4
-K:C
+voice Drums { drums }
 
-voice Drums(channel = 10)
+play Drums
 {
-    F^,,    : xxxxx xxxxx xxxxx xxxxx |
-    C,,     : xxxx |
+    F^: | xxxxx xxxxx xxxxx xxxxx |
+    C:  | xxxx |
 }
+
