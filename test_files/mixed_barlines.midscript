@@ -4,5 +4,5 @@ K:C
 
 voice Drums()
 {
-    C,, : x ; x | x ; x |
+    C,, : x | x | x | x |
 }

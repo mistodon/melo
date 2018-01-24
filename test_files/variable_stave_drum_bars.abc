@@ -1,16 +1,12 @@
 X:1
-T:Title
+M:4/4
+Q:1/4=120
 K:C
-%
 V:Drums
 %%MIDI channel 10
 %%MIDI program 0
 L:1/8
-[C,, ^F,,]^F,,[D,, ^F,,]^F,,[C,, ^F,,]^F,,[D,, ^F,,]^F,,|
-[C,, ^F,,]^F,,[D,, ^F,,]^F,,[C,, ^F,,][C,, ^F,,][D,, ^F,,]^F,,|
-[C,, D,, ^F,,]zzzC,,zzz|
-%
-V:Lead
-%%MIDI channel 0
-%%MIDI program 0
-a b c d a b c d | a b c d e d c b |
+[^F,,C,,]^F,,[^F,,D,,]^F,,[^F,,C,,]^F,,[^F,,D,,]^F,,|
+[^F,,C,,]^F,,[^F,,D,,]^F,,[^F,,C,,][^F,,C,,][^F,,D,,]^F,,|
+[^F,,D,,C,,]4C,,4|
+

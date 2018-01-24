@@ -461,6 +461,17 @@ pub fn midi_to_abc(note: i8) -> Option<&'static str>
 }
 
 
+pub fn lcm(a: u64, b: u64) -> u64
+{
+    let mut lcm = ::std::cmp::max(a, b);
+    while !(lcm % a == 0 && lcm % b == 0)
+    {
+        lcm += 1
+    }
+    lcm
+}
+
+
 #[cfg(test)]
 mod tests
 {
