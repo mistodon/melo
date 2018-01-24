@@ -84,6 +84,11 @@ fn write_bars(bars: &[Bar], beats_per_bar: u64) -> Option<String>
 
         let mut notes = bar.notes.iter().peekable();
 
+        // Way smarter idea than this:
+        //  1.  Choose note/rest and length
+        //  2.  If tuplet, shorten length and choose number of repetitions
+        //  3.  Push those notes as strings into a Vec (with '-' for ties where required)
+        //  4.  iterate over chunks of size n(tuple) and write (n<notes...>
         loop
         {
             let note = notes.next();
@@ -322,5 +327,13 @@ mod tests
     {
         let source = "voice A {} play A { :| C C C ; :| E E E ; :| G G G }";
         write_bars_test(source, "L:1/8\n(3[CEG]4[CEG]4[CEG]4|\n", 4);
+    }
+
+    #[test]
+    #[ignore] // TODO(***realname***): Make this work
+    fn long_notes_in_triplets()
+    {
+        let source = "voice A {} play A { :| C | CC | CCC CCC | }";
+        write_bars_test(source, "L:1/8\n(3C2-C2-C2-(3C2-C2-C2|\n(3C2-C2-C2(3C2-C2-C2|\n(3C2C2C2(3C2C2C2|\n", 4);
     }
 }
