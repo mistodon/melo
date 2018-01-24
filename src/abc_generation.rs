@@ -335,4 +335,26 @@ mod tests
         let source = "voice A {} play A { :| C | CC | CCC CCC | }";
         write_bars_test(source, "L:1/8\n(3C2-C2-C2-(3C2-C2-C2|\n(3C2-C2-C2(3C2-C2-C2|\n(3C2C2C2(3C2C2C2|\n", 4);
     }
+
+    #[test]
+    // TODO(claire): Remove this test if it is fixed by fixing `rest_before_chord_not_duplicated`
+    fn broken_drums()
+    {
+        let source = "
+            voice A { drums }
+            play A {
+                d^: | ---- x--- ---- x--- |
+                F^: | x--- x--- x--- x--- |
+                D:  | --xx ---- --xx --xx |
+                C:  | x--- ---- x--- ---- |
+            }";
+        write_bars_test(source, "L:1/16\n[^F,,C,,]zD,,D,,[^D^F,,]z3[^F,,C,,]zD,,D,,[^D,^F,,]zD,,D,,|\n", 4);
+    }
+
+    #[test]
+    fn rest_before_chord_not_duplicated()
+    {
+        let source = " voice A {} play A { :| - C | ; :| - G | }";
+        write_bars_test(source, "L:1/4\nz2[CG]2|\n", 4);
+    }
 }
