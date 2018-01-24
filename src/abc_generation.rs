@@ -108,7 +108,6 @@ fn write_bars(bars: &[Bar], beats_per_bar: u64) -> Option<String>
                     Some(_) => scaled_chord_position,
                     None => notes_per_bar
                 };
-                println!("{:?} : {}({} | {}) - {} = ?", note, rest_end_position, scaled_chord_position, notes_per_bar, scaled_last_end_position);
                 let rest_length = rest_end_position - scaled_last_end_position;
 
                 if tuplet > 1
@@ -116,8 +115,6 @@ fn write_bars(bars: &[Bar], beats_per_bar: u64) -> Option<String>
                     let individual_rest_length = notes_per_bar / (tuplet * 2);
                     let mut rest_position = scaled_last_end_position;
                     let rest_end = rest_position + rest_length;
-
-                    println!("{} -> {}", rest_position, rest_end);
 
                     while rest_position < rest_end
                     {
