@@ -1,4 +1,4 @@
-const MIDSCRIPT_SHARPS: [&str; 128] = [
+pub const MIDSCRIPT_SHARPS: [&str; 128] = [
     "C,,,,,",
     "C^,,,,,",
     "D,,,,,",
@@ -129,7 +129,10 @@ const MIDSCRIPT_SHARPS: [&str; 128] = [
     "g''''",
 ];
 
-const MIDSCRIPT_FLATS: [&str; 128] = [
+pub const MIN_SHARP: &str = MIDSCRIPT_SHARPS[0];
+pub const MAX_SHARP: &str = MIDSCRIPT_SHARPS[127];
+
+pub const MIDSCRIPT_FLATS: [&str; 128] = [
     "C,,,,,",
     "D_,,,,,",
     "D,,,,,",
@@ -260,7 +263,10 @@ const MIDSCRIPT_FLATS: [&str; 128] = [
     "g''''",
 ];
 
-const ABC_NOTES: [&str; 128] = [
+pub const MIN_FLAT: &str = MIDSCRIPT_FLATS[0];
+pub const MAX_FLAT: &str = MIDSCRIPT_FLATS[127];
+
+pub const ABC_NOTES: [&str; 128] = [
     "C,,,,,",
     "^C,,,,,",
     "D,,,,,",
