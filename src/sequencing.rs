@@ -1,5 +1,5 @@
 use parsing::data::*;
-
+use trust::Trust;
 
 use self::data::*;
 
@@ -82,7 +82,28 @@ pub mod data
 }
 
 
-pub fn sequence_pieces<'a>(piece_nodes: &[PieceNode<'a>]) -> Option<Vec<Piece<'a>>>
+#[derive(Debug, Fail, PartialEq, Eq)]
+pub enum SequencingError
+{
+    #[fail(display = "error: {}", message)]
+    InvalidNote
+    {
+        message: String,
+    },
+
+    #[fail(display = "error: No voice named {} was declared.", voice_name)]
+    UndeclaredVoice
+    {
+        voice_name: String,
+    },
+
+    #[fail(display = "error: Voiceless `play` blocks are not yet supported.")]
+    VoicelessPlayBlock,
+}
+
+
+pub fn sequence_pieces<'a>(
+    piece_nodes: &[PieceNode<'a>]) -> Result<Vec<Piece<'a>>, SequencingError>
 {
     use notes::lcm;
 
@@ -97,7 +118,13 @@ pub fn sequence_pieces<'a>(piece_nodes: &[PieceNode<'a>]) -> Option<Vec<Piece<'a
                 let matched = piece_node.voices.iter().any(|voice| Some(voice.name) == play.voice);
                 if !matched
                 {
-                    return None
+                    let error = match play.voice
+                    {
+                        Some(voice_name) => SequencingError::UndeclaredVoice { voice_name: voice_name.to_owned() },
+                        None => SequencingError::VoicelessPlayBlock
+                    };
+
+                    return Err(error)
                 }
             }
         }
@@ -152,10 +179,36 @@ pub fn sequence_pieces<'a>(piece_nodes: &[PieceNode<'a>]) -> Option<Vec<Piece<'a
                             {
                                 NoteNode::Rest => continue,
                                 NoteNode::Note(midi) => {
-                                    let midi = midi.checked_add(voice.octave * 12)?;
+                                    let octave = voice.octave;
+
+                                    let midi = midi.checked_add(octave * 12)
+                                        .ok_or_else(
+                                            ||
+                                            {
+                                                use notes;
+
+                                                let sharp = notes::midi_to_sharp(midi).trust();
+                                                let flat = notes::midi_to_flat(midi).trust();
+                                                let (direction, offset) = match octave
+                                                {
+                                                    o if o > 0 => ("up", o),
+                                                    o => ("down", -o)
+                                                };
+                                                let message = format!(
+                                                    "Note ({} / {}) is invalid after shifting {} {} octaves. Notes must lie between {} and {}.",
+                                                    flat, sharp, direction, offset,
+                                                    notes::MIN_SHARP, notes::MAX_SHARP);
+
+                                                SequencingError::InvalidNote
+                                                {
+                                                    message
+                                                }
+                                            })?;
+
                                     let length = 1 * note_scale;
                                     let position = note_index as u8 * note_scale;
                                     let note = Note { midi, length, position };
+
                                     bar.notes.push(note);
                                 }
                             }
@@ -175,7 +228,7 @@ pub fn sequence_pieces<'a>(piece_nodes: &[PieceNode<'a>]) -> Option<Vec<Piece<'a
         pieces.push(piece);
     }
 
-    Some(pieces)
+    Ok(pieces)
 }
 
 
@@ -199,7 +252,7 @@ mod tests
     {
         let tokens = &lexing::lex(source).expect("ERROR IN LEXER");
         let parse_tree = parsing::parse(tokens).expect("ERROR IN PARSER");
-        assert!(sequence_pieces(&parse_tree.pieces).is_none());
+        assert!(sequence_pieces(&parse_tree.pieces).is_err());
     }
 
     fn voice_test(source: &str, expected_bars: Vec<Bar>)
