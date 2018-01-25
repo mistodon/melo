@@ -13,6 +13,12 @@ pub enum AbcGenerationError
     {
         #[cause]
         error: Error,
+    },
+
+    #[fail(display = "error: Piece requires a {}-tuplet, but only tuplets of 3-9 notes are currently supported.", tuplet)]
+    UnsupportedTuplet
+    {
+        tuplet: u64
     }
 }
 
@@ -94,6 +100,11 @@ fn write_bars(bars: &[Bar], beats_per_bar: u64) -> Result<String, AbcGenerationE
     let notes_per_bar = lcm(max_divisions, beats_per_bar);
     let notes_per_beat = notes_per_bar / beats_per_bar;
     let (beat_division, tuplet) = div_tuplet(notes_per_beat);
+
+    if tuplet > 9
+    {
+        return Err(AbcGenerationError::UnsupportedTuplet { tuplet })
+    }
 
     writeln!(buffer, "L:1/{}", beat_division)?;
 
@@ -233,6 +244,20 @@ mod tests
         let bars = &pieces[0].voices[0].bars;
 
         assert_eq!(write_bars(bars, notes_per_bar).unwrap(), expected);
+    }
+
+    fn write_bars_fail(source: &str, notes_per_bar: u64)
+    {
+        use lexing;
+        use parsing;
+        use sequencing;
+
+        let tokens = lexing::lex(source).expect("ERROR IN LEXER");
+        let parse_tree = parsing::parse(&tokens).expect("ERROR IN PARSER");
+        let pieces = sequencing::sequence_pieces(&parse_tree.pieces).expect("ERROR IN SEQUENCER");
+        let bars = &pieces[0].voices[0].bars;
+
+        assert!(write_bars(bars, notes_per_bar).is_err());
     }
 
     #[test]
@@ -378,5 +403,12 @@ mod tests
     {
         let source = " voice A {} play A { :| - C | ; :| - G | }";
         write_bars_test(source, "L:1/4\nz2[CG]2|\n", 4);
+    }
+
+    #[test]
+    fn large_tuplets_fail()
+    {
+        let source = "voice A {} play A { :| abcdabcdabc | }";
+        write_bars_fail(source, 4);
     }
 }
