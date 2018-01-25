@@ -111,112 +111,102 @@ fn write_bars(bars: &[Bar], beats_per_bar: u64) -> Result<String, AbcGenerationE
     for bar in bars
     {
         let scale = notes_per_bar / bar.divisions;
-        let mut scaled_last_end_position = 0;
-        let mut last_tuplet_marker = None;
 
-        let mut chord = Vec::new();
-        let mut chord_position = 0;
+        let mut notes = bar.notes.iter();
+        let mut cursor: u64 = 0;
+        let mut abc_notes = vec![];
 
-        let mut notes = bar.notes.iter().peekable();
-
-        // Way smarter idea than this:
-        //  1.  Choose note/rest and length
-        //  2.  If tuplet, shorten length and choose number of repetitions
-        //  3.  Push those notes as strings into a Vec (with '-' for ties where required)
-        //  4.  iterate over chunks of size n(tuple) and write (n<notes...>
         loop
         {
             let note = notes.next();
+            let position = note.map(|note| note.position as u64 * scale).unwrap_or(notes_per_bar);
 
-            if let Some(note) = note
+            if position < cursor
             {
-                chord.push(note);
-                chord_position = note.position;
+                continue
             }
 
-            let scaled_chord_position = chord_position as u64 * scale;
+            let rest_length = position - cursor;
 
-            // Required rest
+            if rest_length > 0
             {
-                let rest_end_position = match note
+                let individual_rest_length =  if tuplet == 1 { rest_length } else { 1 };
+                let number_of_rests = rest_length / individual_rest_length;
+                let rest_string = match individual_rest_length
                 {
-                    Some(_) => scaled_chord_position,
-                    None => notes_per_bar
+                    1 => "z".to_owned(),
+                    n => format!("z{}", n),
                 };
-                let rest_length = rest_end_position - scaled_last_end_position;
 
-                if tuplet > 1
+                for _ in 0..number_of_rests
                 {
-                    let individual_rest_length = notes_per_bar / (tuplet * 2);
-                    let mut rest_position = scaled_last_end_position;
-                    let rest_end = rest_position + rest_length;
-
-                    while rest_position < rest_end
-                    {
-                        if rest_position % tuplet == 0 && Some(rest_position) != last_tuplet_marker
-                        {
-                            last_tuplet_marker = Some(rest_position);
-                            write!(buffer, "({}", tuplet)?;
-                        }
-                        write!(buffer, "z{}", individual_rest_length)?;
-                        rest_position += individual_rest_length;
-                    }
-
-                    if rest_end_position % tuplet == 0 && Some(rest_end_position) != last_tuplet_marker && rest_end_position != notes_per_bar
-                    {
-                        last_tuplet_marker = Some(rest_end_position);
-                        write!(buffer, "({}", tuplet)?;
-                    }
+                    abc_notes.push(rest_string.clone());
                 }
-                else
-                {
-                    match rest_length
-                    {
-                        0 => (),
-                        1 => write!(buffer, "z")?,
-                        n => write!(buffer, "z{}", n)?,
-                    }
-                }
+
+                cursor = position;
             }
 
-            let next_note = notes.peek();
 
             match note
             {
-                Some(note) =>
-                {
-                    if Some(note.position) != next_note.map(|note| note.position)
+                Some(note) => {
+                    let chord: Vec<Note> = bar.notes.iter()
+                        .filter(|other| other.position == note.position)
+                        .map(|&note| note)
+                        .collect();
+
+                    let min_chord_length = chord.iter().map(|note| note.length as u64 * scale).min().trust();
+                    let individual_chord_length = if tuplet == 1 { min_chord_length } else { 1 };
+                    let number_of_chords = min_chord_length / individual_chord_length;
+
+                    let chord_notes_string = chord.iter()
+                        .map(|note| notes::midi_to_abc(note.midi).trust())
+                        .collect::<Vec<&str>>()
+                        .join("");
+
+                    let chord_string = match chord.len()
                     {
+                        1 => chord_notes_string,
+                        _ => format!("[{}]", chord_notes_string)
+                    };
 
-                        let abc = {
-                            match chord.len()
-                            {
-                                0 => unreachable!(),
-                                1 => notes::midi_to_abc(chord[0].midi).trust().to_owned(),
-                                _ => {
-                                    let chord_abc = chord.iter()
-                                        .map(|note| notes::midi_to_abc(note.midi).trust())
-                                        .collect::<Vec<&str>>()
-                                        .join("");
-                                    format!("[{}]", chord_abc)
-                                }
-                            }
-                        };
+                    let chord_string = match individual_chord_length
+                    {
+                        1 => format!("{}", chord_string),
+                        n => format!("{}{}", chord_string, n)
+                    };
 
-                        let min_chord_length = chord.iter().map(|note| note.length).min().trust();
-                        let scaled_chord_length = (min_chord_length as u64) * scale;
+                    let tied_chord_string = format!("{}-", chord_string);
 
-                        match scaled_chord_length
-                        {
-                            1 => write!(buffer, "{}", abc)?,
-                            n => write!(buffer, "{}{}", abc, n)?,
-                        }
-
-                        chord.clear();
-                        scaled_last_end_position = scaled_chord_position + scaled_chord_length;
+                    for _ in 0..(number_of_chords - 1)
+                    {
+                        abc_notes.push(tied_chord_string.clone())
                     }
+                    abc_notes.push(chord_string);
+
+                    cursor += min_chord_length;
                 }
                 None => break
+            }
+        }
+
+        assert!(cursor == notes_per_bar);
+        assert!(abc_notes.len() % tuplet as usize == 0);
+
+        match tuplet
+        {
+            1 => {
+                write!(buffer, "{}", abc_notes.join(""))?;
+            }
+            n => {
+                for chunk in abc_notes.chunks(n as usize)
+                {
+                    write!(buffer, "({}", n)?;
+                    for note in chunk
+                    {
+                        write!(buffer, "{}", note)?;
+                    }
+                }
             }
         }
 
@@ -330,14 +320,28 @@ mod tests
     fn test_triplet_in_4_4_time()
     {
         let source = "voice A {} play A { :| C C C | }";
-        write_bars_test(source, "L:1/8\n(3C4C4C4|\n", 4);
+        write_bars_test(source, "L:1/8\n(3C-C-C-(3CC-C-(3C-CC-(3C-C-C|\n", 4);
+    }
+
+    #[test]
+    fn test_fast_triplets()
+    {
+        let source = "voice A {} play A { :| ccc ccc ccc ccc }";
+        write_bars_test(source, "L:1/8\n(3ccc(3ccc(3ccc(3ccc|\n", 4);
+    }
+
+    #[test]
+    fn test_even_faster_triplets()
+    {
+        let source = "voice A {} play A { :| cccccc cccccc cccccc cccccc }";
+        write_bars_test(source, "L:1/16\n(3ccc(3ccc(3ccc(3ccc(3ccc(3ccc(3ccc(3ccc|\n", 4);
     }
 
     #[test]
     fn test_quintuplet_in_4_4_time()
     {
         let source = "voice A {} play A { :| C C C C C |}";
-        write_bars_test(source, "L:1/8\n(5C4C4C4C4C4|\n", 4);
+        write_bars_test(source, "L:1/8\n(5C-C-C-CC-(5C-C-CC-C-(5C-CC-C-C-(5CC-C-C-C|\n", 4);
     }
 
     #[test]
@@ -351,7 +355,7 @@ mod tests
     fn test_triplets_with_rests()
     {
         let source = "voice A {} play A { :| C - - - C C | }";
-        write_bars_test(source, "L:1/8\n(3C2z2z2(3z2C2C2|\n", 4);
+        write_bars_test(source, "L:1/8\n(3C-Cz(3zzz(3zzC-(3CC-C|\n", 4);
     }
 
     #[test]
@@ -371,31 +375,16 @@ mod tests
     #[test]
     fn triplet_chords()
     {
+        // TODO(***realname***): This and similar tests should be able to be expressed as a single triplet of 1/2 notes
         let source = "voice A {} play A { :| C C C ; :| E E E ; :| G G G }";
-        write_bars_test(source, "L:1/8\n(3[CEG]4[CEG]4[CEG]4|\n", 4);
+        write_bars_test(source, "L:1/8\n(3[CEG]-[CEG]-[CEG]-(3[CEG][CEG]-[CEG]-(3[CEG]-[CEG][CEG]-(3[CEG]-[CEG]-[CEG]|\n", 4);
     }
 
     #[test]
-    #[ignore] // TODO(***realname***): Make this work
     fn long_notes_in_triplets()
     {
         let source = "voice A {} play A { :| C | CC | CCC CCC | }";
-        write_bars_test(source, "L:1/8\n(3C2-C2-C2-(3C2-C2-C2|\n(3C2-C2-C2(3C2-C2-C2|\n(3C2C2C2(3C2C2C2|\n", 4);
-    }
-
-    #[test]
-    // TODO(***realname***): Remove this test if it is fixed by fixing `rest_before_chord_not_duplicated`
-    fn broken_drums()
-    {
-        let source = "
-            voice A { drums }
-            play A {
-                d^: | ---- x--- ---- x--- |
-                F^: | x--- x--- x--- x--- |
-                D:  | --xx ---- --xx --xx |
-                C:  | x--- ---- x--- ---- |
-            }";
-        write_bars_test(source, "L:1/16\n[^F,,C,,]zD,,D,,[^D^F,,]z3[^F,,C,,]zD,,D,,[^D,^F,,]zD,,D,,|\n", 4);
+        write_bars_test(source, "L:1/8\n(3C-C-C-(3C-C-C-(3C-C-C-(3C-C-C|\n(3C-C-C-(3C-C-C(3C-C-C-(3C-C-C|\n(3C-CC-(3CC-C(3C-CC-(3CC-C|\n", 4);
     }
 
     #[test]
