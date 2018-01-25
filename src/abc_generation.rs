@@ -1,6 +1,25 @@
+use std::fmt::Error;
+
 use sequencing::data::*;
 use notes;
 use trust::Trust;
+
+
+#[derive(Debug, Fail, PartialEq, Eq)]
+pub enum AbcGenerationError
+{
+    #[fail(display = "error: Error in formatting: {}", error)]
+    FormattingError
+    {
+        #[cause]
+        error: Error,
+    }
+}
+
+impl From<Error> for AbcGenerationError
+{
+    fn from(error: Error) -> Self { AbcGenerationError::FormattingError { error } }
+}
 
 
 fn div_tuplet(notes_per_beat: u64) -> (u64, u64)
@@ -20,7 +39,7 @@ fn div_tuplet(notes_per_beat: u64) -> (u64, u64)
 }
 
 
-pub fn generate_abc(pieces: &[Piece]) -> Option<String>
+pub fn generate_abc(pieces: &[Piece]) -> Result<String, AbcGenerationError>
 {
     use std::fmt::Write;
 
@@ -28,52 +47,55 @@ pub fn generate_abc(pieces: &[Piece]) -> Option<String>
 
     for (index, piece) in pieces.iter().enumerate()
     {
-        writeln!(buffer, "X:{}", index + 1).ok()?;
+        writeln!(buffer, "X:{}", index + 1)?;
 
         if let Some(title) = piece.title
         {
-            writeln!(buffer, "T:{}", title).ok()?;
+            writeln!(buffer, "T:{}", title)?;
         }
         if let Some(composer) = piece.composer
         {
-            writeln!(buffer, "C:{}", composer).ok()?;
+            writeln!(buffer, "C:{}", composer)?;
         }
 
-        writeln!(buffer, "M:{}/4", piece.beats).ok()?;
-        writeln!(buffer, "Q:1/4={}", piece.tempo).ok()?;
-        writeln!(buffer, "K:C").ok()?;
+        writeln!(buffer, "M:{}/4", piece.beats)?;
+        writeln!(buffer, "Q:1/4={}", piece.tempo)?;
+        writeln!(buffer, "K:C")?;
 
         for voice in &piece.voices
         {
-            writeln!(buffer, "V:{}", voice.name).ok()?;
-            writeln!(buffer, "%%MIDI channel {}", voice.channel).ok()?;
-            writeln!(buffer, "%%MIDI program {}", voice.program).ok()?;
+            writeln!(buffer, "V:{}", voice.name)?;
+            writeln!(buffer, "%%MIDI channel {}", voice.channel)?;
+            writeln!(buffer, "%%MIDI program {}", voice.program)?;
 
-            let stave_text = write_bars(&voice.bars, piece.beats)?;
+            if !voice.bars.is_empty()
+            {
+                let stave_text = write_bars(&voice.bars, piece.beats)?;
 
-            write!(buffer, "{}", stave_text).ok()?;
+                write!(buffer, "{}", stave_text)?;
+            }
         }
     }
 
-    writeln!(buffer).ok()?;
+    writeln!(buffer)?;
 
-    Some(buffer)
+    Ok(buffer)
 }
 
 
-fn write_bars(bars: &[Bar], beats_per_bar: u64) -> Option<String>
+fn write_bars(bars: &[Bar], beats_per_bar: u64) -> Result<String, AbcGenerationError>
 {
     use std::fmt::Write;
     use notes::lcm;
 
     let mut buffer = String::new();
 
-    let max_divisions = bars.iter().map(|bar| bar.divisions).max()?;
+    let max_divisions = bars.iter().map(|bar| bar.divisions).max().trust();
     let notes_per_bar = lcm(max_divisions, beats_per_bar);
     let notes_per_beat = notes_per_bar / beats_per_bar;
     let (beat_division, tuplet) = div_tuplet(notes_per_beat);
 
-    writeln!(buffer, "L:1/{}", beat_division).ok()?;
+    writeln!(buffer, "L:1/{}", beat_division)?;
 
     for bar in bars
     {
@@ -123,16 +145,16 @@ fn write_bars(bars: &[Bar], beats_per_bar: u64) -> Option<String>
                         if rest_position % tuplet == 0 && Some(rest_position) != last_tuplet_marker
                         {
                             last_tuplet_marker = Some(rest_position);
-                            write!(buffer, "({}", tuplet).ok()?;
+                            write!(buffer, "({}", tuplet)?;
                         }
-                        write!(buffer, "z{}", individual_rest_length).ok()?;
+                        write!(buffer, "z{}", individual_rest_length)?;
                         rest_position += individual_rest_length;
                     }
 
                     if rest_end_position % tuplet == 0 && Some(rest_end_position) != last_tuplet_marker && rest_end_position != notes_per_bar
                     {
                         last_tuplet_marker = Some(rest_end_position);
-                        write!(buffer, "({}", tuplet).ok()?;
+                        write!(buffer, "({}", tuplet)?;
                     }
                 }
                 else
@@ -140,8 +162,8 @@ fn write_bars(bars: &[Bar], beats_per_bar: u64) -> Option<String>
                     match rest_length
                     {
                         0 => (),
-                        1 => write!(buffer, "z").ok()?,
-                        n => write!(buffer, "z{}", n).ok()?,
+                        1 => write!(buffer, "z")?,
+                        n => write!(buffer, "z{}", n)?,
                     }
                 }
             }
@@ -175,8 +197,8 @@ fn write_bars(bars: &[Bar], beats_per_bar: u64) -> Option<String>
 
                         match scaled_chord_length
                         {
-                            1 => write!(buffer, "{}", abc).ok()?,
-                            n => write!(buffer, "{}{}", abc, n).ok()?,
+                            1 => write!(buffer, "{}", abc)?,
+                            n => write!(buffer, "{}{}", abc, n)?,
                         }
 
                         chord.clear();
@@ -187,10 +209,10 @@ fn write_bars(bars: &[Bar], beats_per_bar: u64) -> Option<String>
             }
         }
 
-        writeln!(buffer, "|").ok()?;
+        writeln!(buffer, "|")?;
     }
 
-    Some(buffer)
+    Ok(buffer)
 }
 
 

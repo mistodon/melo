@@ -25,7 +25,7 @@ pub fn compile_to_abc(input: &str) -> Result<String, Error>
     let tokens = lexing::lex(input)?;
     let parse_tree = parsing::parse(&tokens)?;
     let pieces = sequencing::sequence_pieces(&parse_tree.pieces)?;
-    let abc = abc_generation::generate_abc(&pieces).ok_or(failure::err_msg("GenerationError"))?;
+    let abc = abc_generation::generate_abc(&pieces)?;
 
     Ok(abc)
 }
