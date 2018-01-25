@@ -103,6 +103,14 @@ pub enum ParsingError
         col: usize,
     },
 
+    #[fail(display = "error:{}:{}: Hit markers (\"x\") are only allowed in single-note staves, not \"{}:\" staves.", line, col, stave_prefix)]
+    InvalidHit
+    {
+        line: usize,
+        col: usize,
+        stave_prefix: String,
+    },
+
     #[fail(display = "error:{}:{}: Invalid attribute \"{}\" for `{}`.", line, col, attribute, structure)]
     InvalidAttribute
     {
@@ -513,17 +521,17 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                     let mut stave_full = false;
 
                     let meta = *stream.peek().trust();
+                    let (line, col) = meta.line_col;
 
                     match meta.token
                     {
                         EOF => return Err(ParsingError::eof(meta, "in stave", "stave contents".to_owned())),
                         Rest => bar.notes.push(NoteNode::Rest),
                         Hit => {
-                            let midi = stave_note.expect("error: Hit (`x`) notes are only valid on staves with a note prefix");
+                            let midi = stave_note.ok_or(ParsingError::InvalidHit { stave_prefix: raw_prefix.to_owned(), line, col })?;
                             bar.notes.push(NoteNode::Note(midi));
                         }
                         Note(note) => {
-                            let (line, col) = meta.line_col;
                             let midi = notes::note_to_midi(note)
                                 .ok_or_else(|| ParsingError::InvalidNote { note: note.to_owned(), line, col })?;
                             bar.notes.push(NoteNode::Note(midi));
@@ -950,6 +958,12 @@ mod tests
                 Note("d"),
                 RightBrace
             ]);
+    }
+
+    #[test]
+    fn fail_when_hit_notes_are_encountered_in_incompatible_staves()
+    {
+        parsefailtest(vec![Play, LeftBrace, Key(""), Barline, Hit, RightBrace]);
     }
 }
 
