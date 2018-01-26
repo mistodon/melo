@@ -40,7 +40,7 @@ pub mod data
         Hit,
         Ditto,
         RepeatBar,
-        RepeatNote,
+        ExtendNote,
         Note(&'a str),
         PlayPart(&'a str),
 
@@ -73,7 +73,7 @@ pub mod data
                 Hit => "'x'",
                 Ditto => "'\"'",
                 RepeatBar => "'%'",
-                RepeatNote => ".",
+                ExtendNote => ".",
                 Note(_) => "<note>",
                 PlayPart(_) => "'*<part>'",
                 EOF => "<end_of_file>",
@@ -209,7 +209,7 @@ pub fn lex<'a>(source: &'a str) -> Result<Vec<MetaToken<'a>>, LexingError>
                                 "x" => Hit,
                                 "\"" => Ditto,
                                 "%" => RepeatBar,
-                                "." => RepeatNote,
+                                "." => ExtendNote,
                                 _ => unreachable!()
                             };
                             tokens.push(MetaToken { token, span, line_col });
@@ -537,14 +537,14 @@ mod tests
                 Key(""),
                 Barline,
                 Note("A"),
-                RepeatNote,
-                RepeatNote,
-                RepeatNote,
+                ExtendNote,
+                ExtendNote,
+                ExtendNote,
                 Note("B"),
                 Num(4),
                 Barline,
                 Note("C"),
-                RepeatNote,
+                ExtendNote,
         ]);
     }
 
