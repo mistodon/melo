@@ -45,8 +45,8 @@ fn test_lexing()
 
         Key("F^"), Barline,
         Hit, Hit, Hit, Hit, Hit, Hit, Hit, Hit, Barline,
-        Repeat, Barline,
-        Repeat, Barline,
+        RepeatBar, Barline,
+        RepeatBar, Barline,
 
         Key("D"), Barline,
         Rest, Rest, Hit, Rest, Rest, Rest, Hit, Rest, Barline,
@@ -95,7 +95,7 @@ fn test_lexing()
 
         Key(""), Barline,
         PlayPart("Melody0"), Barline,
-        Repeat, Barline, Repeat, Barline, Repeat, Barline,
+        RepeatBar, Barline, RepeatBar, Barline, RepeatBar, Barline,
 
         RightBrace,
         RightBrace,
@@ -105,7 +105,7 @@ fn test_lexing()
         LeftBrace,
         Key(":"), Barline,
         PlayPart("MainTheme"), Barline,
-        Repeat, Barline,
+        RepeatBar, Barline,
 
         RightBrace,
         BlankLine,

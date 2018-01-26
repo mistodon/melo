@@ -40,6 +40,7 @@ pub mod data
         pub program: u8,
         pub octave: i8,
         pub bars: Vec<Bar>,
+        pub divisions_per_bar: u8,
     }
 
     impl<'a> Default for Voice<'a>
@@ -53,6 +54,7 @@ pub mod data
                 program: 0,
                 octave: 0,
                 bars: Vec::new(),
+                divisions_per_bar: 1,
             }
         }
     }
@@ -143,6 +145,19 @@ pub fn sequence_pieces<'a>(
             voice.program = voice_node.program.unwrap_or(voice.program);
             voice.octave = voice_node.octave.unwrap_or(voice.octave);
 
+            let bar_length_lcm = piece_node.plays
+                .iter()
+                .filter(|play| play.voice == Some(voice.name))
+                .flat_map(
+                    |play| play.staves.iter()
+                        .flat_map(
+                            |stave| stave.bars.iter()
+                                .map(|bar| bar.notes.iter().map(|note| note.length()).sum())))
+                .fold(1, lcm);
+
+            voice.divisions_per_bar = bar_length_lcm as u8;
+
+
             for play_node in &piece_node.plays
             {
                 if play_node.voice != Some(voice.name)
@@ -160,25 +175,22 @@ pub fn sequence_pieces<'a>(
                         }
 
                         let bar = &mut voice.bars[index];
-                        let bar_node_length = bar_node.notes.len() as u64;
+                        let bar_node_length: u64 = bar_node.notes.iter().map(|note| note.length()).sum();
 
-                        let lcm = lcm(bar.divisions, bar_node_length);
-                        let bar_scale = (lcm / bar.divisions) as u64;
-                        let note_scale = (lcm / bar_node_length) as u8;
+                        assert!(voice.divisions_per_bar % bar_node_length as u8 == 0);
+                        let note_scale = voice.divisions_per_bar / bar_node_length as u8;
 
-                        bar.divisions *= bar_scale;
-                        for note in &mut bar.notes
-                        {
-                            note.length *= bar_scale as u8;
-                            note.position *= bar_scale as u8;
-                        }
+                        bar.divisions = voice.divisions_per_bar as u64;
 
-                        for (note_index, note_node) in bar_node.notes.iter().enumerate()
+                        let mut bar_position = 0;
+                        for note_node in &bar_node.notes
                         {
                             match *note_node
                             {
-                                NoteNode::Rest => continue,
-                                NoteNode::Note(midi) => {
+                                NoteNode::Rest { length } => {
+                                    bar_position += note_scale * length;
+                                }
+                                NoteNode::Note { midi, length } => {
                                     let octave = voice.octave;
 
                                     let midi = midi.checked_add(octave * 12)
@@ -205,11 +217,13 @@ pub fn sequence_pieces<'a>(
                                                 }
                                             })?;
 
-                                    let length = 1 * note_scale;
-                                    let position = note_index as u8 * note_scale;
+                                    let length = note_scale * length;
+                                    let position = bar_position;
                                     let note = Note { midi, length, position };
 
                                     bar.notes.push(note);
+
+                                    bar_position += length;
                                 }
                             }
                         }
@@ -368,5 +382,21 @@ mod tests
     fn fail_when_notes_moved_out_of_range()
     {
         sequence_test_fail("voice V { octave: 1} play V { :| g^'''}");
+    }
+
+    #[test]
+    fn voice_with_note_lengths()
+    {
+        voice_test("voice A { } play A { :| C4 -2 G2 }",
+           vec![
+               Bar
+               {
+                   divisions: 8,
+                   notes: vec![
+                       Note { midi: 60, length: 4, position: 0 },
+                       Note { midi: 67, length: 2, position: 6 },
+                   ]
+               }
+           ]);
     }
 }

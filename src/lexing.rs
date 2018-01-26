@@ -39,8 +39,8 @@ pub mod data
         Rest,
         Hit,
         Ditto,
-        Repeat,
-        Length(u64),
+        RepeatBar,
+        RepeatNote,
         Note(&'a str),
         PlayPart(&'a str),
 
@@ -72,8 +72,8 @@ pub mod data
                 Rest => "'-'",
                 Hit => "'x'",
                 Ditto => "'\"'",
-                Repeat => "'%'",
-                Length(_) => "<length_specifier>",
+                RepeatBar => "'%'",
+                RepeatNote => ".",
                 Note(_) => "<note>",
                 PlayPart(_) => "'*<part>'",
                 EOF => "<end_of_file>",
@@ -125,7 +125,7 @@ pub fn lex<'a>(source: &'a str) -> Result<Vec<MetaToken<'a>>, LexingError>
     ];
 
     const STAVE_CAPTURE_PRIORITIES: &[&str] = &[
-        "note", "part", "barline", "symbol", "length", "whitespace", "comment", "error"
+        "note", "part", "barline", "symbol", "number", "whitespace", "comment", "error"
     ];
 
     for capture in STRUCTURE_REGEX.captures_iter(source)
@@ -208,19 +208,15 @@ pub fn lex<'a>(source: &'a str) -> Result<Vec<MetaToken<'a>>, LexingError>
                                 "-" => Rest,
                                 "x" => Hit,
                                 "\"" => Ditto,
-                                "%" => Repeat,
+                                "%" => RepeatBar,
+                                "." => RepeatNote,
                                 _ => unreachable!()
                             };
                             tokens.push(MetaToken { token, span, line_col });
                         }
-                        "length" => {
-                            let size = match text
-                            {
-                                "." => 2,
-                                s if s.as_bytes()[1] == b'.' => s.len() + 1,
-                                s => s[1..].parse().trust()
-                            };
-                            tokens.push(MetaToken { token: Length(size as u64), span, line_col });
+                        "number" => {
+                            let number = text.parse::<i64>().trust();
+                            tokens.push(MetaToken { token: Num(number), span, line_col });
                         }
                         "whitespace" | "comment" => (),
                         "error" => {
@@ -286,8 +282,8 @@ lazy_static!
     static ref MUSIC_REGEX: Regex = Regex::new("\
         (?P<note>[a-gA-G][=_\\^]*[,']*)|\
         (?P<part>\\*[a-zA-Z_][a-zA-Z0-9_]*)|\
-        (?P<symbol>[\\-x\"%])|\
-        (?P<length>\\.(\\d+|\\.*))|\
+        (?P<symbol>[\\.\\-x\"%])|\
+        (?P<number>\\d+)|\
         (?P<barline>\\|)|\
         (?P<comment>//.*)|\
         (?P<whitespace>(\\s|;)+)|\
@@ -537,16 +533,18 @@ mod tests
     #[test]
     fn lex_note_length()
     {
-        lextest(": | A... B.4 | C.", vec![
+        lextest(": | A... B4 | C.", vec![
                 Key(""),
                 Barline,
                 Note("A"),
-                Length(4),
+                RepeatNote,
+                RepeatNote,
+                RepeatNote,
                 Note("B"),
-                Length(4),
+                Num(4),
                 Barline,
                 Note("C"),
-                Length(2),
+                RepeatNote,
         ]);
     }
 
@@ -561,7 +559,7 @@ mod tests
                 Hit,
                 Rest,
                 Barline,
-                Repeat,
+                RepeatBar,
                 Barline,
                 Ditto,
                 Barline,

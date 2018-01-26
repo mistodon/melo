@@ -67,8 +67,28 @@ pub mod data
     #[derive(Debug, Copy, Clone, PartialEq, Eq)]
     pub enum NoteNode
     {
-        Rest,
-        Note(i8),
+        Rest
+        {
+            length: u8,
+        },
+        Note
+        {
+            length: u8,
+            midi: i8,
+        }
+    }
+
+    impl NoteNode
+    {
+        // TODO(claire): This is an inelegant way to have a common field.
+        pub fn length(&self) -> u64
+        {
+            match *self
+            {
+                NoteNode::Rest { length } => length as u64,
+                NoteNode::Note { length, .. } => length as u64,
+            }
+        }
     }
 }
 
@@ -124,6 +144,23 @@ pub enum ParsingError
     UndeclaredStave
     {
         stave_prefix: String,
+        line: usize,
+        col: usize,
+    },
+
+
+    #[fail(display = "error:{}:{}: Invalid note length {}. Lengths must be between 0 and 255.", length, line, col)]
+    InvalidLength
+    {
+        length: i64,
+        line: usize,
+        col: usize,
+    },
+
+    #[fail(display = "error:{}:{}: Unexpected note length {}. Lengths must follow a note or rest.", length, line, col)]
+    UnexpectedLength
+    {
+        length: i64,
         line: usize,
         col: usize,
     },
@@ -526,15 +563,27 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                     match meta.token
                     {
                         EOF => return Err(ParsingError::eof(meta, "in stave", "stave contents".to_owned())),
-                        Rest => bar.notes.push(NoteNode::Rest),
+                        Rest => bar.notes.push(NoteNode::Rest { length: 1 }),
                         Hit => {
                             let midi = stave_note.ok_or(ParsingError::InvalidHit { stave_prefix: raw_prefix.to_owned(), line, col })?;
-                            bar.notes.push(NoteNode::Note(midi));
+                            bar.notes.push(NoteNode::Note { midi, length: 1 });
                         }
                         Note(note) => {
                             let midi = notes::note_to_midi(note)
                                 .ok_or_else(|| ParsingError::InvalidNote { note: note.to_owned(), line, col })?;
-                            bar.notes.push(NoteNode::Note(midi));
+                            bar.notes.push(NoteNode::Note { midi, length: 1 });
+                        }
+                        Num(num) => {
+                            if num <= 0 || num >= 255
+                            {
+                                return Err(ParsingError::InvalidLength { length: num, line, col })
+                            }
+                            let previous_note = bar.notes.last_mut().ok_or(ParsingError::UnexpectedLength { length: num, line, col })?;
+                            match previous_note
+                            {
+                                &mut NoteNode::Rest { ref mut length } => *length = num as u8,
+                                &mut NoteNode::Note { ref mut length, .. } => *length = num as u8,
+                            }
                         }
                         Barline => bar_full = true,
                         Key(_) | BlankLine | RightBrace => stave_full = true,
@@ -778,7 +827,7 @@ mod tests
                 plays: vec![
                     PlayNode
                     {
-                        staves: vec![stave("V0", vec![vec![NoteNode::Rest]]) ],
+                        staves: vec![stave("V0", vec![vec![NoteNode::Rest { length: 1 }]]) ],
                         .. Default::default()
                     }
                 ],
@@ -796,7 +845,7 @@ mod tests
                 plays: vec![
                     PlayNode
                     {
-                        staves: vec![stave("V0", vec![vec![NoteNode::Rest]]) ],
+                        staves: vec![stave("V0", vec![vec![NoteNode::Rest { length: 1 }]]) ],
                         .. Default::default()
                     }
                 ],
@@ -815,8 +864,8 @@ mod tests
                     PlayNode
                     {
                         staves: vec![
-                            stave("C", vec![vec![NoteNode::Rest]]),
-                            stave("D", vec![vec![NoteNode::Rest]])],
+                            stave("C", vec![vec![NoteNode::Rest { length: 1 }]]),
+                            stave("D", vec![vec![NoteNode::Rest { length: 1 }]])],
                         .. Default::default()
                     }
                 ],
@@ -834,7 +883,7 @@ mod tests
                 plays: vec![
                     PlayNode
                     {
-                        staves: vec![stave("C", vec![vec![NoteNode::Note(60)]])],
+                        staves: vec![stave("C", vec![vec![NoteNode::Note { midi: 60, length: 1 }]])],
                         .. Default::default()
                     }
                 ],
@@ -852,7 +901,7 @@ mod tests
                 plays: vec![
                     PlayNode
                     {
-                        staves: vec![stave("V0", vec![vec![NoteNode::Note(60), NoteNode::Note(62)]])],
+                        staves: vec![stave("V0", vec![vec![NoteNode::Note { midi: 60, length: 1 }, NoteNode::Note { midi: 62, length: 1 }]])],
                         .. Default::default()
                     }
                 ],
@@ -870,7 +919,7 @@ mod tests
                 plays: vec![
                     PlayNode
                     {
-                        staves: vec![stave("C", vec![vec![NoteNode::Note(60)], vec![NoteNode::Note(60)]])],
+                        staves: vec![stave("C", vec![vec![NoteNode::Note { midi: 60, length: 1 }], vec![NoteNode::Note { midi: 60, length: 1 }]])],
                         .. Default::default()
                     }
                 ],
@@ -889,8 +938,8 @@ mod tests
                     PlayNode
                     {
                         staves: vec![
-                            stave("V0", vec![vec![NoteNode::Note(60)]]),
-                            stave("V1", vec![vec![NoteNode::Note(67)]]),
+                            stave("V0", vec![vec![NoteNode::Note { midi: 60, length: 1 }]]),
+                            stave("V1", vec![vec![NoteNode::Note { midi: 67, length: 1 }]]),
                         ],
                         .. Default::default()
                     }
@@ -928,8 +977,8 @@ mod tests
                     PlayNode
                     {
                         staves: vec![
-                            stave("V0", vec![vec![NoteNode::Note(60)], vec![NoteNode::Note(67)]]),
-                            stave("V1", vec![vec![NoteNode::Note(67)], vec![NoteNode::Note(74)]]),
+                            stave("V0", vec![vec![NoteNode::Note { midi: 60, length: 1 }], vec![NoteNode::Note { midi: 67, length: 1 }]]),
+                            stave("V1", vec![vec![NoteNode::Note { midi: 67, length: 1 }], vec![NoteNode::Note { midi: 74, length: 1 }]]),
                         ],
                         .. Default::default()
                     }
@@ -964,6 +1013,62 @@ mod tests
     fn fail_when_hit_notes_are_encountered_in_incompatible_staves()
     {
         parsefailtest(vec![Play, LeftBrace, Key(""), Barline, Hit, RightBrace]);
+    }
+
+    #[test]
+    fn parse_note_with_length()
+    {
+        parsetest(vec![Play, LeftBrace, Key(""), Barline, Note("C"), Num(4), RightBrace],
+            PieceNode
+            {
+                plays: vec![
+                    PlayNode
+                    {
+                        staves: vec![
+                            stave("V0", vec![vec![NoteNode::Note { midi: 60, length: 4 }]]),
+                        ],
+                        .. Default::default()
+                    }
+                ],
+                .. Default::default()
+            })
+    }
+
+    #[test]
+    fn parse_rest_with_length()
+    {
+        parsetest(vec![Play, LeftBrace, Key(""), Barline, Rest, Num(4), RightBrace],
+            PieceNode
+            {
+                plays: vec![
+                    PlayNode
+                    {
+                        staves: vec![
+                            stave("V0", vec![vec![NoteNode::Rest { length: 4 }]]),
+                        ],
+                        .. Default::default()
+                    }
+                ],
+                .. Default::default()
+            })
+    }
+
+    #[test]
+    fn fail_on_unexpected_length()
+    {
+        parsefailtest(vec![Play, LeftBrace, Key(""), Barline, Num(4), RightBrace]);
+    }
+
+    #[test]
+    fn fail_on_overflowed_length()
+    {
+        parsefailtest(vec![Play, LeftBrace, Key(""), Barline, Rest, Num(300), RightBrace]);
+    }
+
+    #[test]
+    fn fail_on_underflowed_length()
+    {
+        parsefailtest(vec![Play, LeftBrace, Key(""), Barline, Rest, Num(0), RightBrace]);
     }
 }
 
