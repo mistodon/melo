@@ -1,3 +1,7 @@
+pub mod data;
+pub mod error;
+
+
 use std::borrow::Cow;
 use std::iter::Peekable;
 use std::slice::Iter;
@@ -7,203 +11,12 @@ use lexing::data::Token::*;
 use trust::Trust;
 use notes;
 
+
 use self::data::*;
+use self::error::{ ParsingError, ErrorType };
 
 
 type TokenStream<'a> = Peekable<Iter<'a, MetaToken<'a>>>;
-
-
-pub mod data
-{
-    use std::borrow::Cow;
-
-    #[derive(Debug, PartialEq, Eq)]
-    pub struct ParseTree<'a>
-    {
-        pub pieces: Vec<PieceNode<'a>>,
-    }
-
-    #[derive(Debug, Default, PartialEq, Eq)]
-    pub struct PieceNode<'a>
-    {
-        pub title: Option<&'a str>,
-        pub composer: Option<&'a str>,
-        pub tempo: Option<u64>,
-        pub beats: Option<u64>,
-
-        pub voices: Vec<VoiceNode<'a>>,
-        pub plays: Vec<PlayNode<'a>>,
-    }
-
-    #[derive(Debug, Default, PartialEq, Eq)]
-    pub struct VoiceNode<'a>
-    {
-        pub name: &'a str,
-        pub program: Option<u8>,
-        pub channel: Option<u8>,
-        pub octave: Option<i8>,
-        pub volume: Option<u8>,
-    }
-
-    #[derive(Debug, Default, PartialEq, Eq)]
-    pub struct PlayNode<'a>
-    {
-        pub voice: Option<&'a str>,
-        pub staves: Vec<StaveNode<'a>>,
-    }
-
-    #[derive(Debug, Default, PartialEq, Eq)]
-    pub struct StaveNode<'a>
-    {
-        pub prefix: Cow<'a, str>,
-        pub bars: Vec<BarNode>,
-    }
-
-    #[derive(Debug, Default, PartialEq, Eq)]
-    pub struct BarNode
-    {
-        pub notes: Vec<NoteNode>,
-    }
-
-    #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-    pub enum NoteNode
-    {
-        Rest
-        {
-            length: u8,
-        },
-        Extension
-        {
-            length: u8,
-        },
-        Note
-        {
-            length: u8,
-            midi: i8,
-        },
-    }
-
-    impl NoteNode
-    {
-        // TODO(***realname***): This is an inelegant way to have a common field.
-        pub fn length(&self) -> u32
-        {
-            match *self
-            {
-                NoteNode::Rest { length } => length as u32,
-                NoteNode::Extension { length } => length as u32,
-                NoteNode::Note { length, .. } => length as u32,
-            }
-        }
-    }
-}
-
-
-#[derive(Debug, Fail, PartialEq, Eq)]
-pub enum ParsingError
-{
-    #[fail(display = "error:{}:{}: Unexpected token '{}' {}. Expected {}.", line, col, token, context, expected)]
-    UnexpectedToken
-    {
-        token: String,
-        context: &'static str,
-        expected: String,
-        line: usize,
-        col: usize,
-    },
-
-    #[fail(display = "error:{}:{}: Unexpected end of input {}. Expected {}.", line, col, context, expected)]
-    UnexpectedEOF
-    {
-        context: &'static str,
-        expected: String,
-        line: usize,
-        col: usize,
-    },
-
-    #[fail(display = "error:{}:{}: Invalid note \"{}\" is out of range.", line, col, note)]
-    InvalidNote
-    {
-        note: String,
-        line: usize,
-        col: usize,
-    },
-
-    #[fail(display = "error:{}:{}: Hit markers (\"x\") are only allowed in single-note staves, not \"{}:\" staves.", line, col, stave_prefix)]
-    InvalidHit
-    {
-        line: usize,
-        col: usize,
-        stave_prefix: String,
-    },
-
-    #[fail(display = "error:{}:{}: Invalid attribute \"{}\" for `{}`.", line, col, attribute, structure)]
-    InvalidAttribute
-    {
-        attribute: String,
-        structure: &'static str,
-        line: usize,
-        col: usize,
-    },
-
-    #[fail(display = "error:{}:{}: Undeclared stave \"{}\". All staves in a play block must be declared before the first blank line.", line, col, stave_prefix)]
-    UndeclaredStave
-    {
-        stave_prefix: String,
-        line: usize,
-        col: usize,
-    },
-
-
-    #[fail(display = "error:{}:{}: Invalid note length {}. Lengths must be between 0 and 255.", length, line, col)]
-    InvalidLength
-    {
-        length: i64,
-        line: usize,
-        col: usize,
-    },
-
-    #[fail(display = "error:{}:{}: Unexpected note length {}. Lengths must follow a note or rest.", length, line, col)]
-    UnexpectedLength
-    {
-        length: i64,
-        line: usize,
-        col: usize,
-    },
-
-    #[fail(display = "{}\nerror: Encountered {} parsing errors shown above.", error_text, error_count)]
-    MultipleParsingErrors
-    {
-        errors: Vec<ParsingError>,
-        error_text: String,
-        error_count: usize,
-    },
-}
-
-impl ParsingError
-{
-    pub fn eof(eof_token: &MetaToken, context: &'static str, expected: String) -> ParsingError
-    {
-        let (line, col) = (eof_token.line, eof_token.col);
-        ParsingError::UnexpectedEOF { context, expected, line, col }
-    }
-
-    pub fn unexpected(token: &MetaToken, context: &'static str, expected: String) -> ParsingError
-    {
-        let (line, col) = (token.line, token.col);
-        ParsingError::UnexpectedToken { token: format!("{}", token.span.1), context, expected, line, col }
-    }
-}
-
-impl From<Vec<ParsingError>> for ParsingError
-{
-    fn from(errors: Vec<ParsingError>) -> Self
-    {
-        let text = errors.iter().map(ParsingError::to_string).collect::<Vec<_>>().join("\n");
-        let error_count = errors.len();
-        ParsingError::MultipleParsingErrors { error_text: text, error_count, errors }
-    }
-}
 
 
 fn error_swizzle<T, E>(results: Vec<Result<T, E>>) -> Result<Vec<T>, Vec<E>>
@@ -361,8 +174,8 @@ fn parse_piece_from_body<'a>(stream: &mut TokenStream<'a>) -> Result<PieceNode<'
                     Key("composer") => piece_node.composer = Some(try_parse_name(stream, "after `composer:`")?),
                     Key("tempo") => piece_node.tempo = Some(try_parse_num(stream, "after `tempo:`")? as u64),
                     Key("beats") => piece_node.beats = Some(try_parse_num(stream, "after `beats:`")? as u64),
-                    Key(key) => return Err(ParsingError::InvalidAttribute { attribute: key.to_owned(), structure: "piece", line, col }),
-                    Ident(key) => return Err(ParsingError::InvalidAttribute { attribute: key.to_owned(), structure: "piece", line, col }),
+                    Key(key) => return Err(ParsingError { line, col, error: ErrorType::InvalidAttribute { attribute: key.to_owned(), structure: "piece" } }),
+                    Ident(key) => return Err(ParsingError { line, col, error: ErrorType::InvalidAttribute { attribute: key.to_owned(), structure: "piece" } }),
                     _ => unreachable!()
                 }
 
@@ -465,8 +278,8 @@ fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, Parsin
             Key("program") => voice_node.program = Some(try_parse_num(stream, "after `program:`")? as u8),
             Key("octave") => voice_node.octave = Some(try_parse_num(stream, "after `octave:`")? as i8),
             Key("volume") => voice_node.volume = Some(try_parse_num(stream, "after `volume:`")? as u8),
-            Key(key) => return Err(ParsingError::InvalidAttribute { attribute: key.to_owned(), structure: "voice", line, col }),
-            Ident(key) => return Err(ParsingError::InvalidAttribute { attribute: key.to_owned(), structure: "voice", line, col }),
+            Key(key) => return Err(ParsingError { line, col, error: ErrorType::InvalidAttribute { attribute: key.to_owned(), structure: "voice" } }),
+            Ident(key) => return Err(ParsingError { line, col, error: ErrorType::InvalidAttribute { attribute: key.to_owned(), structure: "voice" } }),
             _ => unreachable!()
         }
 
@@ -544,11 +357,14 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                         {
                             let (line, col) = (meta.line, meta.col);
                             return Err(
-                                ParsingError::UndeclaredStave
+                                ParsingError
                                 {
-                                    stave_prefix: raw_prefix.to_owned(),
                                     line,
                                     col,
+                                    error: ErrorType::UndeclaredStave
+                                    {
+                                        stave_prefix: raw_prefix.to_owned(),
+                                    }
                                 })
                         }
                     }
@@ -573,12 +389,12 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                         EOF => return Err(ParsingError::eof(meta, "in stave", "stave contents".to_owned())),
                         Rest => bar.notes.push(NoteNode::Rest { length: 1 }),
                         Hit => {
-                            let midi = stave_note.ok_or(ParsingError::InvalidHit { stave_prefix: raw_prefix.to_owned(), line, col })?;
+                            let midi = stave_note.ok_or_else(|| ParsingError { line, col, error: ErrorType::InvalidHit { stave_prefix: raw_prefix.to_owned() }})?;
                             bar.notes.push(NoteNode::Note { midi, length: 1 });
                         }
                         Note(note) => {
                             let midi = notes::note_to_midi(note)
-                                .ok_or_else(|| ParsingError::InvalidNote { note: note.to_owned(), line, col })?;
+                                .ok_or_else(|| ParsingError { line, col, error: ErrorType::InvalidNote { note: note.to_owned() } })?;
                             bar.notes.push(NoteNode::Note { midi, length: 1 });
                         }
                         ExtendNote => {
@@ -587,9 +403,11 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                         Num(num) => {
                             if num <= 0 || num >= 255
                             {
-                                return Err(ParsingError::InvalidLength { length: num, line, col })
+                                return Err(ParsingError { line, col, error: ErrorType::InvalidLength { length: num } })
                             }
-                            let previous_note = bar.notes.last_mut().ok_or(ParsingError::UnexpectedLength { length: num, line, col })?;
+
+                            let previous_note = bar.notes.last_mut().ok_or(ParsingError { line, col, error: ErrorType::UnexpectedLength { length: num } })?;
+
                             match previous_note
                             {
                                 &mut NoteNode::Rest { ref mut length } => *length = num as u8,
