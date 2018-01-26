@@ -184,13 +184,13 @@ impl ParsingError
 {
     pub fn eof(eof_token: &MetaToken, context: &'static str, expected: String) -> ParsingError
     {
-        let (line, col) = eof_token.line_col;
+        let (line, col) = (eof_token.line, eof_token.col);
         ParsingError::UnexpectedEOF { context, expected, line, col }
     }
 
     pub fn unexpected(token: &MetaToken, context: &'static str, expected: String) -> ParsingError
     {
-        let (line, col) = token.line_col;
+        let (line, col) = (token.line, token.col);
         ParsingError::UnexpectedToken { token: format!("{}", token.span.1), context, expected, line, col }
     }
 }
@@ -354,7 +354,7 @@ fn parse_piece_from_body<'a>(stream: &mut TokenStream<'a>) -> Result<PieceNode<'
             }
             _ => {
                 let attribute_key = parse_attribute_key(stream, "in `piece`")?;
-                let (line, col) = meta.line_col;
+                let (line, col) = (meta.line, meta.col);
                 match attribute_key
                 {
                     Key("title") => piece_node.title = Some(try_parse_name(stream, "after `title:`")?),
@@ -452,7 +452,8 @@ fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, Parsin
         }
 
         let attribute_key = parse_attribute_key(stream, "in `voice`")?;
-        let (line, col) = stream.peek().trust().line_col;
+        let meta = *stream.peek().trust();
+        let (line, col) = (meta.line, meta.col);
 
         match attribute_key
         {
@@ -541,7 +542,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                         }
                         else
                         {
-                            let (line, col) = meta.line_col;
+                            let (line, col) = (meta.line, meta.col);
                             return Err(
                                 ParsingError::UndeclaredStave
                                 {
@@ -565,7 +566,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                     let mut stave_full = false;
 
                     let meta = *stream.peek().trust();
-                    let (line, col) = meta.line_col;
+                    let (line, col) = (meta.line, meta.col);
 
                     match meta.token
                     {
@@ -640,7 +641,7 @@ mod tests
     fn parsetest(mut tokens: Vec<Token>, expected: PieceNode)
     {
         tokens.push(EOF);
-        let meta_tokens = tokens.into_iter().map(|token| MetaToken { token, span: Span(0, ""), line_col: (0, 0) })
+        let meta_tokens = tokens.into_iter().map(|token| MetaToken { token, span: Span(0, ""), line: 0, col: 0 })
             .collect::<Vec<MetaToken>>();
         let result = parse(&meta_tokens).unwrap();
         assert_eq!(result.pieces.len(), 1);
@@ -650,7 +651,7 @@ mod tests
     fn parsefailtest(mut tokens: Vec<Token>)
     {
         tokens.push(EOF);
-        let meta_tokens = tokens.into_iter().map(|token| MetaToken { token, span: Span(0, ""), line_col: (0, 0) })
+        let meta_tokens = tokens.into_iter().map(|token| MetaToken { token, span: Span(0, ""), line: 0, col: 0 })
             .collect::<Vec<MetaToken>>();
         assert!(parse(&meta_tokens).is_err());
     }
@@ -658,7 +659,7 @@ mod tests
     fn multiparsetest(mut tokens: Vec<Token>, expected: Vec<PieceNode>)
     {
         tokens.push(EOF);
-        let meta_tokens = tokens.into_iter().map(|token| MetaToken { token, span: Span(0, ""), line_col: (0, 0) })
+        let meta_tokens = tokens.into_iter().map(|token| MetaToken { token, span: Span(0, ""), line: 0, col: 0 })
             .collect::<Vec<MetaToken>>();
         let result = parse(&meta_tokens).unwrap();
         assert_eq!(result.pieces, expected);

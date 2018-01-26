@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["***Realname*** ***Lastname*** <***redacted.email@redacted.nope***>"]
 
 [dependencies]
+ansi_term = "~0.10.2"
 failure = "~0.1.1"
 lazy_static = "~1.0.0"
 regex = "~0.2.5"
