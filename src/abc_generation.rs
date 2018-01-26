@@ -407,5 +407,12 @@ mod tests
         let source = "voice A {} play A { :| A C3 E4 -8 }";
         write_bars_test(source, "L:1/16\nA,C3E4z8|\n", 4);
     }
+
+    #[test]
+    fn notes_with_dots()
+    {
+        let source = "voice A {} play A { :| C..D E..F G..F E..D | C }";
+        write_bars_test(source, "L:1/16\nC3DE3FG3FE3D|\nC16|\n", 4);
+    }
 }
 

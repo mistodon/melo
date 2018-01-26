@@ -71,11 +71,15 @@ pub mod data
         {
             length: u8,
         },
+        Extension
+        {
+            length: u8,
+        },
         Note
         {
             length: u8,
             midi: i8,
-        }
+        },
     }
 
     impl NoteNode
@@ -86,6 +90,7 @@ pub mod data
             match *self
             {
                 NoteNode::Rest { length } => length as u64,
+                NoteNode::Extension { length } => length as u64,
                 NoteNode::Note { length, .. } => length as u64,
             }
         }
@@ -573,6 +578,9 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                                 .ok_or_else(|| ParsingError::InvalidNote { note: note.to_owned(), line, col })?;
                             bar.notes.push(NoteNode::Note { midi, length: 1 });
                         }
+                        ExtendNote => {
+                            bar.notes.push(NoteNode::Extension { length: 1 });
+                        }
                         Num(num) => {
                             if num <= 0 || num >= 255
                             {
@@ -582,6 +590,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                             match previous_note
                             {
                                 &mut NoteNode::Rest { ref mut length } => *length = num as u8,
+                                &mut NoteNode::Extension { ref mut length } => *length = num as u8,
                                 &mut NoteNode::Note { ref mut length, .. } => *length = num as u8,
                             }
                         }

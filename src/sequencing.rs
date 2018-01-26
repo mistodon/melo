@@ -169,6 +169,8 @@ pub fn sequence_pieces<'a>(
                 {
                     for (index, bar_node) in stave_node.bars.iter().enumerate()
                     {
+                        let mut previous_note_exists = false;
+
                         if index >= voice.bars.len()
                         {
                             voice.bars.push(Bar::default())
@@ -188,9 +190,21 @@ pub fn sequence_pieces<'a>(
                             match *note_node
                             {
                                 NoteNode::Rest { length } => {
+                                    previous_note_exists = false;
+                                    bar_position += note_scale * length;
+                                }
+                                NoteNode::Extension { length } => {
+                                    if previous_note_exists
+                                    {
+                                        let previous_note = bar.notes.last_mut().trust();
+                                        previous_note.length += note_scale * length;
+                                    }
+
                                     bar_position += note_scale * length;
                                 }
                                 NoteNode::Note { midi, length } => {
+                                    previous_note_exists = true;
+
                                     let octave = voice.octave;
 
                                     let midi = midi.checked_add(octave * 12)
@@ -398,5 +412,84 @@ mod tests
                    ]
                }
            ]);
+    }
+
+    #[test]
+    fn voice_with_dots()
+    {
+        voice_test("voice A { } play A { :| A..B C... .8 }",
+            vec![
+                Bar
+                {
+                    divisions: 16,
+                    notes: vec![
+                        Note { midi: 57, length: 3, position: 0 },
+                        Note { midi: 59, length: 1, position: 3 },
+                        Note { midi: 60, length: 12, position: 4 },
+                    ]
+                }
+            ]);
+    }
+
+    #[test]
+    fn voice_with_leading_dots()
+    {
+        voice_test("voice A { } play A { :| ...C E... G... -... }",
+            vec![
+                Bar
+                {
+                    divisions: 16,
+                    notes: vec![
+                        Note { midi: 60, length: 1, position: 3 },
+                        Note { midi: 64, length: 4, position: 4 },
+                        Note { midi: 67, length: 4, position: 8 },
+                    ]
+                }
+            ]);
+    }
+
+    #[test]
+    fn dots_do_not_carry_across_staves()
+    {
+        voice_test("voice A { } play A { :| CEGc | ; :| ...g }",
+            vec![
+                Bar
+                {
+                    divisions: 4,
+                    notes: vec![
+                        Note { midi: 60, length: 1, position: 0 },
+                        Note { midi: 64, length: 1, position: 1 },
+                        Note { midi: 67, length: 1, position: 2 },
+                        Note { midi: 72, length: 1, position: 3 },
+                        Note { midi: 79, length: 1, position: 3 },
+                    ]
+                }
+            ]);
+    }
+
+    #[test]
+    #[ignore]
+    fn notes_can_be_tied_across_bars()
+    {
+        voice_test("voice A {} play A { :| CEG. | ..EC }",
+            vec![
+                Bar
+                {
+                    divisions: 4,
+                    notes: vec![
+                        Note { midi: 60, length: 1, position: 0 },
+                        Note { midi: 64, length: 1, position: 1 },
+                        Note { midi: 67, length: 4, position: 2 },
+                    ]
+                },
+                Bar
+                {
+                    divisions: 4,
+                    notes: vec![
+                        Note { midi: 64, length: 1, position: 2 },
+                        Note { midi: 60, length: 1, position: 3 },
+                    ]
+                },
+            ]);
     }
 }
