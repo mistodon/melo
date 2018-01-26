@@ -1,94 +1,12 @@
+pub mod data;
+pub mod error;
+
+
 use parsing::data::*;
 use trust::Trust;
 
 use self::data::*;
-
-
-pub mod data
-{
-    #[derive(Debug, PartialEq)]
-    pub struct Piece<'a>
-    {
-        pub title: Option<&'a str>,
-        pub composer: Option<&'a str>,
-        pub tempo: u64,
-        pub beats: u64,
-
-        pub voices: Vec<Voice<'a>>,
-    }
-
-    impl<'a> Default for Piece<'a>
-    {
-        fn default() -> Self
-        {
-            Piece
-            {
-                title: None,
-                composer: None,
-                tempo: 120,
-                beats: 4,
-                voices: Vec::new(),
-            }
-        }
-    }
-
-    #[derive(Debug, PartialEq)]
-    pub struct Voice<'a>
-    {
-        pub name: &'a str,
-        pub channel: u8,
-        pub program: u8,
-        pub octave: i8,
-        pub volume: Option<f64>,
-        pub notes: Vec<Note>,
-        pub divisions_per_bar: u32,
-    }
-
-    impl<'a> Default for Voice<'a>
-    {
-        fn default() -> Self
-        {
-            Voice
-            {
-                name: "error",
-                channel: 1,
-                program: 0,
-                octave: 0,
-                volume: None,
-                notes: Vec::new(),
-                divisions_per_bar: 1,
-            }
-        }
-    }
-
-    #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-    pub struct Note
-    {
-        pub position: u32,
-        pub length: u32,
-        pub midi: i8,
-    }
-}
-
-
-#[derive(Debug, Fail, PartialEq, Eq)]
-pub enum SequencingError
-{
-    #[fail(display = "error: {}", message)]
-    InvalidNote
-    {
-        message: String,
-    },
-
-    #[fail(display = "error: No voice named {} was declared.", voice_name)]
-    UndeclaredVoice
-    {
-        voice_name: String,
-    },
-
-    #[fail(display = "error: Voiceless `play` blocks are not yet supported.")]
-    VoicelessPlayBlock,
-}
+use self::error::{ SequencingError, ErrorType };
 
 
 pub fn sequence_pieces<'a>(
@@ -109,15 +27,17 @@ pub fn sequence_pieces<'a>(
                 {
                     let error = match play.voice
                     {
-                        Some(voice_name) => SequencingError::UndeclaredVoice { voice_name: voice_name.to_owned() },
-                        None => SequencingError::VoicelessPlayBlock
+                        Some(voice_name) => ErrorType::UndeclaredVoice { voice_name: voice_name.to_owned() },
+                        None => ErrorType::VoicelessPlayBlock
                     };
 
-                    return Err(error)
+                    // TODO(claire): This error needs file position information
+                    return Err(SequencingError { line: 123456789, col: 123456789, error })
                 }
             }
         }
 
+        // TODO(claire): Stop this - make things immutable after construction so new fields aren't left out
         let mut piece = Piece::default();
 
         piece.title = piece_node.title.or(piece.title);
@@ -188,29 +108,13 @@ pub fn sequence_pieces<'a>(
 
                                     let octave = voice.octave;
 
-                                    let midi = midi.checked_add(octave * 12)
-                                        .ok_or_else(
-                                            ||
-                                            {
-                                                use notes;
-
-                                                let sharp = notes::midi_to_sharp(midi).trust();
-                                                let flat = notes::midi_to_flat(midi).trust();
-                                                let (direction, offset) = match octave
-                                                {
-                                                    o if o > 0 => ("up", o),
-                                                    o => ("down", -o)
-                                                };
-                                                let message = format!(
-                                                    "Note ({} / {}) is invalid after shifting {} {} octaves. Notes must lie between {} and {}.",
-                                                    flat, sharp, direction, offset,
-                                                    notes::MIN_SHARP, notes::MAX_SHARP);
-
-                                                SequencingError::InvalidNote
-                                                {
-                                                    message
-                                                }
-                                            })?;
+                                    let midi = midi.checked_add(octave * 12).ok_or_else(
+                                        || SequencingError
+                                        {
+                                            line: 12345,
+                                            col: 12345,
+                                            error: ErrorType::InvalidNote { midi, octave_offset: octave }
+                                        })?;
 
                                     let length = note_scale * length as u32;
                                     let position = cursor;
