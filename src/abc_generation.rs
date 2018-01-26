@@ -400,4 +400,12 @@ mod tests
         let source = "voice A {} play A { :| abcdabcdabc | }";
         write_bars_fail(source, 4);
     }
+
+    #[test]
+    fn notes_with_lengths()
+    {
+        let source = "voice A {} play A { :| A C3 E4 -8 }";
+        write_bars_test(source, "L:1/16\nA,C3E4z8|\n", 4);
+    }
 }
+
