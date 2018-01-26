@@ -1,100 +1,13 @@
+pub mod data;
+pub mod error;
+
+
 use regex::{ Regex };
 
 use trust::Trust;
 
 use self::data::*;
-
-
-pub mod data
-{
-    #[derive(Debug, PartialEq, Eq)]
-    pub struct MetaToken<'a>
-    {
-        pub token: Token<'a>,
-        pub span: Span<'a>,
-        pub line_col: (usize, usize),
-    }
-
-    #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-    pub struct Span<'a>(pub usize, pub &'a str);
-
-    #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-    pub enum Token<'a>
-    {
-        Piece,
-        Voice,
-        Section,
-        Part,
-        Play,
-        LeftBrace,
-        RightBrace,
-        Comma,
-        BlankLine,
-        Num(i64),
-        Key(&'a str),
-        Ident(&'a str),
-        Str(&'a str),
-
-        Barline,
-        Rest,
-        Hit,
-        Ditto,
-        RepeatBar,
-        ExtendNote,
-        Note(&'a str),
-        PlayPart(&'a str),
-
-        EOF,
-    }
-
-    impl<'a> Token<'a>
-    {
-        pub fn readable_type(&self) -> &'static str
-        {
-            use self::Token::*;
-
-            match *self
-            {
-                Piece => "'piece'",
-                Voice => "'voice'",
-                Section => "'section'",
-                Part => "'part'",
-                Play => "'play'",
-                LeftBrace => "'{'",
-                RightBrace => "'}'",
-                Comma => "','",
-                BlankLine => "<blank_line>",
-                Num(_) => "<number>",
-                Key(_) => "<key>:",
-                Ident(_) => "<identifier>",
-                Str(_) => "<string>",
-                Barline => "'|'",
-                Rest => "'-'",
-                Hit => "'x'",
-                Ditto => "'\"'",
-                RepeatBar => "'%'",
-                ExtendNote => ".",
-                Note(_) => "<note>",
-                PlayPart(_) => "'*<part>'",
-                EOF => "<end_of_file>",
-            }
-        }
-    }
-}
-
-
-#[derive(Debug, Fail, PartialEq, Eq)]
-pub enum LexingError
-{
-    #[fail(display = "error: Unexpected character '{}' in {} at {}:{}.", text, context, line, col)]
-    UnexpectedCharacter
-    {
-        text: String,
-        context: &'static str,
-        line: usize,
-        col: usize,
-    }
-}
+use self::error::{ LexingError, ErrorType };
 
 
 fn line_col_at(source: &str, position: usize) -> (usize, usize)
@@ -144,11 +57,11 @@ pub fn lex<'a>(source: &'a str) -> Result<Vec<MetaToken<'a>>, LexingError>
         let text = m.as_str();
         let text_len = text.len();
         let span = Span(m.start(), text);
-        let line_col = line_col_at(source, m.start());
+        let (line, col) = line_col_at(source, m.start());
 
         match group_name
         {
-            "key" => tokens.push(MetaToken { token: Key(text[..(text_len-1)].trim()), span, line_col }),
+            "key" => tokens.push(MetaToken { token: Key(text[..(text_len-1)].trim()), span, line, col }),
             "ident" => {
                 let token = match text
                 {
@@ -159,12 +72,12 @@ pub fn lex<'a>(source: &'a str) -> Result<Vec<MetaToken<'a>>, LexingError>
                     "play" => Play,
                     s => Ident(s),
                 };
-                tokens.push(MetaToken { token, span, line_col });
+                tokens.push(MetaToken { token, span, line, col });
             }
-            "string" => tokens.push(MetaToken { token: Str(&text[1..(text_len-1)]), span, line_col }),
+            "string" => tokens.push(MetaToken { token: Str(&text[1..(text_len-1)]), span, line, col }),
             "number" => {
                 let number = text.parse().trust();
-                tokens.push(MetaToken { token: Num(number), span, line_col });
+                tokens.push(MetaToken { token: Num(number), span, line, col });
             }
             "delim" => {
                 let token = match text
@@ -174,7 +87,7 @@ pub fn lex<'a>(source: &'a str) -> Result<Vec<MetaToken<'a>>, LexingError>
                     "," => Comma,
                     _ => unreachable!()
                 };
-                tokens.push(MetaToken { token, span, line_col });
+                tokens.push(MetaToken { token, span, line, col });
             }
             "staveline" => {
                 let start = span.0;
@@ -195,13 +108,13 @@ pub fn lex<'a>(source: &'a str) -> Result<Vec<MetaToken<'a>>, LexingError>
                     let text = m.as_str();
                     let start = start + m.start();
                     let span = Span(start, text);
-                    let line_col = line_col_at(source, start);
+                    let (line, col) = line_col_at(source, start);
 
                     match group_name
                     {
-                        "note" => tokens.push(MetaToken { token: Note(text), span, line_col }),
-                        "part" => tokens.push(MetaToken { token: PlayPart(&text[1..]), span, line_col }),
-                        "barline" => tokens.push(MetaToken { token: Barline, span, line_col }),
+                        "note" => tokens.push(MetaToken { token: Note(text), span, line, col }),
+                        "part" => tokens.push(MetaToken { token: PlayPart(&text[1..]), span, line, col }),
+                        "barline" => tokens.push(MetaToken { token: Barline, span, line, col }),
                         "symbol" => {
                             let token = match text
                             {
@@ -212,49 +125,55 @@ pub fn lex<'a>(source: &'a str) -> Result<Vec<MetaToken<'a>>, LexingError>
                                 "." => ExtendNote,
                                 _ => unreachable!()
                             };
-                            tokens.push(MetaToken { token, span, line_col });
+                            tokens.push(MetaToken { token, span, line, col });
                         }
                         "number" => {
                             let number = text.parse::<i64>().trust();
-                            tokens.push(MetaToken { token: Num(number), span, line_col });
+                            tokens.push(MetaToken { token: Num(number), span, line, col });
                         }
                         "whitespace" | "comment" => (),
                         "error" => {
                             return Err(
-                                LexingError::UnexpectedCharacter
+                                LexingError
                                 {
-                                    text: text.to_owned(),
-                                    context: "stave",
-                                    line: line_col.0,
-                                    col: line_col.1,
+                                    line, col,
+                                    error: ErrorType::UnexpectedCharacter
+                                    {
+                                        text: text.to_owned(),
+                                        context: "stave"
+                                    }
                                 });
                         }
                         _ => unreachable!()
                     }
                 }
             }
-            "blank" => tokens.push(MetaToken { token: BlankLine, span, line_col }),
+            "blank" => tokens.push(MetaToken { token: BlankLine, span, line, col }),
             "whitespace" | "comment" => (),
             "error" => {
                 return Err(
-                    LexingError::UnexpectedCharacter
+                    LexingError
                     {
-                        text: text.to_owned(),
-                        context: "file",
-                        line: line_col.0,
-                        col: line_col.1,
-                    })
+                        line, col,
+                        error: ErrorType::UnexpectedCharacter
+                        {
+                            text: text.to_owned(),
+                            context: "file"
+                        }
+                    });
             }
             _ => unreachable!()
         }
     }
 
+    let (line, col) = line_col_at(source, source.len());
     tokens.push(
         MetaToken
         {
             token: EOF,
             span: Span(source.len(), ""),
-            line_col: line_col_at(source, source.len()),
+            line,
+            col,
         });
 
     Ok(tokens)
@@ -319,12 +238,15 @@ mod tests
     {
         assert_eq!(
             lex("@").unwrap_err(),
-            LexingError::UnexpectedCharacter
+            LexingError
             {
-                text: "@".to_owned(),
-                context: "file",
                 line: 1,
                 col: 1,
+                error: ErrorType::UnexpectedCharacter
+                {
+                    text: "@".to_owned(),
+                    context: "file",
+                }
             });
     }
 
@@ -333,12 +255,15 @@ mod tests
     {
         assert_eq!(
             lex("   :|{}|").unwrap_err(),
-            LexingError::UnexpectedCharacter
+            LexingError
             {
-                text: "{".to_owned(),
-                context: "stave",
                 line: 1,
                 col: 6,
+                error: ErrorType::UnexpectedCharacter
+                {
+                    text: "{".to_owned(),
+                    context: "stave",
+                }
             });
     }
 

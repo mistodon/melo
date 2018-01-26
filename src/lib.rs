@@ -4,7 +4,9 @@
 #[macro_use] extern crate failure;
 #[macro_use] extern crate lazy_static;
 
+extern crate ansi_term;
 extern crate regex;
+
 
 pub mod notes;
 mod abc_generation;
@@ -12,6 +14,7 @@ pub mod lexing;     // TODO(claire): These should be private
 pub mod parsing;    // TODO(claire): These should be private
 mod sequencing;
 mod trust;
+
 
 #[cfg(test)]
 mod test_helpers;
