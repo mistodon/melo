@@ -324,6 +324,13 @@ mod tests
     }
 
     #[test]
+    fn test_triplets_in_3_4_time()
+    {
+        let source = "voice A {} play A { :| CEG ceg gec }";
+        write_bars_test(source, "L:1/8\n(3CEG(3ceg(3gec|\n", 3);
+    }
+
+    #[test]
     fn test_fast_triplets()
     {
         let source = "voice A {} play A { :| ccc ccc ccc ccc }";
