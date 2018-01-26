@@ -6,7 +6,7 @@ use self::data::*;
 
 pub mod data
 {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq)]
     pub struct Piece<'a>
     {
         pub title: Option<&'a str>,
@@ -32,13 +32,14 @@ pub mod data
         }
     }
 
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq)]
     pub struct Voice<'a>
     {
         pub name: &'a str,
         pub channel: u8,
         pub program: u8,
         pub octave: i8,
+        pub volume: Option<f64>,
         pub notes: Vec<Note>,
         pub divisions_per_bar: u32,
     }
@@ -53,6 +54,7 @@ pub mod data
                 channel: 1,
                 program: 0,
                 octave: 0,
+                volume: None,
                 notes: Vec::new(),
                 divisions_per_bar: 1,
             }
@@ -129,6 +131,7 @@ pub fn sequence_pieces<'a>(
             voice.channel = voice_node.channel.unwrap_or(voice.channel);
             voice.program = voice_node.program.unwrap_or(voice.program);
             voice.octave = voice_node.octave.unwrap_or(voice.octave);
+            voice.volume = voice_node.volume.map(|vol| vol as f64 / 127.0);
 
             let bar_length_lcm = piece_node.plays
                 .iter()

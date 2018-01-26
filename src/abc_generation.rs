@@ -74,6 +74,12 @@ pub fn generate_abc(pieces: &[Piece]) -> Result<String, AbcGenerationError>
             writeln!(buffer, "%%MIDI channel {}", voice.channel)?;
             writeln!(buffer, "%%MIDI program {}", voice.program)?;
 
+            if let Some(volume) = voice.volume
+            {
+                let volume = (volume * 127.0).round() as u8;
+                writeln!(buffer, "%%MIDI control 7 {}", volume)?;
+            }
+
             if !voice.notes.is_empty()
             {
                 let stave_text = write_bars(&voice.notes, piece.beats as u32, voice.divisions_per_bar)?;
