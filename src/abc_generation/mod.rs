@@ -1,31 +1,11 @@
-use std::fmt::Error;
+pub mod error;
 
 use sequencing::data::*;
 use notes;
 use trust::Trust;
 
 
-#[derive(Debug, Fail, PartialEq, Eq)]
-pub enum AbcGenerationError
-{
-    #[fail(display = "error: Error in formatting: {}", error)]
-    FormattingError
-    {
-        #[cause]
-        error: Error,
-    },
-
-    #[fail(display = "error: Piece requires a {}-tuplet, but only tuplets of 3-9 notes are currently supported.", tuplet)]
-    UnsupportedTuplet
-    {
-        tuplet: u64
-    }
-}
-
-impl From<Error> for AbcGenerationError
-{
-    fn from(error: Error) -> Self { AbcGenerationError::FormattingError { error } }
-}
+use self::error::{ AbcGenerationError, ErrorType };
 
 
 fn div_tuplet(notes_per_beat: u64) -> (u64, u64)
@@ -109,7 +89,7 @@ fn write_bars(stave_notes: &[Note], beats_per_bar: u32, divisions_per_bar: u32) 
 
     if tuplet > 9
     {
-        return Err(AbcGenerationError::UnsupportedTuplet { tuplet })
+        return Err(AbcGenerationError { line: 12345, col: 12345, error: ErrorType::UnsupportedTuplet { tuplet } })
     }
 
     writeln!(buffer, "L:1/{}", beat_division)?;
