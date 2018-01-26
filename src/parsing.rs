@@ -85,13 +85,13 @@ pub mod data
     impl NoteNode
     {
         // TODO(claire): This is an inelegant way to have a common field.
-        pub fn length(&self) -> u64
+        pub fn length(&self) -> u32
         {
             match *self
             {
-                NoteNode::Rest { length } => length as u64,
-                NoteNode::Extension { length } => length as u64,
-                NoteNode::Note { length, .. } => length as u64,
+                NoteNode::Rest { length } => length as u32,
+                NoteNode::Extension { length } => length as u32,
+                NoteNode::Note { length, .. } => length as u32,
             }
         }
     }

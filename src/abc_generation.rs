@@ -74,9 +74,9 @@ pub fn generate_abc(pieces: &[Piece]) -> Result<String, AbcGenerationError>
             writeln!(buffer, "%%MIDI channel {}", voice.channel)?;
             writeln!(buffer, "%%MIDI program {}", voice.program)?;
 
-            if !voice.bars.is_empty()
+            if !voice.notes.is_empty()
             {
-                let stave_text = write_bars(&voice.bars, piece.beats)?;
+                let stave_text = write_bars(&voice.notes, piece.beats as u32, voice.divisions_per_bar)?;
 
                 write!(buffer, "{}", stave_text)?;
             }
@@ -89,17 +89,17 @@ pub fn generate_abc(pieces: &[Piece]) -> Result<String, AbcGenerationError>
 }
 
 
-fn write_bars(bars: &[Bar], beats_per_bar: u64) -> Result<String, AbcGenerationError>
+fn write_bars(stave_notes: &[Note], beats_per_bar: u32, divisions_per_bar: u32) -> Result<String, AbcGenerationError>
 {
     use std::fmt::Write;
     use notes::lcm;
 
     let mut buffer = String::new();
 
-    let max_divisions = bars.iter().map(|bar| bar.divisions).max().trust();
-    let notes_per_bar = lcm(max_divisions, beats_per_bar);
+    let max_divisions = divisions_per_bar;
+    let notes_per_bar = lcm(max_divisions as u64, beats_per_bar as u64) as u32;
     let notes_per_beat = notes_per_bar / beats_per_bar;
-    let (beat_division, tuplet) = div_tuplet(notes_per_beat);
+    let (beat_division, tuplet) = div_tuplet(notes_per_beat as u64);
 
     if tuplet > 9
     {
@@ -108,110 +108,133 @@ fn write_bars(bars: &[Bar], beats_per_bar: u64) -> Result<String, AbcGenerationE
 
     writeln!(buffer, "L:1/{}", beat_division)?;
 
-    for bar in bars
+    let scale = notes_per_bar as u32 / divisions_per_bar;
+
+    let mut notes = stave_notes.iter();
+    let mut cursor = 0;
+    let mut abc_notes = vec![];
+
+    let final_barline = {
+        let latest_end = stave_notes.iter().map(|note| note.position + note.length).max().trust();
+        let latest_bar = (latest_end + divisions_per_bar - 1) / divisions_per_bar;
+        latest_bar * divisions_per_bar * scale
+    };
+
+    loop
     {
-        let scale = notes_per_bar / bar.divisions;
+        let note = notes.next();
+        let position = note.map(|note| note.position * scale).unwrap_or(final_barline);
 
-        let mut notes = bar.notes.iter();
-        let mut cursor: u64 = 0;
-        let mut abc_notes = vec![];
-
-        loop
+        if position < cursor
         {
-            let note = notes.next();
-            let position = note.map(|note| note.position as u64 * scale).unwrap_or(notes_per_bar);
+            continue
+        }
 
-            if position < cursor
+        let rest_length = position - cursor;
+
+        if rest_length > 0
+        {
+            let individual_rest_length =  if tuplet == 1 { rest_length } else { 1 };
+            let number_of_rests = rest_length / individual_rest_length;
+            let rest_string = match individual_rest_length
             {
-                continue
+                1 => "z".to_owned(),
+                n => format!("z{}", n),
+            };
+
+            for _ in 0..number_of_rests
+            {
+                abc_notes.push((rest_string.clone(), individual_rest_length));
             }
 
-            let rest_length = position - cursor;
+            cursor = position;
+        }
 
-            if rest_length > 0
-            {
-                let individual_rest_length =  if tuplet == 1 { rest_length } else { 1 };
-                let number_of_rests = rest_length / individual_rest_length;
-                let rest_string = match individual_rest_length
+        match note
+        {
+            Some(note) => {
+                let chord: Vec<Note> = stave_notes.iter()
+                    .filter(|other| other.position == note.position)
+                    .map(|&note| note)
+                    .collect();
+
+                let min_chord_length = chord.iter().map(|note| note.length * scale).min().trust();
+                let individual_chord_length = if tuplet == 1 { min_chord_length } else { 1 };
+                let number_of_chords = min_chord_length / individual_chord_length;
+
+                let chord_notes_string = chord.iter()
+                    .map(|note| notes::midi_to_abc(note.midi).trust())
+                    .collect::<Vec<&str>>()
+                    .join("");
+
+                let chord_string = match chord.len()
                 {
-                    1 => "z".to_owned(),
-                    n => format!("z{}", n),
+                    1 => chord_notes_string,
+                    _ => format!("[{}]", chord_notes_string)
                 };
 
-                for _ in 0..number_of_rests
+                let chord_string = match individual_chord_length
                 {
-                    abc_notes.push(rest_string.clone());
-                }
+                    1 => format!("{}", chord_string),
+                    n => format!("{}{}", chord_string, n)
+                };
 
-                cursor = position;
-            }
+                let tied_chord_string = format!("{}-", chord_string);
 
-
-            match note
-            {
-                Some(note) => {
-                    let chord: Vec<Note> = bar.notes.iter()
-                        .filter(|other| other.position == note.position)
-                        .map(|&note| note)
-                        .collect();
-
-                    let min_chord_length = chord.iter().map(|note| note.length as u64 * scale).min().trust();
-                    let individual_chord_length = if tuplet == 1 { min_chord_length } else { 1 };
-                    let number_of_chords = min_chord_length / individual_chord_length;
-
-                    let chord_notes_string = chord.iter()
-                        .map(|note| notes::midi_to_abc(note.midi).trust())
-                        .collect::<Vec<&str>>()
-                        .join("");
-
-                    let chord_string = match chord.len()
-                    {
-                        1 => chord_notes_string,
-                        _ => format!("[{}]", chord_notes_string)
-                    };
-
-                    let chord_string = match individual_chord_length
-                    {
-                        1 => format!("{}", chord_string),
-                        n => format!("{}{}", chord_string, n)
-                    };
-
-                    let tied_chord_string = format!("{}-", chord_string);
-
-                    for _ in 0..(number_of_chords - 1)
-                    {
-                        abc_notes.push(tied_chord_string.clone())
-                    }
-                    abc_notes.push(chord_string);
-
-                    cursor += min_chord_length;
-                }
-                None => break
-            }
-        }
-
-        assert!(cursor == notes_per_bar);
-        assert!(abc_notes.len() % tuplet as usize == 0);
-
-        match tuplet
-        {
-            1 => {
-                write!(buffer, "{}", abc_notes.join(""))?;
-            }
-            n => {
-                for chunk in abc_notes.chunks(n as usize)
+                for _ in 0..(number_of_chords - 1)
                 {
-                    write!(buffer, "({}", n)?;
-                    for note in chunk
-                    {
-                        write!(buffer, "{}", note)?;
-                    }
+                    abc_notes.push((tied_chord_string.clone(), individual_chord_length))
                 }
-            }
-        }
+                abc_notes.push((chord_string, individual_chord_length));
 
-        writeln!(buffer, "|")?;
+                cursor += min_chord_length;
+            }
+            None => break
+        }
     }
+
+    assert!(cursor == final_barline);
+    assert!(abc_notes.len() % tuplet as usize == 0);
+
+    let mut written_notes = 0;
+
+    match tuplet
+    {
+        1 => {
+            for (note, length) in abc_notes
+            {
+                if written_notes >= notes_per_bar
+                {
+                    written_notes -= notes_per_bar;
+                    assert!(written_notes < notes_per_bar);
+                    writeln!(buffer, "|")?;
+                }
+
+                write!(buffer, "{}", note)?;
+                written_notes += length;
+            }
+        }
+        n => {
+            for chunk in abc_notes.chunks(n as usize)
+            {
+                if written_notes >= notes_per_bar
+                {
+                    written_notes -= notes_per_bar;
+                    assert!(written_notes < notes_per_bar);
+                    writeln!(buffer, "|")?;
+                }
+
+                write!(buffer, "({}", n)?;
+                for &(ref note, length) in chunk
+                {
+                    write!(buffer, "{}", note)?;
+                    written_notes += length;
+                }
+            }
+        }
+    }
+
+    writeln!(buffer, "|")?;
 
     Ok(buffer)
 }
@@ -222,7 +245,7 @@ mod tests
 {
     use super::*;
 
-    fn write_bars_test(source: &str, expected: &str, notes_per_bar: u64)
+    fn write_bars_test(source: &str, expected: &str, notes_per_bar: u32)
     {
         use lexing;
         use parsing;
@@ -231,12 +254,12 @@ mod tests
         let tokens = lexing::lex(source).expect("ERROR IN LEXER");
         let parse_tree = parsing::parse(&tokens).expect("ERROR IN PARSER");
         let pieces = sequencing::sequence_pieces(&parse_tree.pieces).expect("ERROR IN SEQUENCER");
-        let bars = &pieces[0].voices[0].bars;
+        let voice = &pieces[0].voices[0];
 
-        assert_eq!(write_bars(bars, notes_per_bar).unwrap(), expected);
+        assert_eq!(write_bars(&voice.notes, notes_per_bar, voice.divisions_per_bar).unwrap(), expected);
     }
 
-    fn write_bars_fail(source: &str, notes_per_bar: u64)
+    fn write_bars_fail(source: &str, notes_per_bar: u32)
     {
         use lexing;
         use parsing;
@@ -245,9 +268,9 @@ mod tests
         let tokens = lexing::lex(source).expect("ERROR IN LEXER");
         let parse_tree = parsing::parse(&tokens).expect("ERROR IN PARSER");
         let pieces = sequencing::sequence_pieces(&parse_tree.pieces).expect("ERROR IN SEQUENCER");
-        let bars = &pieces[0].voices[0].bars;
+        let voice = &pieces[0].voices[0];
 
-        assert!(write_bars(bars, notes_per_bar).is_err());
+        assert!(write_bars(&voice.notes, notes_per_bar, voice.divisions_per_bar).is_err());
     }
 
     #[test]

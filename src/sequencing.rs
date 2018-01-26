@@ -39,8 +39,8 @@ pub mod data
         pub channel: u8,
         pub program: u8,
         pub octave: i8,
-        pub bars: Vec<Bar>,
-        pub divisions_per_bar: u8,
+        pub notes: Vec<Note>,
+        pub divisions_per_bar: u32,
     }
 
     impl<'a> Default for Voice<'a>
@@ -53,33 +53,18 @@ pub mod data
                 channel: 1,
                 program: 0,
                 octave: 0,
-                bars: Vec::new(),
+                notes: Vec::new(),
                 divisions_per_bar: 1,
             }
-        }
-    }
-
-    #[derive(Debug, PartialEq, Eq)]
-    pub struct Bar
-    {
-        pub divisions: u64,
-        pub notes: Vec<Note>,
-    }
-
-    impl Default for Bar
-    {
-        fn default() -> Self
-        {
-            Bar { divisions: 1, notes: Vec::new() }
         }
     }
 
     #[derive(Debug, Copy, Clone, PartialEq, Eq)]
     pub struct Note
     {
+        pub position: u32,
+        pub length: u32,
         pub midi: i8,
-        pub position: u8,
-        pub length: u8,
     }
 }
 
@@ -152,10 +137,10 @@ pub fn sequence_pieces<'a>(
                     |play| play.staves.iter()
                         .flat_map(
                             |stave| stave.bars.iter()
-                                .map(|bar| bar.notes.iter().map(|note| note.length()).sum())))
+                                .map(|bar| bar.notes.iter().map(|note| note.length() as u64).sum())))
                 .fold(1, lcm);
 
-            voice.divisions_per_bar = bar_length_lcm as u8;
+            voice.divisions_per_bar = bar_length_lcm as u32;
 
 
             for play_node in &piece_node.plays
@@ -167,40 +152,33 @@ pub fn sequence_pieces<'a>(
 
                 for stave_node in &play_node.staves
                 {
+                    let mut previous_note_exists = false;
+
                     for (index, bar_node) in stave_node.bars.iter().enumerate()
                     {
-                        let mut previous_note_exists = false;
+                        let mut cursor = index as u32 * voice.divisions_per_bar;
 
-                        if index >= voice.bars.len()
-                        {
-                            voice.bars.push(Bar::default())
-                        }
+                        let bar_node_length: u32 = bar_node.notes.iter().map(|note| note.length() as u32).sum();
 
-                        let bar = &mut voice.bars[index];
-                        let bar_node_length: u64 = bar_node.notes.iter().map(|note| note.length()).sum();
+                        assert!(voice.divisions_per_bar % bar_node_length == 0);
+                        let note_scale = voice.divisions_per_bar / bar_node_length;
 
-                        assert!(voice.divisions_per_bar % bar_node_length as u8 == 0);
-                        let note_scale = voice.divisions_per_bar / bar_node_length as u8;
-
-                        bar.divisions = voice.divisions_per_bar as u64;
-
-                        let mut bar_position = 0;
                         for note_node in &bar_node.notes
                         {
                             match *note_node
                             {
                                 NoteNode::Rest { length } => {
                                     previous_note_exists = false;
-                                    bar_position += note_scale * length;
+                                    cursor += note_scale * length as u32;
                                 }
                                 NoteNode::Extension { length } => {
                                     if previous_note_exists
                                     {
-                                        let previous_note = bar.notes.last_mut().trust();
-                                        previous_note.length += note_scale * length;
+                                        let previous_note = voice.notes.last_mut().trust();
+                                        previous_note.length += note_scale * length as u32;
                                     }
 
-                                    bar_position += note_scale * length;
+                                    cursor += note_scale * length as u32;
                                 }
                                 NoteNode::Note { midi, length } => {
                                     previous_note_exists = true;
@@ -231,23 +209,20 @@ pub fn sequence_pieces<'a>(
                                                 }
                                             })?;
 
-                                    let length = note_scale * length;
-                                    let position = bar_position;
+                                    let length = note_scale * length as u32;
+                                    let position = cursor;
                                     let note = Note { midi, length, position };
 
-                                    bar.notes.push(note);
+                                    voice.notes.push(note);
 
-                                    bar_position += length;
+                                    cursor += length;
                                 }
                             }
                         }
                     }
                 }
 
-                for bar in &mut voice.bars
-                {
-                    bar.notes.sort_by_key(|note| note.position);
-                }
+                voice.notes.sort_by_key(|note| note.position);
             }
 
             piece.voices.push(voice);
@@ -283,12 +258,12 @@ mod tests
         assert!(sequence_pieces(&parse_tree.pieces).is_err());
     }
 
-    fn voice_test(source: &str, expected_bars: Vec<Bar>)
+    fn voice_test(source: &str, expected_notes: Vec<Note>)
     {
         let tokens = &lexing::lex(source).expect("ERROR IN LEXER");
         let parse_tree = parsing::parse(tokens).expect("ERROR IN PARSER");
         let piece = &sequence_pieces(&parse_tree.pieces).unwrap()[0];
-        assert_eq!(piece.voices[0].bars, expected_bars);
+        assert_eq!(piece.voices[0].notes, expected_notes);
     }
 
     #[test]
@@ -331,14 +306,7 @@ mod tests
     #[test]
     fn voice_with_single_note()
     {
-        voice_test("voice OneNote { } play OneNote { :| C }",
-           vec![
-               Bar
-               {
-                   divisions: 1,
-                   notes: vec![Note { midi: 60, length: 1, position: 0 }]
-               }
-           ]);
+        voice_test("voice OneNote { } play OneNote { :| C }", vec![Note { midi: 60, length: 1, position: 0 }]);
     }
 
     #[test]
@@ -346,14 +314,8 @@ mod tests
     {
         voice_test("voice TwoNote { } play TwoNote { :| C G }",
            vec![
-               Bar
-               {
-                   divisions: 2,
-                   notes: vec![
-                       Note { midi: 60, length: 1, position: 0 },
-                       Note { midi: 67, length: 1, position: 1 },
-                   ]
-               }
+               Note { midi: 60, length: 1, position: 0 },
+               Note { midi: 67, length: 1, position: 1 },
            ]);
     }
 
@@ -362,14 +324,8 @@ mod tests
     {
         voice_test("voice Diad { } play Diad { :| C ; :| G }",
            vec![
-               Bar
-               {
-                   divisions: 1,
-                   notes: vec![
-                       Note { midi: 60, length: 1, position: 0 },
-                       Note { midi: 67, length: 1, position: 0 },
-                   ]
-               }
+               Note { midi: 60, length: 1, position: 0 },
+               Note { midi: 67, length: 1, position: 0 },
            ]);
     }
 
@@ -378,17 +334,11 @@ mod tests
     {
         voice_test("voice Diad { } play Diad { :| C E G ; :| c g }",
            vec![
-               Bar
-               {
-                   divisions: 6,
-                   notes: vec![
-                       Note { midi: 60, length: 2, position: 0 },
-                       Note { midi: 72, length: 3, position: 0 },
-                       Note { midi: 64, length: 2, position: 2 },
-                       Note { midi: 79, length: 3, position: 3 },
-                       Note { midi: 67, length: 2, position: 4 },
-                   ]
-               }
+               Note { midi: 60, length: 2, position: 0 },
+               Note { midi: 72, length: 3, position: 0 },
+               Note { midi: 64, length: 2, position: 2 },
+               Note { midi: 79, length: 3, position: 3 },
+               Note { midi: 67, length: 2, position: 4 },
            ]);
     }
 
@@ -403,14 +353,8 @@ mod tests
     {
         voice_test("voice A { } play A { :| C4 -2 G2 }",
            vec![
-               Bar
-               {
-                   divisions: 8,
-                   notes: vec![
-                       Note { midi: 60, length: 4, position: 0 },
-                       Note { midi: 67, length: 2, position: 6 },
-                   ]
-               }
+               Note { midi: 60, length: 4, position: 0 },
+               Note { midi: 67, length: 2, position: 6 },
            ]);
     }
 
@@ -419,15 +363,9 @@ mod tests
     {
         voice_test("voice A { } play A { :| A..B C... .8 }",
             vec![
-                Bar
-                {
-                    divisions: 16,
-                    notes: vec![
-                        Note { midi: 57, length: 3, position: 0 },
-                        Note { midi: 59, length: 1, position: 3 },
-                        Note { midi: 60, length: 12, position: 4 },
-                    ]
-                }
+                Note { midi: 57, length: 3, position: 0 },
+                Note { midi: 59, length: 1, position: 3 },
+                Note { midi: 60, length: 12, position: 4 },
             ]);
     }
 
@@ -436,15 +374,9 @@ mod tests
     {
         voice_test("voice A { } play A { :| ...C E... G... -... }",
             vec![
-                Bar
-                {
-                    divisions: 16,
-                    notes: vec![
-                        Note { midi: 60, length: 1, position: 3 },
-                        Note { midi: 64, length: 4, position: 4 },
-                        Note { midi: 67, length: 4, position: 8 },
-                    ]
-                }
+                Note { midi: 60, length: 1, position: 3 },
+                Note { midi: 64, length: 4, position: 4 },
+                Note { midi: 67, length: 4, position: 8 },
             ]);
     }
 
@@ -453,43 +385,24 @@ mod tests
     {
         voice_test("voice A { } play A { :| CEGc | ; :| ...g }",
             vec![
-                Bar
-                {
-                    divisions: 4,
-                    notes: vec![
-                        Note { midi: 60, length: 1, position: 0 },
-                        Note { midi: 64, length: 1, position: 1 },
-                        Note { midi: 67, length: 1, position: 2 },
-                        Note { midi: 72, length: 1, position: 3 },
-                        Note { midi: 79, length: 1, position: 3 },
-                    ]
-                }
+                Note { midi: 60, length: 1, position: 0 },
+                Note { midi: 64, length: 1, position: 1 },
+                Note { midi: 67, length: 1, position: 2 },
+                Note { midi: 72, length: 1, position: 3 },
+                Note { midi: 79, length: 1, position: 3 },
             ]);
     }
 
     #[test]
-    #[ignore]
     fn notes_can_be_tied_across_bars()
     {
         voice_test("voice A {} play A { :| CEG. | ..EC }",
             vec![
-                Bar
-                {
-                    divisions: 4,
-                    notes: vec![
-                        Note { midi: 60, length: 1, position: 0 },
-                        Note { midi: 64, length: 1, position: 1 },
-                        Note { midi: 67, length: 4, position: 2 },
-                    ]
-                },
-                Bar
-                {
-                    divisions: 4,
-                    notes: vec![
-                        Note { midi: 64, length: 1, position: 2 },
-                        Note { midi: 60, length: 1, position: 3 },
-                    ]
-                },
+                Note { midi: 60, length: 1, position: 0 },
+                Note { midi: 64, length: 1, position: 1 },
+                Note { midi: 67, length: 4, position: 2 },
+                Note { midi: 64, length: 1, position: 6 },
+                Note { midi: 60, length: 1, position: 7 },
             ]);
     }
 }
