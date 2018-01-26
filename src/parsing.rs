@@ -42,6 +42,7 @@ pub mod data
         pub program: Option<u8>,
         pub channel: Option<u8>,
         pub octave: Option<i8>,
+        pub volume: Option<u8>,
     }
 
     #[derive(Debug, Default, PartialEq, Eq)]
@@ -462,6 +463,7 @@ fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, Parsin
             Key("channel") => voice_node.channel = Some(try_parse_num(stream, "after `channel:`")? as u8),
             Key("program") => voice_node.program = Some(try_parse_num(stream, "after `program:`")? as u8),
             Key("octave") => voice_node.octave = Some(try_parse_num(stream, "after `octave:`")? as i8),
+            Key("volume") => voice_node.volume = Some(try_parse_num(stream, "after `volume:`")? as u8),
             Key(key) => return Err(ParsingError::InvalidAttribute { attribute: key.to_owned(), structure: "voice", line, col }),
             Ident(key) => return Err(ParsingError::InvalidAttribute { attribute: key.to_owned(), structure: "voice", line, col }),
             _ => unreachable!()
@@ -754,6 +756,8 @@ mod tests
                 Num(0), Comma,
                 Key("octave"),
                 Num(-2), Comma,
+                Key("volume"),
+                Num(99), Comma,
                 RightBrace
             ],
             PieceNode
@@ -765,6 +769,7 @@ mod tests
                         channel: Some(1),
                         program: Some(0),
                         octave: Some(-2),
+                        volume: Some(99),
                     }],
                 .. Default::default()
             })
