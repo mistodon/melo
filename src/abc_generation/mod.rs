@@ -8,7 +8,7 @@ use trust::Trust;
 use self::error::{ AbcGenerationError, ErrorType };
 
 
-fn div_tuplet(notes_per_beat: u64) -> (u64, u64)
+fn div_tuplet(notes_per_beat: u32) -> (u32, u32)
 {
     let mut tuplet = notes_per_beat;
     let mut division = 1;
@@ -83,9 +83,9 @@ fn write_bars(stave_notes: &[Note], beats_per_bar: u32, divisions_per_bar: u32) 
     let mut buffer = String::new();
 
     let max_divisions = divisions_per_bar;
-    let notes_per_bar = lcm(max_divisions as u64, beats_per_bar as u64) as u32;
+    let notes_per_bar = lcm(max_divisions, beats_per_bar);
     let notes_per_beat = notes_per_bar / beats_per_bar;
-    let (beat_division, tuplet) = div_tuplet(notes_per_beat as u64);
+    let (beat_division, tuplet) = div_tuplet(notes_per_beat);
 
     if tuplet > 9
     {
@@ -111,7 +111,7 @@ fn write_bars(stave_notes: &[Note], beats_per_bar: u32, divisions_per_bar: u32) 
         let next_barline = ((cursor / notes_per_bar) + 1) * notes_per_bar;
 
         let note = notes.next();
-        let position = note.map(|note| note.position * scale).unwrap_or(::std::cmp::min(next_barline, end_position));
+        let position = note.map(|note| note.position * scale).unwrap_or_else(|| ::std::cmp::min(next_barline, end_position));
 
         if position < cursor
         {
@@ -169,17 +169,22 @@ fn write_bars(stave_notes: &[Note], beats_per_bar: u32, divisions_per_bar: u32) 
             Some(note) => {
                 let chord: Vec<Note> = stave_notes.iter()
                     .filter(|other| other.position == note.position)
-                    .map(|&note| note)
+                    .cloned()
                     .collect();
 
                 let min_chord_length = chord.iter().map(|note| note.length * scale).min().trust();
 
-                let chord_notes_string = chord.iter()
-                    .map(|note| notes::midi_to_abc(note.midi).trust())
-                    .collect::<Vec<&str>>()
-                    .join("");
+                fn chord_string(chord: &[Note]) -> String
+                {
+                    let chord_notes_string = chord.iter()
+                        .map(|note| notes::midi_to_abc(note.midi).trust())
+                        .collect::<Vec<&str>>()
+                        .join("");
 
-                let chord_string = if chord.len() == 1 { chord_notes_string } else { format!("[{}]", chord_notes_string) };
+                    if chord.len() == 1 { chord_notes_string } else { format!("[{}]", chord_notes_string) }
+                }
+
+                let chord_string = chord_string(&chord);
 
                 if tuplet == 1
                 {

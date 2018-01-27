@@ -26,7 +26,7 @@ fn line_col_at(source: &str, position: usize) -> (usize, usize)
 }
 
 
-pub fn lex<'a>(source: &'a str) -> Result<Vec<MetaToken<'a>>, LexingError>
+pub fn lex(source: &str) -> Result<Vec<MetaToken>, LexingError>
 {
     use self::Token::*;
 
@@ -49,7 +49,7 @@ pub fn lex<'a>(source: &'a str) -> Result<Vec<MetaToken<'a>>, LexingError>
         {
             if let Some(m) = capture.name(group_name)
             {
-                group = group.or(Some((group_name, m)));
+                group = group.or_else(|| Some((group_name, m)));
             }
         }
 
@@ -100,7 +100,7 @@ pub fn lex<'a>(source: &'a str) -> Result<Vec<MetaToken<'a>>, LexingError>
                     {
                         if let Some(m) = capture.name(group_name)
                         {
-                            group = group.or(Some((group_name, m)));
+                            group = group.or_else(|| Some((group_name, m)));
                         }
                     }
 

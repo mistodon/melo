@@ -146,9 +146,8 @@ fn parse_piece_from_body<'a>(stream: &mut TokenStream<'a>) -> Result<PieceNode<'
         let meta = *stream.peek().trust();
         match meta.token
         {
-            EOF => break,
+            EOF | RightBrace => break,
             BlankLine => { stream.next(); () },
-            RightBrace => break,
             Voice => {
                 let voice = parse_voice(stream);
                 if voice.is_err()
@@ -174,8 +173,8 @@ fn parse_piece_from_body<'a>(stream: &mut TokenStream<'a>) -> Result<PieceNode<'
                     Key("composer") => piece_node.composer = Some(try_parse_name(stream, "after `composer:`")?),
                     Key("tempo") => piece_node.tempo = Some(try_parse_num(stream, "after `tempo:`")? as u64),
                     Key("beats") => piece_node.beats = Some(try_parse_num(stream, "after `beats:`")? as u64),
-                    Key(key) => return Err(ParsingError { line, col, error: ErrorType::InvalidAttribute { attribute: key.to_owned(), structure: "piece" } }),
-                    Ident(key) => return Err(ParsingError { line, col, error: ErrorType::InvalidAttribute { attribute: key.to_owned(), structure: "piece" } }),
+                    Key(key) | Ident(key) =>
+                        return Err(ParsingError { line, col, error: ErrorType::InvalidAttribute { attribute: key.to_owned(), structure: "piece" } }),
                     _ => unreachable!()
                 }
 
@@ -219,11 +218,7 @@ fn try_parse_name<'a>(
     match meta.token
     {
         EOF => Err(ParsingError::eof(meta, context, "a name".to_owned())),
-        Ident(s) => {
-            stream.next();
-            Ok(s)
-        }
-        Str(s) => {
+        Ident(s) | Str(s) => {
             stream.next();
             Ok(s)
         }
@@ -231,7 +226,7 @@ fn try_parse_name<'a>(
     }
 }
 
-fn try_parse_num<'a>(
+fn try_parse_num(
     stream: &mut TokenStream,
     context: &'static str) -> Result<i64, ParsingError>
 {
@@ -278,8 +273,7 @@ fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, Parsin
             Key("program") => voice_node.program = Some(try_parse_num(stream, "after `program:`")? as u8),
             Key("octave") => voice_node.octave = Some(try_parse_num(stream, "after `octave:`")? as i8),
             Key("volume") => voice_node.volume = Some(try_parse_num(stream, "after `volume:`")? as u8),
-            Key(key) => return Err(ParsingError { line, col, error: ErrorType::InvalidAttribute { attribute: key.to_owned(), structure: "voice" } }),
-            Ident(key) => return Err(ParsingError { line, col, error: ErrorType::InvalidAttribute { attribute: key.to_owned(), structure: "voice" } }),
+            Key(key) | Ident(key) => return Err(ParsingError { line, col, error: ErrorType::InvalidAttribute { attribute: key.to_owned(), structure: "voice" } }),
             _ => unreachable!()
         }
 
@@ -345,7 +339,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                         .find(|&(_, stave)| stave.prefix == prefix)
                         .map(|(i, _)| i);
 
-                    let stave_index = existing_stave.unwrap_or(play_node.staves.len());
+                    let stave_index = existing_stave.unwrap_or_else(|| play_node.staves.len());
 
                     if existing_stave.is_none()
                     {
@@ -408,11 +402,11 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
 
                             let previous_note = bar.notes.last_mut().ok_or(ParsingError { line, col, error: ErrorType::UnexpectedLength { length: num } })?;
 
-                            match previous_note
+                            match *previous_note
                             {
-                                &mut NoteNode::Rest { ref mut length } => *length = num as u8,
-                                &mut NoteNode::Extension { ref mut length } => *length = num as u8,
-                                &mut NoteNode::Note { ref mut length, .. } => *length = num as u8,
+                                NoteNode::Rest { ref mut length }
+                                | NoteNode::Extension { ref mut length }
+                                | NoteNode::Note { ref mut length, .. } => *length = num as u8
                             }
                         }
                         Barline => bar_full = true,
@@ -422,13 +416,10 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                                 meta, "in stave", "stave contents".to_owned())),
                     }
 
-                    if bar_full || stave_full
+                    if (bar_full || stave_full) && !bar.notes.is_empty()
                     {
-                        if !bar.notes.is_empty()
-                        {
-                            let complete_bar = ::std::mem::replace(&mut bar, BarNode::default());
-                            stave.bars.push(complete_bar);
-                        }
+                        let complete_bar = ::std::mem::replace(&mut bar, BarNode::default());
+                        stave.bars.push(complete_bar);
                     }
 
                     if stave_full

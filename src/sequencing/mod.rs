@@ -51,7 +51,7 @@ pub fn sequence_pieces<'a>(
             voice.channel = voice_node.channel.unwrap_or(voice.channel);
             voice.program = voice_node.program.unwrap_or(voice.program);
             voice.octave = voice_node.octave.unwrap_or(voice.octave);
-            voice.volume = voice_node.volume.map(|vol| vol as f64 / 127.0);
+            voice.volume = voice_node.volume.map(|vol| f64::from(vol) / 127.0);
 
             let bar_length_lcm = piece_node.plays
                 .iter()
@@ -60,10 +60,10 @@ pub fn sequence_pieces<'a>(
                     |play| play.staves.iter()
                         .flat_map(
                             |stave| stave.bars.iter()
-                                .map(|bar| bar.notes.iter().map(|note| note.length() as u64).sum())))
+                                .map(|bar| bar.notes.iter().map(|note| note.length()).sum())))
                 .fold(1, lcm);
 
-            voice.divisions_per_bar = bar_length_lcm as u32;
+            voice.divisions_per_bar = bar_length_lcm;
 
 
             for play_node in &piece_node.plays
@@ -81,7 +81,7 @@ pub fn sequence_pieces<'a>(
                     {
                         let mut cursor = index as u32 * voice.divisions_per_bar;
 
-                        let bar_node_length: u32 = bar_node.notes.iter().map(|note| note.length() as u32).sum();
+                        let bar_node_length: u32 = bar_node.notes.iter().map(|note| note.length()).sum();
 
                         assert!(voice.divisions_per_bar % bar_node_length == 0);
                         let note_scale = voice.divisions_per_bar / bar_node_length;
@@ -92,16 +92,16 @@ pub fn sequence_pieces<'a>(
                             {
                                 NoteNode::Rest { length } => {
                                     previous_note_exists = false;
-                                    cursor += note_scale * length as u32;
+                                    cursor += note_scale * u32::from(length);
                                 }
                                 NoteNode::Extension { length } => {
                                     if previous_note_exists
                                     {
                                         let previous_note = voice.notes.last_mut().trust();
-                                        previous_note.length += note_scale * length as u32;
+                                        previous_note.length += note_scale * u32::from(length);
                                     }
 
-                                    cursor += note_scale * length as u32;
+                                    cursor += note_scale * u32::from(length);
                                 }
                                 NoteNode::Note { midi, length } => {
                                     previous_note_exists = true;
@@ -116,7 +116,7 @@ pub fn sequence_pieces<'a>(
                                             error: ErrorType::InvalidNote { midi, octave_offset: octave }
                                         })?;
 
-                                    let length = note_scale * length as u32;
+                                    let length = note_scale * u32::from(length);
                                     let position = cursor;
                                     let note = Note { midi, length, position };
 
