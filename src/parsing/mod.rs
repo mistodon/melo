@@ -159,10 +159,12 @@ fn parse_piece_from_body<'a>(
     stream: &mut TokenStream<'a>,
 ) -> Result<PieceNode<'a>, ParsingError>
 {
-    let mut piece_node = PieceNode::default();
-
     let mut voice_results = Vec::new();
     let mut play_results = Vec::new();
+    let mut title = None;
+    let mut composer = None;
+    let mut beats = None;
+    let mut tempo = None;
 
     loop
     {
@@ -200,22 +202,19 @@ fn parse_piece_from_body<'a>(
                 {
                     Key("title") =>
                     {
-                        piece_node.title = Some(try_parse_name(stream, "after `title:`")?)
+                        title = Some(try_parse_name(stream, "after `title:`")?)
                     }
                     Key("composer") =>
                     {
-                        piece_node.composer =
-                            Some(try_parse_name(stream, "after `composer:`")?)
+                        composer = Some(try_parse_name(stream, "after `composer:`")?)
                     }
                     Key("tempo") =>
                     {
-                        piece_node.tempo =
-                            Some(try_parse_num(stream, "after `tempo:`")? as u64)
+                        tempo = Some(try_parse_num(stream, "after `tempo:`")? as u64)
                     }
                     Key("beats") =>
                     {
-                        piece_node.beats =
-                            Some(try_parse_num(stream, "after `beats:`")? as u64)
+                        beats = Some(try_parse_num(stream, "after `beats:`")? as u64)
                     }
                     Key(key) | Ident(key) =>
                     {
@@ -240,13 +239,10 @@ fn parse_piece_from_body<'a>(
         }
     }
 
-    let voice_nodes = error_swizzle(voice_results)?;
-    let play_nodes = error_swizzle(play_results)?;
+    let voices = error_swizzle(voice_results)?;
+    let plays = error_swizzle(play_results)?;
 
-    piece_node.voices = voice_nodes;
-    piece_node.plays = play_nodes;
-
-    Ok(piece_node)
+    Ok(PieceNode { title, composer, beats, tempo, voices, plays })
 }
 
 fn parse_attribute_key<'a>(
@@ -316,10 +312,10 @@ fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, Parsin
     expect_token(stream, Voice, "in `piece`")?;
 
     let name = try_parse_name(stream, "in `voice`")?;
-    let mut voice_node = VoiceNode {
-        name,
-        ..Default::default()
-    };
+    let mut channel = None;
+    let mut program = None;
+    let mut octave = None;
+    let mut volume = None;
 
     expect_token(stream, LeftBrace, "at `voice`")?;
 
@@ -338,24 +334,24 @@ fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, Parsin
         {
             Ident("drums") =>
             {
-                voice_node.channel = Some(10);
-                voice_node.octave = Some(-2);
+                channel = Some(10);
+                octave = Some(-2);
             }
             Key("channel") =>
             {
-                voice_node.channel = Some(try_parse_num(stream, "after `channel:`")? as u8)
+                channel = Some(try_parse_num(stream, "after `channel:`")? as u8)
             }
             Key("program") =>
             {
-                voice_node.program = Some(try_parse_num(stream, "after `program:`")? as u8)
+                program = Some(try_parse_num(stream, "after `program:`")? as u8)
             }
             Key("octave") =>
             {
-                voice_node.octave = Some(try_parse_num(stream, "after `octave:`")? as i8)
+                octave = Some(try_parse_num(stream, "after `octave:`")? as i8)
             }
             Key("volume") =>
             {
-                voice_node.volume = Some(try_parse_num(stream, "after `volume:`")? as u8)
+                volume = Some(try_parse_num(stream, "after `volume:`")? as u8)
             }
             Key(key) | Ident(key) =>
             {
@@ -378,7 +374,7 @@ fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, Parsin
         }
     }
 
-    Ok(voice_node)
+    Ok(VoiceNode { name, channel, program, octave, volume })
 }
 
 fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingError>
@@ -386,10 +382,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
     expect_token(stream, Play, "in `piece`")?;
 
     let voice = try_parse_name(stream, "in `play`").ok();
-    let mut play_node = PlayNode {
-        voice,
-        ..Default::default()
-    };
+    let mut staves: Vec<StaveNode> = Vec::new();
 
     let mut anonymous_stave_count = 0;
     let mut allow_new_staves = true;
@@ -417,7 +410,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
             }
             BlankLine =>
             {
-                let already_have_some_staves = !play_node.staves.is_empty();
+                let already_have_some_staves = !staves.is_empty();
                 if already_have_some_staves
                 {
                     allow_new_staves = false;
@@ -440,22 +433,21 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                 };
 
                 let stave = {
-                    let existing_stave = play_node
-                        .staves
+                    let existing_stave = staves
                         .iter()
                         .enumerate()
                         .find(|&(_, stave)| stave.prefix == prefix)
                         .map(|(i, _)| i);
 
-                    let stave_index = existing_stave.unwrap_or_else(|| play_node.staves.len());
+                    let stave_index = existing_stave.unwrap_or_else(|| staves.len());
 
                     if existing_stave.is_none()
                     {
                         if allow_new_staves
                         {
-                            play_node.staves.push(StaveNode {
+                            staves.push(StaveNode {
                                 prefix,
-                                ..Default::default()
+                                bars: Vec::new(),
                             });
                         }
                         else
@@ -471,7 +463,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                         }
                     }
 
-                    &mut play_node.staves[stave_index]
+                    &mut staves[stave_index]
                 };
 
 
@@ -585,7 +577,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
         }
     }
 
-    Ok(play_node)
+    Ok(PlayNode { voice, staves })
 }
 
 
