@@ -286,40 +286,34 @@ fn write_bars(
 
     match tuplet
     {
-        1 =>
+        1 => for (note, length) in abc_notes
         {
-            for (note, length) in abc_notes
+            if written_notes >= notes_per_bar
             {
-                if written_notes >= notes_per_bar
-                {
-                    written_notes -= notes_per_bar;
-                    assert!(written_notes < notes_per_bar);
-                    writeln!(buffer, "|")?;
-                }
+                written_notes -= notes_per_bar;
+                assert!(written_notes < notes_per_bar);
+                writeln!(buffer, "|")?;
+            }
 
+            write!(buffer, "{}", note)?;
+            written_notes += length;
+        },
+        n => for chunk in abc_notes.chunks(n as usize)
+        {
+            if written_notes >= notes_per_bar
+            {
+                written_notes -= notes_per_bar;
+                assert!(written_notes < notes_per_bar);
+                writeln!(buffer, "|")?;
+            }
+
+            write!(buffer, "({}", n)?;
+            for &(ref note, length) in chunk
+            {
                 write!(buffer, "{}", note)?;
                 written_notes += length;
             }
-        }
-        n =>
-        {
-            for chunk in abc_notes.chunks(n as usize)
-            {
-                if written_notes >= notes_per_bar
-                {
-                    written_notes -= notes_per_bar;
-                    assert!(written_notes < notes_per_bar);
-                    writeln!(buffer, "|")?;
-                }
-
-                write!(buffer, "({}", n)?;
-                for &(ref note, length) in chunk
-                {
-                    write!(buffer, "{}", note)?;
-                    written_notes += length;
-                }
-            }
-        }
+        },
     }
 
     writeln!(buffer, "|")?;
