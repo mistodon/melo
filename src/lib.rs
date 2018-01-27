@@ -1,8 +1,11 @@
 #[cfg(test)]
-#[macro_use] extern crate pretty_assertions;
+#[macro_use]
+extern crate pretty_assertions;
 
-#[macro_use] extern crate failure;
-#[macro_use] extern crate lazy_static;
+#[macro_use]
+extern crate failure;
+#[macro_use]
+extern crate lazy_static;
 
 extern crate ansi_term;
 extern crate regex;
@@ -10,8 +13,8 @@ extern crate regex;
 
 pub mod notes;
 mod abc_generation;
-pub mod lexing;     // TODO(claire): These should be private
-pub mod parsing;    // TODO(claire): These should be private
+pub mod lexing; // TODO(claire): These should be private
+pub mod parsing; // TODO(claire): These should be private
 mod sequencing;
 mod trust;
 
@@ -32,4 +35,3 @@ pub fn compile_to_abc(input: &str) -> Result<String, Error>
 
     Ok(abc)
 }
-

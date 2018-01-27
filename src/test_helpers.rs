@@ -5,10 +5,11 @@ pub fn stave(prefix: &str, notes: Vec<Vec<NoteNode>>) -> StaveNode
 {
     use std::borrow::Cow;
 
-    StaveNode
-    {
+    StaveNode {
         prefix: Cow::Borrowed(prefix),
-        bars: notes.into_iter().map(|bar| BarNode { notes: bar }).collect()
+        bars: notes
+            .into_iter()
+            .map(|bar| BarNode { notes: bar })
+            .collect(),
     }
 }
-

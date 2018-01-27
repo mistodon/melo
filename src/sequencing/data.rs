@@ -1,4 +1,3 @@
-
 #[derive(Debug, PartialEq)]
 pub struct Piece<'a>
 {
@@ -14,8 +13,7 @@ impl<'a> Default for Piece<'a>
 {
     fn default() -> Self
     {
-        Piece
-        {
+        Piece {
             title: None,
             composer: None,
             tempo: 120,
@@ -41,8 +39,7 @@ impl<'a> Default for Voice<'a>
 {
     fn default() -> Self
     {
-        Voice
-        {
+        Voice {
             name: "error",
             channel: 1,
             program: 0,

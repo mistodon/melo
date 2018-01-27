@@ -54,16 +54,15 @@ pub enum NoteNode
 {
     Rest
     {
-        length: u8,
+        length: u8
     },
     Extension
     {
-        length: u8,
+        length: u8
     },
     Note
     {
-        length: u8,
-        midi: i8,
+        length: u8, midi: i8
     },
 }
 
@@ -76,8 +75,7 @@ impl NoteNode
         {
             NoteNode::Rest { length }
             | NoteNode::Extension { length }
-            | NoteNode::Note { length, .. } => u32::from(length)
+            | NoteNode::Note { length, .. } => u32::from(length),
         }
     }
 }
-

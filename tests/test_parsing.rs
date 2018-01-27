@@ -10,7 +10,10 @@ fn test_parsing()
     use midscript::lexing;
     use midscript::parsing;
 
-    let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/test_files/parsing_test.midscript"));
+    let source = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/test_files/parsing_test.midscript"
+    ));
 
     let tokens = lexing::lex(source).unwrap();
     let result = parsing::parse(&tokens).unwrap();
@@ -43,4 +46,3 @@ fn test_parsing()
     assert_eq!(play_lead.staves[0].bars.len(), 2);
     assert_eq!(play_lead.staves[0].bars[0].notes.len(), 2);
 }
-
