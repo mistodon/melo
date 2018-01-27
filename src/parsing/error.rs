@@ -141,7 +141,8 @@ impl Display for ParsingError
 
 impl ParsingError
 {
-    pub fn eof(eof_token: &MetaToken, context: &'static str, expected: String) -> ParsingError
+    pub fn eof(eof_token: &MetaToken, context: &'static str, expected: String)
+        -> ParsingError
     {
         let (line, col) = (eof_token.line, eof_token.col);
         ParsingError {
@@ -151,7 +152,11 @@ impl ParsingError
         }
     }
 
-    pub fn unexpected(token: &MetaToken, context: &'static str, expected: String) -> ParsingError
+    pub fn unexpected(
+        token: &MetaToken,
+        context: &'static str,
+        expected: String,
+    ) -> ParsingError
     {
         let (line, col) = (token.line, token.col);
         ParsingError {

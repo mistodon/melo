@@ -9,8 +9,9 @@ use self::data::*;
 use self::error::{ErrorType, SequencingError};
 
 
-pub fn sequence_pieces<'a>(piece_nodes: &[PieceNode<'a>])
-    -> Result<Vec<Piece<'a>>, SequencingError>
+pub fn sequence_pieces<'a>(
+    piece_nodes: &[PieceNode<'a>],
+) -> Result<Vec<Piece<'a>>, SequencingError>
 {
     use notes::lcm;
 
@@ -128,16 +129,16 @@ pub fn sequence_pieces<'a>(piece_nodes: &[PieceNode<'a>])
 
                                     let octave = voice.octave;
 
-                                    let midi = midi.checked_add(octave * 12).ok_or_else(|| {
-                                        SequencingError {
+                                    let midi = midi.checked_add(octave * 12).ok_or_else(
+                                        || SequencingError {
                                             line: 12345,
                                             col: 12345,
                                             error: ErrorType::InvalidNote {
                                                 midi,
                                                 octave_offset: octave,
                                             },
-                                        }
-                                    })?;
+                                        },
+                                    )?;
 
                                     let length = note_scale * u32::from(length);
                                     let position = cursor;

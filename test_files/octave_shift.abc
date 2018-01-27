@@ -6,6 +6,6 @@ V:Drums
 %%MIDI channel 1
 %%MIDI program 0
 L:1/8
-[^f'c']^f'[^f'd']^f'[^f'c']^f'[^f'd']^f'|
-[^f'c']^f'[^f'd']^f'[^f'c'][^f'c'][^f'd']^f'|
+[^f'=c']^f'[^f'=d']^f'[^f'=c']^f'[^f'=d']^f'|
+[^f'=c']^f'[^f'=d']^f'[^f'=c'][^f'=c'][^f'=d']^f'|
 
