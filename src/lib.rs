@@ -13,8 +13,8 @@ extern crate regex;
 
 pub mod notes;
 mod abc_generation;
-pub mod lexing; // TODO(claire): These should be private
-pub mod parsing; // TODO(claire): These should be private
+mod lexing;
+mod parsing;
 mod sequencing;
 mod trust;
 

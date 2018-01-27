@@ -15,6 +15,7 @@ pub const MIDSCRIPT_SHARPS: [&str; 128] = [
 pub const MIN_SHARP: &str = MIDSCRIPT_SHARPS[0];
 pub const MAX_SHARP: &str = MIDSCRIPT_SHARPS[127];
 
+
 pub const MIDSCRIPT_FLATS: [&str; 128] = [
     "C,,,,,", "D_,,,,,", "D,,,,,", "E_,,,,,", "E,,,,,", "F,,,,,", "G_,,,,,", "G,,,,,", "A_,,,,",
     "A,,,,", "B_,,,,", "B,,,,", "C,,,,", "D_,,,,", "D,,,,", "E_,,,,", "E,,,,", "F,,,,", "G_,,,,",
@@ -31,6 +32,7 @@ pub const MIDSCRIPT_FLATS: [&str; 128] = [
 
 pub const MIN_FLAT: &str = MIDSCRIPT_FLATS[0];
 pub const MAX_FLAT: &str = MIDSCRIPT_FLATS[127];
+
 
 pub const ABC_NOTES: [&str; 128] = [
     "C,,,,,", "^C,,,,,", "D,,,,,", "^D,,,,,", "E,,,,,", "F,,,,,", "^F,,,,,", "G,,,,,", "^G,,,,,",
@@ -69,26 +71,19 @@ pub fn note_to_midi(note: &str) -> Option<i8>
         _ => return None,
     };
 
-    let delta = match chars.next()
+    for ch in chars
     {
-        Some('^') => 1,
-        Some('_') => -1,
-        Some('\'') => 12,
-        Some(',') => -12,
-        Some('=') | None => 0,
-        Some(_) => return None,
-    };
-
-    midi += delta;
-
-    for octave_shift in chars
-    {
-        match octave_shift
+        let delta = match ch
         {
-            '\'' => midi += 12,
-            ',' => midi -= 12,
+            '^' => 1,
+            '_' => -1,
+            '\'' => 12,
+            ',' => -12,
+            '=' => 0,
             _ => return None,
-        }
+        };
+
+        midi += delta;
     }
 
     if midi >= 0 && midi < 128
@@ -101,20 +96,24 @@ pub fn note_to_midi(note: &str) -> Option<i8>
     }
 }
 
+
 pub fn note_to_abc(note: &str) -> Option<&'static str>
 {
     note_to_midi(note).and_then(midi_to_abc)
 }
+
 
 pub fn midi_to_flat(note: i8) -> Option<&'static str>
 {
     MIDSCRIPT_FLATS.get(note as usize).cloned()
 }
 
+
 pub fn midi_to_sharp(note: i8) -> Option<&'static str>
 {
     MIDSCRIPT_SHARPS.get(note as usize).cloned()
 }
+
 
 pub fn midi_to_abc(note: i8) -> Option<&'static str>
 {
@@ -149,7 +148,9 @@ mod tests
         test("C,,,,,", 0);
         test("C", 60);
         test("C^", 61);
+        test("C^^", 62);
         test("C_", 59);
+        test("C__", 58);
         test("a", 69);
         test("a=", 69);
         test("c", 72);
