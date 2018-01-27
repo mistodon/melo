@@ -73,7 +73,7 @@ impl Display for ParsingError
         use ansi_term::Color;
         use self::ErrorType::*;
 
-        if let &MultipleParsingErrors { ref errors } = &self.error
+        if let MultipleParsingErrors { ref errors } = self.error
         {
             for error in errors
             {
@@ -95,10 +95,10 @@ impl Display for ParsingError
 
             let error_message = match self.error
             {
-                UnexpectedToken { ref token, ref context, ref expected } =>
+                UnexpectedToken { ref token, context, ref expected } =>
                     format!("Unexpected token `{}` {}. Expected {}.", token, context, expected),
 
-                UnexpectedEOF { ref context, ref expected } =>
+                UnexpectedEOF { context, ref expected } =>
                     format!("Unexpected end of input {}. Expected {}.", context, expected),
 
                 InvalidNote { ref note } =>
@@ -109,7 +109,7 @@ impl Display for ParsingError
                     format!("Hit markers (`x`) cannot be used in `{}:` staves. They are only valid in single-note staves.", stave_prefix),
 
                 // TODO(claire): which ones are valid?
-                InvalidAttribute { ref attribute, ref structure } =>
+                InvalidAttribute { ref attribute, structure } =>
                     format!("Invalid attribute `{}` for `{}`.",
                         attribute, structure),
 

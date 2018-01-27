@@ -426,14 +426,13 @@ pub fn note_to_midi(note: &str) -> Option<i8>
         Some('_') => -1,
         Some('\'') => 12,
         Some(',') => -12,
-        Some('=') => 0,
-        None => 0,
+        Some('=') | None => 0,
         Some(_) => return None
     };
 
     midi += delta;
 
-    while let Some(octave_shift) = chars.next()
+    for octave_shift in chars
     {
         match octave_shift
         {
@@ -467,7 +466,7 @@ pub fn midi_to_abc(note: i8) -> Option<&'static str>
 }
 
 
-pub fn lcm(a: u64, b: u64) -> u64
+pub fn lcm(a: u32, b: u32) -> u32
 {
     let mut lcm = ::std::cmp::max(a, b);
     while !(lcm % a == 0 && lcm % b == 0)

@@ -30,7 +30,7 @@ impl Display for LexingError
 
         let error_message = match self.error
         {
-            UnexpectedCharacter { ref text, ref context } => {
+            UnexpectedCharacter { ref text, context } => {
                 format!("Unexpected character `{}` in {}.", text, context)
             }
         };

@@ -20,7 +20,7 @@ pub enum ErrorType
 
     UnsupportedTuplet
     {
-        tuplet: u64
+        tuplet: u32,
     }
 }
 

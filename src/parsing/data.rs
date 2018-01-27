@@ -74,9 +74,9 @@ impl NoteNode
     {
         match *self
         {
-            NoteNode::Rest { length } => length as u32,
-            NoteNode::Extension { length } => length as u32,
-            NoteNode::Note { length, .. } => length as u32,
+            NoteNode::Rest { length }
+            | NoteNode::Extension { length }
+            | NoteNode::Note { length, .. } => u32::from(length)
         }
     }
 }
