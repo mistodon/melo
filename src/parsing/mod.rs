@@ -155,7 +155,9 @@ fn parse_piece<'a>(stream: &mut TokenStream<'a>) -> Result<PieceNode<'a>, Parsin
     Ok(piece_node)
 }
 
-fn parse_piece_from_body<'a>(stream: &mut TokenStream<'a>) -> Result<PieceNode<'a>, ParsingError>
+fn parse_piece_from_body<'a>(
+    stream: &mut TokenStream<'a>,
+) -> Result<PieceNode<'a>, ParsingError>
 {
     let mut piece_node = PieceNode::default();
 
@@ -202,15 +204,18 @@ fn parse_piece_from_body<'a>(stream: &mut TokenStream<'a>) -> Result<PieceNode<'
                     }
                     Key("composer") =>
                     {
-                        piece_node.composer = Some(try_parse_name(stream, "after `composer:`")?)
+                        piece_node.composer =
+                            Some(try_parse_name(stream, "after `composer:`")?)
                     }
                     Key("tempo") =>
                     {
-                        piece_node.tempo = Some(try_parse_num(stream, "after `tempo:`")? as u64)
+                        piece_node.tempo =
+                            Some(try_parse_num(stream, "after `tempo:`")? as u64)
                     }
                     Key("beats") =>
                     {
-                        piece_node.beats = Some(try_parse_num(stream, "after `beats:`")? as u64)
+                        piece_node.beats =
+                            Some(try_parse_num(stream, "after `beats:`")? as u64)
                     }
                     Key(key) | Ident(key) =>
                     {
@@ -285,7 +290,8 @@ fn try_parse_name<'a>(
     }
 }
 
-fn try_parse_num(stream: &mut TokenStream, context: &'static str) -> Result<i64, ParsingError>
+fn try_parse_num(stream: &mut TokenStream, context: &'static str)
+    -> Result<i64, ParsingError>
 {
     let meta = *stream.peek().trust();
 
@@ -504,13 +510,14 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                         }
                         Note(note) =>
                         {
-                            let midi = notes::note_to_midi(note).ok_or_else(|| ParsingError {
-                                line,
-                                col,
-                                error: ErrorType::InvalidNote {
-                                    note: note.to_owned(),
-                                },
-                            })?;
+                            let midi =
+                                notes::note_to_midi(note).ok_or_else(|| ParsingError {
+                                    line,
+                                    col,
+                                    error: ErrorType::InvalidNote {
+                                        note: note.to_owned(),
+                                    },
+                                })?;
                             bar.notes.push(NoteNode::Note { midi, length: 1 });
                         }
                         ExtendNote =>

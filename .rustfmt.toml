@@ -11,3 +11,4 @@ reorder_imports_in_group = true
 trailing_semicolon = false
 blank_lines_upper_bound = 2
 error_on_line_overflow = false
+max_width = 95

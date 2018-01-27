@@ -158,7 +158,8 @@ fn write_bars(
             if tuplet == 1
             {
                 let mut rests_remaining = rest_length;
-                let rests_until_barline = ::std::cmp::min(rests_remaining, next_barline - cursor);
+                let rests_until_barline =
+                    ::std::cmp::min(rests_remaining, next_barline - cursor);
 
                 if rests_until_barline > 0
                 {
@@ -202,7 +203,8 @@ fn write_bars(
                     .cloned()
                     .collect();
 
-                let min_chord_length = chord.iter().map(|note| note.length * scale).min().trust();
+                let min_chord_length =
+                    chord.iter().map(|note| note.length * scale).min().trust();
 
                 fn chord_string(chord: &[Note]) -> String
                 {
@@ -286,34 +288,40 @@ fn write_bars(
 
     match tuplet
     {
-        1 => for (note, length) in abc_notes
+        1 =>
         {
-            if written_notes >= notes_per_bar
+            for (note, length) in abc_notes
             {
-                written_notes -= notes_per_bar;
-                assert!(written_notes < notes_per_bar);
-                writeln!(buffer, "|")?;
-            }
+                if written_notes >= notes_per_bar
+                {
+                    written_notes -= notes_per_bar;
+                    assert!(written_notes < notes_per_bar);
+                    writeln!(buffer, "|")?;
+                }
 
-            write!(buffer, "{}", note)?;
-            written_notes += length;
-        },
-        n => for chunk in abc_notes.chunks(n as usize)
-        {
-            if written_notes >= notes_per_bar
-            {
-                written_notes -= notes_per_bar;
-                assert!(written_notes < notes_per_bar);
-                writeln!(buffer, "|")?;
-            }
-
-            write!(buffer, "({}", n)?;
-            for &(ref note, length) in chunk
-            {
                 write!(buffer, "{}", note)?;
                 written_notes += length;
             }
-        },
+        }
+        n =>
+        {
+            for chunk in abc_notes.chunks(n as usize)
+            {
+                if written_notes >= notes_per_bar
+                {
+                    written_notes -= notes_per_bar;
+                    assert!(written_notes < notes_per_bar);
+                    writeln!(buffer, "|")?;
+                }
+
+                write!(buffer, "({}", n)?;
+                for &(ref note, length) in chunk
+                {
+                    write!(buffer, "{}", note)?;
+                    written_notes += length;
+                }
+            }
+        }
     }
 
     writeln!(buffer, "|")?;
@@ -335,7 +343,8 @@ mod tests
 
         let tokens = lexing::lex(source).expect("ERROR IN LEXER");
         let parse_tree = parsing::parse(&tokens).expect("ERROR IN PARSER");
-        let pieces = sequencing::sequence_pieces(&parse_tree.pieces).expect("ERROR IN SEQUENCER");
+        let pieces =
+            sequencing::sequence_pieces(&parse_tree.pieces).expect("ERROR IN SEQUENCER");
         let voice = &pieces[0].voices[0];
 
         assert_eq!(
@@ -352,7 +361,8 @@ mod tests
 
         let tokens = lexing::lex(source).expect("ERROR IN LEXER");
         let parse_tree = parsing::parse(&tokens).expect("ERROR IN PARSER");
-        let pieces = sequencing::sequence_pieces(&parse_tree.pieces).expect("ERROR IN SEQUENCER");
+        let pieces =
+            sequencing::sequence_pieces(&parse_tree.pieces).expect("ERROR IN SEQUENCER");
         let voice = &pieces[0].voices[0];
 
         assert!(write_bars(&voice.notes, notes_per_bar, voice.divisions_per_bar).is_err());
@@ -379,70 +389,78 @@ mod tests
     fn test_single_note()
     {
         let source = "voice A {} play A { :| C | }";
-        write_bars_test(source, "L:1/4\nC4|\n", 4);
+        write_bars_test(source, "L:1/4\n=C4|\n", 4);
     }
 
     #[test]
     fn test_two_notes_in_sequence()
     {
         let source = "voice A {} play A { :| C C | }";
-        write_bars_test(source, "L:1/4\nC2C2|\n", 4);
+        write_bars_test(source, "L:1/4\n=C2=C2|\n", 4);
     }
 
     #[test]
     fn test_four_notes_in_sequence()
     {
         let source = "voice A {} play A { :| C C C C | }";
-        write_bars_test(source, "L:1/4\nCCCC|\n", 4);
+        write_bars_test(source, "L:1/4\n=C=C=C=C|\n", 4);
     }
 
     #[test]
     fn test_eight_notes_in_sequence()
     {
         let source = "voice A {} play A { :| C C C C C C C C | }";
-        write_bars_test(source, "L:1/8\nCCCCCCCC|\n", 4);
+        write_bars_test(source, "L:1/8\n=C=C=C=C=C=C=C=C|\n", 4);
     }
 
     #[test]
     fn test_sixteen_notes_in_sequence()
     {
         let source = "voice A {} play A { :| C C C C C C C C C C C C C C C C | }";
-        write_bars_test(source, "L:1/16\nCCCCCCCCCCCCCCCC|\n", 4);
+        write_bars_test(source, "L:1/16\n=C=C=C=C=C=C=C=C=C=C=C=C=C=C=C=C|\n", 4);
     }
 
     #[test]
     fn test_four_notes_then_sixteen()
     {
         let source = "voice A {} play A { :| C C C C | C C C C C C C C C C C C C C C C | }";
-        write_bars_test(source, "L:1/16\nC4C4C4C4|\nCCCCCCCCCCCCCCCC|\n", 4);
+        write_bars_test(
+            source,
+            "L:1/16\n=C4=C4=C4=C4|\n=C=C=C=C=C=C=C=C=C=C=C=C=C=C=C=C|\n",
+            4,
+        );
     }
 
     #[test]
     fn test_three_note_bar_in_3_4_time()
     {
         let source = "voice A {} play A { :| C C C | }";
-        write_bars_test(source, "L:1/4\nCCC|\n", 3);
+        write_bars_test(source, "L:1/4\n=C=C=C|\n", 3);
     }
 
     #[test]
     fn test_triplet_in_4_4_time()
     {
         let source = "voice A {} play A { :| C C C | }";
-        write_bars_test(source, "L:1/8\n(3C-C-C-(3CC-C-(3C-CC-(3C-C-C|\n", 4);
+        write_bars_test(
+            source,
+            "L:1/8\n(3=C-=C-=C-(3=C=C-=C-(3=C-=C=C-(3=C-=C-=C|\n",
+            4,
+        );
     }
 
     #[test]
     fn test_triplets_in_3_4_time()
     {
         let source = "voice A {} play A { :| CEG ceg gec }";
-        write_bars_test(source, "L:1/8\n(3CEG(3ceg(3gec|\n", 3);
+        write_bars_test(source, "L:1/8\n(3=C=E=G(3=c=e=g(3=g=e=c|\n", 3);
     }
 
     #[test]
     fn test_fast_triplets()
     {
         let source = "voice A {} play A { :| ccc ccc ccc ccc }";
-        write_bars_test(source, "L:1/8\n(3ccc(3ccc(3ccc(3ccc|\n", 4);
+        write_bars_test(source, "L:1/8\n(3=c=c=c(3=c=c=c(3=c=c=c(3=c=c=c|\n", 4);
     }
 
     #[test]
@@ -451,7 +469,7 @@ mod tests
         let source = "voice A {} play A { :| cccccc cccccc cccccc cccccc }";
         write_bars_test(
             source,
-            "L:1/16\n(3ccc(3ccc(3ccc(3ccc(3ccc(3ccc(3ccc(3ccc|\n",
+            "L:1/16\n(3=c=c=c(3=c=c=c(3=c=c=c(3=c=c=c(3=c=c=c(3=c=c=c(3=c=c=c(3=c=c=c|\n",
             4,
         );
     }
@@ -462,7 +480,7 @@ mod tests
         let source = "voice A {} play A { :| C C C C C |}";
         write_bars_test(
             source,
-            "L:1/8\n(5C-C-C-CC-(5C-C-CC-C-(5C-CC-C-C-(5CC-C-C-C|\n",
+            "L:1/8\n(5=C-=C-=C-=C=C-(5=C-=C-=C=C-=C-(5=C-=C=C-=C-=C-(5=C=C-=C-=C-=C|\n",
             4,
         );
     }
@@ -471,28 +489,28 @@ mod tests
     fn test_notes_with_rests()
     {
         let source = "voice A {} play A { :| C - C - |}";
-        write_bars_test(source, "L:1/4\nCzCz|\n", 4);
+        write_bars_test(source, "L:1/4\n=Cz=Cz|\n", 4);
     }
 
     #[test]
     fn test_triplets_with_rests()
     {
         let source = "voice A {} play A { :| C - - - C C | }";
-        write_bars_test(source, "L:1/8\n(3C-Cz(3zzz(3zzC-(3CC-C|\n", 4);
+        write_bars_test(source, "L:1/8\n(3=C-=Cz(3zzz(3zz=C-(3=C=C-=C|\n", 4);
     }
 
     #[test]
     fn test_two_notes_at_once()
     {
         let source = "voice A {} play A { :| C ; :| G }";
-        write_bars_test(source, "L:1/4\n[CG]4|\n", 4);
+        write_bars_test(source, "L:1/4\n[=C=G]4|\n", 4);
     }
 
     #[test]
     fn three_notes_at_once()
     {
         let source = "voice A {} play A { :| C - - - ; :| E - - - ; :| G - - - }";
-        write_bars_test(source, "L:1/4\n[CEG]z3|\n", 4);
+        write_bars_test(source, "L:1/4\n[=C=E=G]z3|\n", 4);
     }
 
     #[test]
@@ -500,21 +518,21 @@ mod tests
     {
         // TODO(***realname***): This and similar tests should be able to be expressed as a single triplet of 1/2 notes
         let source = "voice A {} play A { :| C C C ; :| E E E ; :| G G G }";
-        write_bars_test(source, "L:1/8\n(3[CEG]-[CEG]-[CEG]-(3[CEG][CEG]-[CEG]-(3[CEG]-[CEG][CEG]-(3[CEG]-[CEG]-[CEG]|\n", 4);
+        write_bars_test(source, "L:1/8\n(3[=C=E=G]-[=C=E=G]-[=C=E=G]-(3[=C=E=G][=C=E=G]-[=C=E=G]-(3[=C=E=G]-[=C=E=G][=C=E=G]-(3[=C=E=G]-[=C=E=G]-[=C=E=G]|\n", 4);
     }
 
     #[test]
     fn long_notes_in_triplets()
     {
         let source = "voice A {} play A { :| C | CC | CCC CCC | }";
-        write_bars_test(source, "L:1/8\n(3C-C-C-(3C-C-C-(3C-C-C-(3C-C-C|\n(3C-C-C-(3C-C-C(3C-C-C-(3C-C-C|\n(3C-CC-(3CC-C(3C-CC-(3CC-C|\n", 4);
+        write_bars_test(source, "L:1/8\n(3=C-=C-=C-(3=C-=C-=C-(3=C-=C-=C-(3=C-=C-=C|\n(3=C-=C-=C-(3=C-=C-=C(3=C-=C-=C-(3=C-=C-=C|\n(3=C-=C=C-(3=C=C-=C(3=C-=C=C-(3=C=C-=C|\n", 4);
     }
 
     #[test]
     fn rest_before_chord_not_duplicated()
     {
         let source = " voice A {} play A { :| - C | ; :| - G | }";
-        write_bars_test(source, "L:1/4\nz2[CG]2|\n", 4);
+        write_bars_test(source, "L:1/4\nz2[=C=G]2|\n", 4);
     }
 
     #[test]
@@ -528,28 +546,32 @@ mod tests
     fn notes_with_lengths()
     {
         let source = "voice A {} play A { :| A C3 E4 -8 }";
-        write_bars_test(source, "L:1/16\nA,C3E4z8|\n", 4);
+        write_bars_test(source, "L:1/16\n=A,=C3=E4z8|\n", 4);
     }
 
     #[test]
     fn notes_with_dots()
     {
         let source = "voice A {} play A { :| C..D E..F G..F E..D | C }";
-        write_bars_test(source, "L:1/16\nC3DE3FG3FE3D|\nC16|\n", 4);
+        write_bars_test(source, "L:1/16\n=C3=D=E3=F=G3=F=E3=D|\n=C16|\n", 4);
     }
 
     #[test]
     fn note_tied_across_bar()
     {
         let source = "voice A {} play A { :| CEG. | ..EC }";
-        write_bars_test(source, "L:1/4\nCEG2-|\nG2EC|\n", 4);
+        write_bars_test(source, "L:1/4\n=C=E=G2-|\n=G2=E=C|\n", 4);
     }
 
     #[test]
     fn note_tied_across_triplets()
     {
         let source = "voice A {} play A { :| C E G . E C }";
-        write_bars_test(source, "L:1/8\n(3C-CE-(3EG-G-(3G-GE-(3EC-C|\n", 4);
+        write_bars_test(
+            source,
+            "L:1/8\n(3=C-=C=E-(3=E=G-=G-(3=G-=G=E-(3=E=C-=C|\n",
+            4,
+        );
     }
 
     #[test]
@@ -558,7 +580,7 @@ mod tests
         let source = "voice A {} play A { :| C E G | . E C }";
         write_bars_test(
             source,
-            "L:1/8\n(3C-C-C-(3CE-E-(3E-EG-(3G-G-G-|\n(3G-G-G-(3GE-E-(3E-EC-(3C-C-C|\n",
+            "L:1/8\n(3=C-=C-=C-(3=C=E-=E-(3=E-=E=G-(3=G-=G-=G-|\n(3=G-=G-=G-(3=G=E-=E-(3=E-=E=C-(3=C-=C-=C|\n",
             4,
         );
     }
@@ -567,6 +589,6 @@ mod tests
     fn rest_across_bars()
     {
         let source = "voice A {} play A { :| C - | - C }";
-        write_bars_test(source, "L:1/4\nC2z2|\nz2C2|\n", 4);
+        write_bars_test(source, "L:1/4\n=C2z2|\nz2=C2|\n", 4);
     }
 }

@@ -6,7 +6,7 @@ V:Lead
 %%MIDI channel 1
 %%MIDI program 33
 L:1/4
-C,D,E,F,|
-G,F,E,D,|
-C,4|
+=C,=D,=E,=F,|
+=G,=F,=E,=D,|
+=C,4|
 
