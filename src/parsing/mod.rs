@@ -171,7 +171,6 @@ fn parse_piece_from_body<'a>(stream: &mut TokenStream<'a>) -> Result<PieceNode<'
             BlankLine =>
             {
                 stream.next();
-                ()
             }
             Voice =>
             {
