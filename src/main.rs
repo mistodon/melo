@@ -18,11 +18,13 @@ enum Command
         #[structopt(help = "Input file, or stdin if not specified.")]
         input: Option<String>,
 
-        #[structopt(short = "o", long = "output", help = "Output file, or stdout if not specified.")]
+        #[structopt(short = "o", long = "output",
+                    help = "Output file, or stdout if not specified.")]
         output: Option<String>,
     },
 
-    #[structopt(name = "mid", about = "Compile midscript to a MIDI file. (Currently requires abc2midi.)")]
+    #[structopt(name = "mid",
+                about = "Compile midscript to a MIDI file. (Currently requires abc2midi.)")]
     Mid
     {
         #[structopt(help = "Input file, or stdin if not specified.")]
@@ -32,7 +34,8 @@ enum Command
         output: String,
     },
 
-    #[structopt(name = "play", about = "Compile and play midscript as MIDI. (Currently requires timidity.)")]
+    #[structopt(name = "play",
+                about = "Compile and play midscript as MIDI. (Currently requires timidity.)")]
     Play
     {
         #[structopt(help = "Input file, or stdin if not specified.")]
@@ -44,14 +47,13 @@ enum Command
     {
         #[structopt(subcommand)]
         subcommand: RefCommand,
-    }
+    },
 }
 
 #[derive(Debug, StructOpt)]
 enum RefCommand
 {
-    #[structopt(name = "notes", about = "View information about valid notes.")]
-    Notes,
+    #[structopt(name = "notes", about = "View information about valid notes.")] Notes,
 
     #[structopt(name = "instruments", about = "View the program numbers for GM instruments.")]
     Instruments,
@@ -70,28 +72,31 @@ fn main()
 
             let processed = match midscript::compile_to_abc(&input_text)
             {
-                Err(err) => {
+                Err(err) =>
+                {
                     eprintln!("Compilation failed:\n{}", err);
                     std::process::exit(1)
-                },
-                Ok(p) => p
+                }
+                Ok(p) => p,
             };
 
             write_output(&processed, output);
         }
 
-        Command::Mid { input, output } => {
+        Command::Mid { input, output } =>
+        {
             use std::process::Command;
 
             let input_text = read_input(input.as_ref());
 
             let processed = match midscript::compile_to_abc(&input_text)
             {
-                Err(err) => {
+                Err(err) =>
+                {
                     eprintln!("Compilation failed:\n{}", err);
                     std::process::exit(1)
-                },
-                Ok(p) => p
+                }
+                Ok(p) => p,
             };
 
             let mut intermediate = output.clone();
@@ -108,18 +113,20 @@ fn main()
             println!("{:?}", output);
         }
 
-        Command::Play { input } => {
+        Command::Play { input } =>
+        {
             use std::process::Command;
 
             let input_text = read_input(input.as_ref());
 
             let processed = match midscript::compile_to_abc(&input_text)
             {
-                Err(err) => {
+                Err(err) =>
+                {
                     eprintln!("Compilation failed:\n{}", err);
                     std::process::exit(1)
-                },
-                Ok(p) => p
+                }
+                Ok(p) => p,
             };
 
             let intermediate = "anonymous.abc";
@@ -134,9 +141,7 @@ fn main()
 
             println!("{:?}", output);
 
-            let output = Command::new("timidity")
-                .arg("anonymous.mid")
-                .output();
+            let output = Command::new("timidity").arg("anonymous.mid").output();
 
             println!("{:?}", output);
         }
@@ -145,18 +150,23 @@ fn main()
         {
             RefCommand::Notes => println!(
                 "{}",
-                include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/reference/notes.txt"))),
+                include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/reference/notes.txt"))
+            ),
 
             RefCommand::Instruments => println!(
                 "{}",
-                include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/reference/instruments.txt"))),
-        }
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/reference/instruments.txt"
+                ))
+            ),
+        },
     }
 }
 
 fn read_input<P>(input: Option<P>) -> String
 where
-    P: AsRef<Path>
+    P: AsRef<Path>,
 {
     use std::fs::File;
     use std::io::Read;
@@ -165,11 +175,15 @@ where
 
     match input
     {
-        Some(filename) => {
-
-            File::open(filename.as_ref()).unwrap().read_to_string(&mut content).unwrap();
-        },
-        None => {
+        Some(filename) =>
+        {
+            File::open(filename.as_ref())
+                .unwrap()
+                .read_to_string(&mut content)
+                .unwrap();
+        }
+        None =>
+        {
             std::io::stdin().read_to_string(&mut content).unwrap();
         }
     }
@@ -179,18 +193,20 @@ where
 
 fn write_output<P>(content: &str, output: Option<P>)
 where
-P: AsRef<Path>
+    P: AsRef<Path>,
 {
     use std::fs::File;
     use std::io::Write;
 
     if let Some(filename) = output
     {
-        File::create(filename.as_ref()).unwrap().write_all(content.as_bytes()).unwrap();
+        File::create(filename.as_ref())
+            .unwrap()
+            .write_all(content.as_bytes())
+            .unwrap();
     }
     else
     {
         std::io::stdout().write_all(content.as_bytes()).unwrap();
     }
 }
-

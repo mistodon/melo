@@ -1,4 +1,4 @@
-use std::fmt::{ Display, Formatter, Error };
+use std::fmt::{Display, Error, Formatter};
 
 use lexing::data::MetaToken;
 
@@ -30,12 +30,12 @@ pub enum ErrorType
 
     InvalidNote
     {
-        note: String,
+        note: String
     },
 
     InvalidHit
     {
-        stave_prefix: String,
+        stave_prefix: String
     },
 
     InvalidAttribute
@@ -46,22 +46,22 @@ pub enum ErrorType
 
     UndeclaredStave
     {
-        stave_prefix: String,
+        stave_prefix: String
     },
 
     InvalidLength
     {
-        length: i64,
+        length: i64
     },
 
     UnexpectedLength
     {
-        length: i64,
+        length: i64
     },
 
     MultipleParsingErrors
     {
-        errors: Vec<ParsingError>,
+        errors: Vec<ParsingError>
     },
 }
 
@@ -70,8 +70,8 @@ impl Display for ParsingError
 {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error>
     {
-        use ansi_term::Color;
         use self::ErrorType::*;
+        use ansi_term::Color;
 
         if let MultipleParsingErrors { ref errors } = self.error
         {
@@ -82,16 +82,20 @@ impl Display for ParsingError
 
             if errors.len() > 1
             {
-                writeln!(f, "{}: {}",
-                     Color::Fixed(9).paint("error"),
-                     Color::Fixed(15).paint(format!("Aborting due to {} previous errors.", errors.len())))?;
+                writeln!(
+                    f,
+                    "{}: {}",
+                    Color::Fixed(9).paint("error"),
+                    Color::Fixed(15)
+                        .paint(format!("Aborting due to {} previous errors.", errors.len()))
+                )?;
             }
 
             Ok(())
         }
         else
         {
-            use notes::{ MIN_SHARP, MAX_SHARP };
+            use notes::{MAX_SHARP, MIN_SHARP};
 
             let error_message = match self.error
             {
@@ -125,9 +129,12 @@ impl Display for ParsingError
                 _ => unreachable!()
             };
 
-            writeln!(f, "{}: {}",
+            writeln!(
+                f,
+                "{}: {}",
                 Color::Fixed(9).paint(format!("error:{}:{}", self.line, self.col)),
-                Color::Fixed(15).paint(error_message))
+                Color::Fixed(15).paint(error_message)
+            )
         }
     }
 }
@@ -137,19 +144,24 @@ impl ParsingError
     pub fn eof(eof_token: &MetaToken, context: &'static str, expected: String) -> ParsingError
     {
         let (line, col) = (eof_token.line, eof_token.col);
-        ParsingError { line, col, error: ErrorType::UnexpectedEOF { context, expected } }
+        ParsingError {
+            line,
+            col,
+            error: ErrorType::UnexpectedEOF { context, expected },
+        }
     }
 
     pub fn unexpected(token: &MetaToken, context: &'static str, expected: String) -> ParsingError
     {
         let (line, col) = (token.line, token.col);
-        ParsingError { line, col, error:
-            ErrorType::UnexpectedToken
-            {
+        ParsingError {
+            line,
+            col,
+            error: ErrorType::UnexpectedToken {
                 token: token.span.1.to_owned(),
                 context,
                 expected,
-            }
+            },
         }
     }
 }
@@ -158,7 +170,10 @@ impl From<Vec<ParsingError>> for ParsingError
 {
     fn from(errors: Vec<ParsingError>) -> Self
     {
-        ParsingError { line: 0, col: 0, error: ErrorType::MultipleParsingErrors { errors } }
+        ParsingError {
+            line: 0,
+            col: 0,
+            error: ErrorType::MultipleParsingErrors { errors },
+        }
     }
 }
-

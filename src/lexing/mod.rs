@@ -2,12 +2,12 @@ pub mod data;
 pub mod error;
 
 
-use regex::{ Regex };
+use regex::Regex;
 
 use trust::Trust;
 
 use self::data::*;
-use self::error::{ LexingError, ErrorType };
+use self::error::{ErrorType, LexingError};
 
 
 fn line_col_at(source: &str, position: usize) -> (usize, usize)
@@ -33,12 +33,27 @@ pub fn lex(source: &str) -> Result<Vec<MetaToken>, LexingError>
     let mut tokens = Vec::new();
 
     const CAPTURE_PRIORITIES: &[&str] = &[
-        "key", "ident", "string", "number", "delim", "staveline",
-        "blank", "whitespace", "comment", "error"
+        "key",
+        "ident",
+        "string",
+        "number",
+        "delim",
+        "staveline",
+        "blank",
+        "whitespace",
+        "comment",
+        "error",
     ];
 
     const STAVE_CAPTURE_PRIORITIES: &[&str] = &[
-        "note", "part", "barline", "symbol", "number", "whitespace", "comment", "error"
+        "note",
+        "part",
+        "barline",
+        "symbol",
+        "number",
+        "whitespace",
+        "comment",
+        "error",
     ];
 
     for capture in STRUCTURE_REGEX.captures_iter(source)
@@ -61,8 +76,14 @@ pub fn lex(source: &str) -> Result<Vec<MetaToken>, LexingError>
 
         match group_name
         {
-            "key" => tokens.push(MetaToken { token: Key(text[..(text_len-1)].trim()), span, line, col }),
-            "ident" => {
+            "key" => tokens.push(MetaToken {
+                token: Key(text[..(text_len - 1)].trim()),
+                span,
+                line,
+                col,
+            }),
+            "ident" =>
+            {
                 let token = match text
                 {
                     "piece" => Piece,
@@ -72,24 +93,47 @@ pub fn lex(source: &str) -> Result<Vec<MetaToken>, LexingError>
                     "play" => Play,
                     s => Ident(s),
                 };
-                tokens.push(MetaToken { token, span, line, col });
+                tokens.push(MetaToken {
+                    token,
+                    span,
+                    line,
+                    col,
+                });
             }
-            "string" => tokens.push(MetaToken { token: Str(&text[1..(text_len-1)]), span, line, col }),
-            "number" => {
+            "string" => tokens.push(MetaToken {
+                token: Str(&text[1..(text_len - 1)]),
+                span,
+                line,
+                col,
+            }),
+            "number" =>
+            {
                 let number = text.parse().trust();
-                tokens.push(MetaToken { token: Num(number), span, line, col });
+                tokens.push(MetaToken {
+                    token: Num(number),
+                    span,
+                    line,
+                    col,
+                });
             }
-            "delim" => {
+            "delim" =>
+            {
                 let token = match text
                 {
                     "{" => LeftBrace,
                     "}" => RightBrace,
                     "," => Comma,
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 };
-                tokens.push(MetaToken { token, span, line, col });
+                tokens.push(MetaToken {
+                    token,
+                    span,
+                    line,
+                    col,
+                });
             }
-            "staveline" => {
+            "staveline" =>
+            {
                 let start = span.0;
 
                 for capture in MUSIC_REGEX.captures_iter(text)
@@ -112,10 +156,26 @@ pub fn lex(source: &str) -> Result<Vec<MetaToken>, LexingError>
 
                     match group_name
                     {
-                        "note" => tokens.push(MetaToken { token: Note(text), span, line, col }),
-                        "part" => tokens.push(MetaToken { token: PlayPart(&text[1..]), span, line, col }),
-                        "barline" => tokens.push(MetaToken { token: Barline, span, line, col }),
-                        "symbol" => {
+                        "note" => tokens.push(MetaToken {
+                            token: Note(text),
+                            span,
+                            line,
+                            col,
+                        }),
+                        "part" => tokens.push(MetaToken {
+                            token: PlayPart(&text[1..]),
+                            span,
+                            line,
+                            col,
+                        }),
+                        "barline" => tokens.push(MetaToken {
+                            token: Barline,
+                            span,
+                            line,
+                            col,
+                        }),
+                        "symbol" =>
+                        {
                             let token = match text
                             {
                                 "-" => Rest,
@@ -123,58 +183,70 @@ pub fn lex(source: &str) -> Result<Vec<MetaToken>, LexingError>
                                 "\"" => Ditto,
                                 "%" => RepeatBar,
                                 "." => ExtendNote,
-                                _ => unreachable!()
+                                _ => unreachable!(),
                             };
-                            tokens.push(MetaToken { token, span, line, col });
+                            tokens.push(MetaToken {
+                                token,
+                                span,
+                                line,
+                                col,
+                            });
                         }
-                        "number" => {
+                        "number" =>
+                        {
                             let number = text.parse::<i64>().trust();
-                            tokens.push(MetaToken { token: Num(number), span, line, col });
+                            tokens.push(MetaToken {
+                                token: Num(number),
+                                span,
+                                line,
+                                col,
+                            });
                         }
                         "whitespace" | "comment" => (),
-                        "error" => {
-                            return Err(
-                                LexingError
-                                {
-                                    line, col,
-                                    error: ErrorType::UnexpectedCharacter
-                                    {
-                                        text: text.to_owned(),
-                                        context: "stave"
-                                    }
-                                });
+                        "error" =>
+                        {
+                            return Err(LexingError {
+                                line,
+                                col,
+                                error: ErrorType::UnexpectedCharacter {
+                                    text: text.to_owned(),
+                                    context: "stave",
+                                },
+                            })
                         }
-                        _ => unreachable!()
+                        _ => unreachable!(),
                     }
                 }
             }
-            "blank" => tokens.push(MetaToken { token: BlankLine, span, line, col }),
+            "blank" => tokens.push(MetaToken {
+                token: BlankLine,
+                span,
+                line,
+                col,
+            }),
             "whitespace" | "comment" => (),
-            "error" => {
-                return Err(
-                    LexingError
-                    {
-                        line, col,
-                        error: ErrorType::UnexpectedCharacter
-                        {
-                            text: text.to_owned(),
-                            context: "file"
-                        }
-                    });
+            "error" =>
+            {
+                return Err(LexingError {
+                    line,
+                    col,
+                    error: ErrorType::UnexpectedCharacter {
+                        text: text.to_owned(),
+                        context: "file",
+                    },
+                })
             }
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
     let (line, col) = line_col_at(source, source.len());
-    tokens.push(
-        MetaToken
-        {
-            token: EOF,
-            span: Span(source.len(), ""),
-            line,
-            col,
-        });
+    tokens.push(MetaToken {
+        token: EOF,
+        span: Span(source.len(), ""),
+        line,
+        col,
+    });
 
     Ok(tokens)
 }
@@ -222,7 +294,11 @@ mod tests
     {
         result.push(EOF);
         assert_eq!(
-            lex(source).unwrap().into_iter().map(|meta| meta.token).collect::<Vec<_>>(),
+            lex(source)
+                .unwrap()
+                .into_iter()
+                .map(|meta| meta.token)
+                .collect::<Vec<_>>(),
             result
         );
     }
@@ -238,16 +314,15 @@ mod tests
     {
         assert_eq!(
             lex("@").unwrap_err(),
-            LexingError
-            {
+            LexingError {
                 line: 1,
                 col: 1,
-                error: ErrorType::UnexpectedCharacter
-                {
+                error: ErrorType::UnexpectedCharacter {
                     text: "@".to_owned(),
                     context: "file",
-                }
-            });
+                },
+            }
+        );
     }
 
     #[test]
@@ -255,16 +330,15 @@ mod tests
     {
         assert_eq!(
             lex("   :|{}|").unwrap_err(),
-            LexingError
-            {
+            LexingError {
                 line: 1,
                 col: 6,
-                error: ErrorType::UnexpectedCharacter
-                {
+                error: ErrorType::UnexpectedCharacter {
                     text: "{".to_owned(),
                     context: "stave",
-                }
-            });
+                },
+            }
+        );
     }
 
     #[test]
@@ -302,7 +376,8 @@ mod tests
     {
         lextest(
             "// This is a piece\npiece{}",
-            vec![Piece, LeftBrace, RightBrace])
+            vec![Piece, LeftBrace, RightBrace],
+        )
     }
 
     #[test]
@@ -314,100 +389,101 @@ mod tests
     #[test]
     fn lex_name()
     {
-        lextest("piece Heroine {}", vec![
-                Piece,
-                Ident("Heroine"),
-                LeftBrace,
-                RightBrace,
-        ]);
+        lextest(
+            "piece Heroine {}",
+            vec![Piece, Ident("Heroine"), LeftBrace, RightBrace],
+        );
     }
 
     #[test]
     fn lex_quoted_name()
     {
-        lextest(r#"piece "Lust for Life" {}"#, vec![
-                Piece,
-                Str("Lust for Life"),
-                LeftBrace,
-                RightBrace,
-        ]);
+        lextest(
+            r#"piece "Lust for Life" {}"#,
+            vec![Piece, Str("Lust for Life"), LeftBrace, RightBrace],
+        );
     }
 
     #[test]
     fn lex_quoted_name_with_quotes_in_it()
     {
-        lextest(r#"piece "\"Lust\" for \"Life\"" {}"#, vec![
+        lextest(
+            r#"piece "\"Lust\" for \"Life\"" {}"#,
+            vec![
                 Piece,
                 Str(r#"\"Lust\" for \"Life\""#),
                 LeftBrace,
                 RightBrace,
-        ]);
+            ],
+        );
     }
 
     #[test]
     fn lex_empty_key()
     {
-        lextest("{ : A }", vec![
-                LeftBrace,
-                Key(""),
-                Ident("A"),
-                RightBrace,
-        ]);
+        lextest("{ : A }", vec![LeftBrace, Key(""), Ident("A"), RightBrace]);
     }
 
     #[test]
     fn lex_all_staves_key()
     {
-        lextest(":: | -", vec![
-                Key(":"),
-                Barline,
-                Rest,
-        ]);
+        lextest(":: | -", vec![Key(":"), Barline, Rest]);
     }
 
     #[test]
     fn lex_field_in_block()
     {
-        lextest(r#"piece LFL { title: "Party Girl" }"#, vec![
+        lextest(
+            r#"piece LFL { title: "Party Girl" }"#,
+            vec![
                 Piece,
                 Ident("LFL"),
                 LeftBrace,
                 Key("title"),
                 Str("Party Girl"),
                 RightBrace,
-        ]);
+            ],
+        );
     }
 
     #[test]
     fn lex_ridiculous_field_name()
     {
-        lextest(r#"piece LFL { F^_=,,''   : "Party Girl" }"#, vec![
+        lextest(
+            r#"piece LFL { F^_=,,''   : "Party Girl" }"#,
+            vec![
                 Piece,
                 Ident("LFL"),
                 LeftBrace,
                 Key("F^_=,,''"),
                 Str("Party Girl"),
                 RightBrace,
-        ]);
+            ],
+        );
     }
 
     #[test]
     fn lex_multiple_fields()
     {
-        lextest("{ drums, name: drum_voice }", vec![
+        lextest(
+            "{ drums, name: drum_voice }",
+            vec![
                 LeftBrace,
                 Ident("drums"),
                 Comma,
                 Key("name"),
                 Ident("drum_voice"),
                 RightBrace,
-        ]);
+            ],
+        );
     }
 
     #[test]
     fn lex_numbers()
     {
-        lextest("{ channel: 0, octave: -1 }", vec![
+        lextest(
+            "{ channel: 0, octave: -1 }",
+            vec![
                 LeftBrace,
                 Key("channel"),
                 Num(0),
@@ -415,13 +491,16 @@ mod tests
                 Key("octave"),
                 Num(-1),
                 RightBrace,
-        ]);
+            ],
+        );
     }
 
     #[test]
     fn lex_blank_lines()
     {
-        lextest("{ a: 0,\n\nb: 1 }", vec![
+        lextest(
+            "{ a: 0,\n\nb: 1 }",
+            vec![
                 LeftBrace,
                 Key("a"),
                 Num(0),
@@ -430,35 +509,31 @@ mod tests
                 Key("b"),
                 Num(1),
                 RightBrace,
-        ]);
+            ],
+        );
     }
 
     #[test]
     fn lex_note()
     {
-        lextest(": | A", vec![
-                Key(""),
-                Barline,
-                Note("A"),
-        ]);
+        lextest(": | A", vec![Key(""), Barline, Note("A")]);
     }
 
     #[test]
     fn lex_complex_notes()
     {
-        lextest(": | B^,,c_''d=", vec![
-                Key(""),
-                Barline,
-                Note("B^,,"),
-                Note("c_''"),
-                Note("d="),
-        ]);
+        lextest(
+            ": | B^,,c_''d=",
+            vec![Key(""), Barline, Note("B^,,"), Note("c_''"), Note("d=")],
+        );
     }
 
     #[test]
     fn lex_note_length()
     {
-        lextest(": | A... B4 | C.", vec![
+        lextest(
+            ": | A... B4 | C.",
+            vec![
                 Key(""),
                 Barline,
                 Note("A"),
@@ -470,13 +545,16 @@ mod tests
                 Barline,
                 Note("C"),
                 ExtendNote,
-        ]);
+            ],
+        );
     }
 
     #[test]
     fn lex_symbols()
     {
-        lextest("C : | x - x-| % | \" |", vec![
+        lextest(
+            "C : | x - x-| % | \" |",
+            vec![
                 Key("C"),
                 Barline,
                 Hit,
@@ -488,42 +566,31 @@ mod tests
                 Barline,
                 Ditto,
                 Barline,
-        ]);
+            ],
+        );
     }
 
     #[test]
     fn lex_play_part()
     {
-        lextest(":| *Theme", vec![
-                Key(""),
-                Barline,
-                PlayPart("Theme"),
-        ]);
+        lextest(":| *Theme", vec![Key(""), Barline, PlayPart("Theme")]);
     }
 
     #[test]
     fn semicolon_can_break_stave_within_one_line()
     {
-        lextest("A:|x;B:|x;", vec![
-                Key("A"),
-                Barline,
-                Hit,
-                Key("B"),
-                Barline,
-                Hit,
-        ]);
+        lextest(
+            "A:|x;B:|x;",
+            vec![Key("A"), Barline, Hit, Key("B"), Barline, Hit],
+        );
     }
 
     #[test]
     fn right_brace_can_break_stave_within_one_line()
     {
-        lextest("{ A:|x }", vec![
-                LeftBrace,
-                Key("A"),
-                Barline,
-                Hit,
-                RightBrace,
-        ]);
+        lextest(
+            "{ A:|x }",
+            vec![LeftBrace, Key("A"), Barline, Hit, RightBrace],
+        );
     }
 }
-

@@ -18,4 +18,3 @@ impl<T, E> Trust<T> for Result<T, E>
         self.unwrap_or_else(|_| unreachable!("trust was broken"))
     }
 }
-

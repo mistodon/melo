@@ -1,11 +1,11 @@
 pub mod error;
 
-use sequencing::data::*;
 use notes;
+use sequencing::data::*;
 use trust::Trust;
 
 
-use self::error::{ AbcGenerationError, ErrorType };
+use self::error::{AbcGenerationError, ErrorType};
 
 
 fn div_tuplet(notes_per_beat: u32) -> (u32, u32)
@@ -19,7 +19,14 @@ fn div_tuplet(notes_per_beat: u32) -> (u32, u32)
         division *= 2;
     }
 
-    let division = if tuplet < 3 { division * 4 } else { division * 8 };
+    let division = if tuplet < 3
+    {
+        division * 4
+    }
+    else
+    {
+        division * 8
+    };
 
     (division, tuplet)
 }
@@ -62,7 +69,8 @@ pub fn generate_abc(pieces: &[Piece]) -> Result<String, AbcGenerationError>
 
             if !voice.notes.is_empty()
             {
-                let stave_text = write_bars(&voice.notes, piece.beats as u32, voice.divisions_per_bar)?;
+                let stave_text =
+                    write_bars(&voice.notes, piece.beats as u32, voice.divisions_per_bar)?;
 
                 write!(buffer, "{}", stave_text)?;
             }
@@ -75,10 +83,14 @@ pub fn generate_abc(pieces: &[Piece]) -> Result<String, AbcGenerationError>
 }
 
 
-fn write_bars(stave_notes: &[Note], beats_per_bar: u32, divisions_per_bar: u32) -> Result<String, AbcGenerationError>
+fn write_bars(
+    stave_notes: &[Note],
+    beats_per_bar: u32,
+    divisions_per_bar: u32,
+) -> Result<String, AbcGenerationError>
 {
-    use std::fmt::Write;
     use notes::lcm;
+    use std::fmt::Write;
 
     let mut buffer = String::new();
 
@@ -89,7 +101,11 @@ fn write_bars(stave_notes: &[Note], beats_per_bar: u32, divisions_per_bar: u32) 
 
     if tuplet > 9
     {
-        return Err(AbcGenerationError { line: 12345, col: 12345, error: ErrorType::UnsupportedTuplet { tuplet } })
+        return Err(AbcGenerationError {
+            line: 12345,
+            col: 12345,
+            error: ErrorType::UnsupportedTuplet { tuplet },
+        })
     }
 
     writeln!(buffer, "L:1/{}", beat_division)?;
@@ -101,7 +117,11 @@ fn write_bars(stave_notes: &[Note], beats_per_bar: u32, divisions_per_bar: u32) 
     let mut abc_notes = vec![];
 
     let end_position = {
-        let latest_end = stave_notes.iter().map(|note| note.position + note.length).max().trust();
+        let latest_end = stave_notes
+            .iter()
+            .map(|note| note.position + note.length)
+            .max()
+            .trust();
         let latest_bar = (latest_end + divisions_per_bar - 1) / divisions_per_bar;
         latest_bar * divisions_per_bar * scale
     };
@@ -111,7 +131,8 @@ fn write_bars(stave_notes: &[Note], beats_per_bar: u32, divisions_per_bar: u32) 
         let next_barline = ((cursor / notes_per_bar) + 1) * notes_per_bar;
 
         let note = notes.next();
-        let position = note.map(|note| note.position * scale).unwrap_or_else(|| ::std::cmp::min(next_barline, end_position));
+        let position = note.map(|note| note.position * scale)
+            .unwrap_or_else(|| ::std::cmp::min(next_barline, end_position));
 
         if position < cursor
         {
@@ -123,9 +144,13 @@ fn write_bars(stave_notes: &[Note], beats_per_bar: u32, divisions_per_bar: u32) 
         fn note_string(base: &str, length: u32, suffix: &str) -> String
         {
             if length == 1
-                { format!("{}{}", base, suffix) }
+            {
+                format!("{}{}", base, suffix)
+            }
             else
-                { format!("{}{}{}", base, length, suffix) }
+            {
+                format!("{}{}{}", base, length, suffix)
+            }
         }
 
         if rest_length > 0
@@ -137,7 +162,10 @@ fn write_bars(stave_notes: &[Note], beats_per_bar: u32, divisions_per_bar: u32) 
 
                 if rests_until_barline > 0
                 {
-                    abc_notes.push((note_string("z", rests_until_barline, ""), rests_until_barline));
+                    abc_notes.push((
+                        note_string("z", rests_until_barline, ""),
+                        rests_until_barline,
+                    ));
                     rests_remaining -= rests_until_barline;
                 }
 
@@ -166,8 +194,10 @@ fn write_bars(stave_notes: &[Note], beats_per_bar: u32, divisions_per_bar: u32) 
 
         match note
         {
-            Some(note) => {
-                let chord: Vec<Note> = stave_notes.iter()
+            Some(note) =>
+            {
+                let chord: Vec<Note> = stave_notes
+                    .iter()
                     .filter(|other| other.position == note.position)
                     .cloned()
                     .collect();
@@ -176,12 +206,20 @@ fn write_bars(stave_notes: &[Note], beats_per_bar: u32, divisions_per_bar: u32) 
 
                 fn chord_string(chord: &[Note]) -> String
                 {
-                    let chord_notes_string = chord.iter()
+                    let chord_notes_string = chord
+                        .iter()
                         .map(|note| notes::midi_to_abc(note.midi).trust())
                         .collect::<Vec<&str>>()
                         .join("");
 
-                    if chord.len() == 1 { chord_notes_string } else { format!("[{}]", chord_notes_string) }
+                    if chord.len() == 1
+                    {
+                        chord_notes_string
+                    }
+                    else
+                    {
+                        format!("[{}]", chord_notes_string)
+                    }
                 }
 
                 let chord_string = chord_string(&chord);
@@ -191,23 +229,33 @@ fn write_bars(stave_notes: &[Note], beats_per_bar: u32, divisions_per_bar: u32) 
                     let next_barline = ((cursor / notes_per_bar) + 1) * notes_per_bar;
 
                     let mut length_remaining = min_chord_length;
-                    let length_until_barline = ::std::cmp::min(length_remaining, next_barline - cursor);
+                    let length_until_barline =
+                        ::std::cmp::min(length_remaining, next_barline - cursor);
 
                     if length_until_barline > 0
                     {
-                        abc_notes.push((note_string(&chord_string, length_until_barline, "-"), length_until_barline));
+                        abc_notes.push((
+                            note_string(&chord_string, length_until_barline, "-"),
+                            length_until_barline,
+                        ));
                         length_remaining -= length_until_barline;
                     }
 
                     while length_remaining >= notes_per_bar
                     {
-                        abc_notes.push((note_string(&chord_string, notes_per_bar, "-"), notes_per_bar));
+                        abc_notes.push((
+                            note_string(&chord_string, notes_per_bar, "-"),
+                            notes_per_bar,
+                        ));
                         length_remaining -= notes_per_bar;
                     }
 
                     if length_remaining > 0
                     {
-                        abc_notes.push((note_string(&chord_string, length_remaining, "-"), length_remaining));
+                        abc_notes.push((
+                            note_string(&chord_string, length_remaining, "-"),
+                            length_remaining,
+                        ));
                     }
 
                     if let Some(tied_note) = abc_notes.last_mut()
@@ -227,7 +275,7 @@ fn write_bars(stave_notes: &[Note], beats_per_bar: u32, divisions_per_bar: u32) 
 
                 cursor += min_chord_length;
             }
-            None => break
+            None => break,
         }
     }
 
@@ -238,7 +286,8 @@ fn write_bars(stave_notes: &[Note], beats_per_bar: u32, divisions_per_bar: u32) 
 
     match tuplet
     {
-        1 => {
+        1 =>
+        {
             for (note, length) in abc_notes
             {
                 if written_notes >= notes_per_bar
@@ -252,7 +301,8 @@ fn write_bars(stave_notes: &[Note], beats_per_bar: u32, divisions_per_bar: u32) 
                 written_notes += length;
             }
         }
-        n => {
+        n =>
+        {
             for chunk in abc_notes.chunks(n as usize)
             {
                 if written_notes >= notes_per_bar
@@ -294,7 +344,10 @@ mod tests
         let pieces = sequencing::sequence_pieces(&parse_tree.pieces).expect("ERROR IN SEQUENCER");
         let voice = &pieces[0].voices[0];
 
-        assert_eq!(write_bars(&voice.notes, notes_per_bar, voice.divisions_per_bar).unwrap(), expected);
+        assert_eq!(
+            write_bars(&voice.notes, notes_per_bar, voice.divisions_per_bar).unwrap(),
+            expected
+        );
     }
 
     fn write_bars_fail(source: &str, notes_per_bar: u32)
@@ -402,14 +455,22 @@ mod tests
     fn test_even_faster_triplets()
     {
         let source = "voice A {} play A { :| cccccc cccccc cccccc cccccc }";
-        write_bars_test(source, "L:1/16\n(3ccc(3ccc(3ccc(3ccc(3ccc(3ccc(3ccc(3ccc|\n", 4);
+        write_bars_test(
+            source,
+            "L:1/16\n(3ccc(3ccc(3ccc(3ccc(3ccc(3ccc(3ccc(3ccc|\n",
+            4,
+        );
     }
 
     #[test]
     fn test_quintuplet_in_4_4_time()
     {
         let source = "voice A {} play A { :| C C C C C |}";
-        write_bars_test(source, "L:1/8\n(5C-C-C-CC-(5C-C-CC-C-(5C-CC-C-C-(5CC-C-C-C|\n", 4);
+        write_bars_test(
+            source,
+            "L:1/8\n(5C-C-C-CC-(5C-C-CC-C-(5C-CC-C-C-(5CC-C-C-C|\n",
+            4,
+        );
     }
 
     #[test]
@@ -501,7 +562,11 @@ mod tests
     fn note_tied_across_triplet_bars()
     {
         let source = "voice A {} play A { :| C E G | . E C }";
-        write_bars_test(source, "L:1/8\n(3C-C-C-(3CE-E-(3E-EG-(3G-G-G-|\n(3G-G-G-(3GE-E-(3E-EC-(3C-C-C|\n", 4);
+        write_bars_test(
+            source,
+            "L:1/8\n(3C-C-C-(3CE-E-(3E-EG-(3G-G-G-|\n(3G-G-G-(3GE-E-(3E-EC-(3C-C-C|\n",
+            4,
+        );
     }
 
     #[test]
@@ -511,4 +576,3 @@ mod tests
         write_bars_test(source, "L:1/4\nC2z2|\nz2C2|\n", 4);
     }
 }
-
