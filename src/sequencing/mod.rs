@@ -47,29 +47,29 @@ pub fn sequence_pieces<'a>(
             }
         }
 
-        // TODO(***realname***): Stop this - make things immutable after construction so new fields aren't left out
-        let mut piece = Piece::default();
+        let Piece { title, composer, tempo, beats, .. } = Piece::default();
 
-        piece.title = piece_node.title.or(piece.title);
-        piece.composer = piece_node.composer.or(piece.composer);
-        piece.tempo = piece_node.tempo.unwrap_or(piece.tempo);
-        piece.beats = piece_node.beats.unwrap_or(piece.beats);
+        let title = piece_node.title.or(title);
+        let composer = piece_node.composer.or(composer);
+        let tempo = piece_node.tempo.unwrap_or(tempo);
+        let beats = piece_node.beats.unwrap_or(beats);
+
+        let mut voices = Vec::new();
 
         for voice_node in &piece_node.voices
         {
-            let mut voice = Voice {
-                name: voice_node.name,
-                ..Default::default()
-            };
-            voice.channel = voice_node.channel.unwrap_or(voice.channel);
-            voice.program = voice_node.program.unwrap_or(voice.program);
-            voice.octave = voice_node.octave.unwrap_or(voice.octave);
-            voice.volume = voice_node.volume.map(|vol| f64::from(vol) / 127.0);
+            let Voice { channel, program, octave, .. } = Voice::default();
 
-            let bar_length_lcm = piece_node
+            let name = voice_node.name;
+            let channel = voice_node.channel.unwrap_or(channel);
+            let program = voice_node.program.unwrap_or(program);
+            let octave = voice_node.octave.unwrap_or(octave);
+            let volume = voice_node.volume.map(|vol| f64::from(vol) / 127.0);
+
+            let divisions_per_bar = piece_node
                 .plays
                 .iter()
-                .filter(|play| play.voice == Some(voice.name))
+                .filter(|play| play.voice == Some(name))
                 .flat_map(|play| {
                     play.staves.iter().flat_map(|stave| {
                         stave
@@ -80,12 +80,12 @@ pub fn sequence_pieces<'a>(
                 })
                 .fold(1, lcm);
 
-            voice.divisions_per_bar = bar_length_lcm;
+            let mut notes: Vec<Note> = Vec::new();
 
 
             for play_node in &piece_node.plays
             {
-                if play_node.voice != Some(voice.name)
+                if play_node.voice != Some(name)
                 {
                     continue
                 }
@@ -96,13 +96,13 @@ pub fn sequence_pieces<'a>(
 
                     for (index, bar_node) in stave_node.bars.iter().enumerate()
                     {
-                        let mut cursor = index as u32 * voice.divisions_per_bar;
+                        let mut cursor = index as u32 * divisions_per_bar;
 
                         let bar_node_length: u32 =
                             bar_node.notes.iter().map(|note| note.length()).sum();
 
-                        assert!(voice.divisions_per_bar % bar_node_length == 0);
-                        let note_scale = voice.divisions_per_bar / bar_node_length;
+                        assert!(divisions_per_bar % bar_node_length == 0);
+                        let note_scale = divisions_per_bar / bar_node_length;
 
                         for note_node in &bar_node.notes
                         {
@@ -117,7 +117,7 @@ pub fn sequence_pieces<'a>(
                                 {
                                     if previous_note_exists
                                     {
-                                        let previous_note = voice.notes.last_mut().trust();
+                                        let previous_note = notes.last_mut().trust();
                                         previous_note.length += note_scale * u32::from(length);
                                     }
 
@@ -126,8 +126,6 @@ pub fn sequence_pieces<'a>(
                                 NoteNode::Note { midi, length } =>
                                 {
                                     previous_note_exists = true;
-
-                                    let octave = voice.octave;
 
                                     let midi = midi.checked_add(octave * 12).ok_or_else(
                                         || SequencingError {
@@ -148,7 +146,7 @@ pub fn sequence_pieces<'a>(
                                         position,
                                     };
 
-                                    voice.notes.push(note);
+                                    notes.push(note);
 
                                     cursor += length;
                                 }
@@ -157,11 +155,31 @@ pub fn sequence_pieces<'a>(
                     }
                 }
 
-                voice.notes.sort_by_key(|note| note.position);
+                notes.sort_by_key(|note| note.position);
             }
 
-            piece.voices.push(voice);
+            let voice = Voice
+            {
+                name,
+                channel,
+                program,
+                octave,
+                volume,
+                divisions_per_bar,
+                notes,
+            };
+
+            voices.push(voice);
         }
+
+        let piece = Piece
+        {
+            title,
+            composer,
+            beats,
+            tempo,
+            voices,
+        };
 
         pieces.push(piece);
     }
@@ -481,3 +499,4 @@ mod tests
         );
     }
 }
+
