@@ -200,10 +200,7 @@ fn parse_piece_from_body<'a>(
                 let (line, col) = (meta.line, meta.col);
                 match attribute_key
                 {
-                    Key("title") =>
-                    {
-                        title = Some(try_parse_name(stream, "after `title:`")?)
-                    }
+                    Key("title") => title = Some(try_parse_name(stream, "after `title:`")?),
                     Key("composer") =>
                     {
                         composer = Some(try_parse_name(stream, "after `composer:`")?)
@@ -242,7 +239,14 @@ fn parse_piece_from_body<'a>(
     let voices = error_swizzle(voice_results)?;
     let plays = error_swizzle(play_results)?;
 
-    Ok(PieceNode { title, composer, beats, tempo, voices, plays })
+    Ok(PieceNode {
+        title,
+        composer,
+        beats,
+        tempo,
+        voices,
+        plays,
+    })
 }
 
 fn parse_attribute_key<'a>(
@@ -337,22 +341,10 @@ fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, Parsin
                 channel = Some(10);
                 octave = Some(-2);
             }
-            Key("channel") =>
-            {
-                channel = Some(try_parse_num(stream, "after `channel:`")? as u8)
-            }
-            Key("program") =>
-            {
-                program = Some(try_parse_num(stream, "after `program:`")? as u8)
-            }
-            Key("octave") =>
-            {
-                octave = Some(try_parse_num(stream, "after `octave:`")? as i8)
-            }
-            Key("volume") =>
-            {
-                volume = Some(try_parse_num(stream, "after `volume:`")? as u8)
-            }
+            Key("channel") => channel = Some(try_parse_num(stream, "after `channel:`")? as u8),
+            Key("program") => program = Some(try_parse_num(stream, "after `program:`")? as u8),
+            Key("octave") => octave = Some(try_parse_num(stream, "after `octave:`")? as i8),
+            Key("volume") => volume = Some(try_parse_num(stream, "after `volume:`")? as u8),
             Key(key) | Ident(key) =>
             {
                 return Err(ParsingError {
@@ -374,7 +366,13 @@ fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, Parsin
         }
     }
 
-    Ok(VoiceNode { name, channel, program, octave, volume })
+    Ok(VoiceNode {
+        name,
+        channel,
+        program,
+        octave,
+        volume,
+    })
 }
 
 fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingError>

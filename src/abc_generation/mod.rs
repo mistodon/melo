@@ -288,40 +288,34 @@ fn write_bars(
 
     match tuplet
     {
-        1 =>
+        1 => for (note, length) in abc_notes
         {
-            for (note, length) in abc_notes
+            if written_notes >= notes_per_bar
             {
-                if written_notes >= notes_per_bar
-                {
-                    written_notes -= notes_per_bar;
-                    assert!(written_notes < notes_per_bar);
-                    writeln!(buffer, "|")?;
-                }
+                written_notes -= notes_per_bar;
+                assert!(written_notes < notes_per_bar);
+                writeln!(buffer, "|")?;
+            }
 
+            write!(buffer, "{}", note)?;
+            written_notes += length;
+        },
+        n => for chunk in abc_notes.chunks(n as usize)
+        {
+            if written_notes >= notes_per_bar
+            {
+                written_notes -= notes_per_bar;
+                assert!(written_notes < notes_per_bar);
+                writeln!(buffer, "|")?;
+            }
+
+            write!(buffer, "({}", n)?;
+            for &(ref note, length) in chunk
+            {
                 write!(buffer, "{}", note)?;
                 written_notes += length;
             }
-        }
-        n =>
-        {
-            for chunk in abc_notes.chunks(n as usize)
-            {
-                if written_notes >= notes_per_bar
-                {
-                    written_notes -= notes_per_bar;
-                    assert!(written_notes < notes_per_bar);
-                    writeln!(buffer, "|")?;
-                }
-
-                write!(buffer, "({}", n)?;
-                for &(ref note, length) in chunk
-                {
-                    write!(buffer, "{}", note)?;
-                    written_notes += length;
-                }
-            }
-        }
+        },
     }
 
     writeln!(buffer, "|")?;
@@ -341,7 +335,7 @@ mod tests
         use parsing;
         use sequencing;
 
-        let tokens = lexing::lex(source).expect("ERROR IN LEXER");
+        let tokens = lexing::lex(source, None).expect("ERROR IN LEXER");
         let parse_tree = parsing::parse(&tokens).expect("ERROR IN PARSER");
         let pieces =
             sequencing::sequence_pieces(&parse_tree.pieces).expect("ERROR IN SEQUENCER");
@@ -359,7 +353,7 @@ mod tests
         use parsing;
         use sequencing;
 
-        let tokens = lexing::lex(source).expect("ERROR IN LEXER");
+        let tokens = lexing::lex(source, None).expect("ERROR IN LEXER");
         let parse_tree = parsing::parse(&tokens).expect("ERROR IN PARSER");
         let pieces =
             sequencing::sequence_pieces(&parse_tree.pieces).expect("ERROR IN SEQUENCER");

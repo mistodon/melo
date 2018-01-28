@@ -13,11 +13,11 @@ extern crate regex;
 
 pub mod notes;
 mod abc_generation;
+mod error;
 mod lexing;
 mod parsing;
 mod sequencing;
 mod trust;
-
 
 #[cfg(test)]
 mod test_helpers;
@@ -26,9 +26,9 @@ mod test_helpers;
 use failure::Error;
 
 
-pub fn compile_to_abc(input: &str) -> Result<String, Error>
+pub fn compile_to_abc(input: &str, filename: Option<&str>) -> Result<String, Error>
 {
-    let tokens = lexing::lex(input)?;
+    let tokens = lexing::lex(input, filename)?;
     let parse_tree = parsing::parse(&tokens)?;
     let pieces = sequencing::sequence_pieces(&parse_tree.pieces)?;
     let abc = abc_generation::generate_abc(&pieces)?;

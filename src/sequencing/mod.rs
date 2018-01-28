@@ -47,7 +47,13 @@ pub fn sequence_pieces<'a>(
             }
         }
 
-        let Piece { title, composer, tempo, beats, .. } = Piece::default();
+        let Piece {
+            title,
+            composer,
+            tempo,
+            beats,
+            ..
+        } = Piece::default();
 
         let title = piece_node.title.or(title);
         let composer = piece_node.composer.or(composer);
@@ -58,7 +64,12 @@ pub fn sequence_pieces<'a>(
 
         for voice_node in &piece_node.voices
         {
-            let Voice { channel, program, octave, .. } = Voice::default();
+            let Voice {
+                channel,
+                program,
+                octave,
+                ..
+            } = Voice::default();
 
             let name = voice_node.name;
             let channel = voice_node.channel.unwrap_or(channel);
@@ -158,8 +169,7 @@ pub fn sequence_pieces<'a>(
                 notes.sort_by_key(|note| note.position);
             }
 
-            let voice = Voice
-            {
+            let voice = Voice {
                 name,
                 channel,
                 program,
@@ -172,8 +182,7 @@ pub fn sequence_pieces<'a>(
             voices.push(voice);
         }
 
-        let piece = Piece
-        {
+        let piece = Piece {
             title,
             composer,
             beats,
@@ -198,7 +207,7 @@ mod tests
 
     fn sequence_test(source: &str, expected: Piece)
     {
-        let tokens = &lexing::lex(source).expect("ERROR IN LEXER");
+        let tokens = &lexing::lex(source, None).expect("ERROR IN LEXER");
         let parse_tree = parsing::parse(tokens).expect("ERROR IN PARSER");
         let piece = &sequence_pieces(&parse_tree.pieces).unwrap()[0];
         assert_eq!(piece, &expected);
@@ -206,14 +215,14 @@ mod tests
 
     fn sequence_test_fail(source: &str)
     {
-        let tokens = &lexing::lex(source).expect("ERROR IN LEXER");
+        let tokens = &lexing::lex(source, None).expect("ERROR IN LEXER");
         let parse_tree = parsing::parse(tokens).expect("ERROR IN PARSER");
         assert!(sequence_pieces(&parse_tree.pieces).is_err());
     }
 
     fn voice_test(source: &str, expected_notes: Vec<Note>)
     {
-        let tokens = &lexing::lex(source).expect("ERROR IN LEXER");
+        let tokens = &lexing::lex(source, None).expect("ERROR IN LEXER");
         let parse_tree = parsing::parse(tokens).expect("ERROR IN PARSER");
         let piece = &sequence_pieces(&parse_tree.pieces).unwrap()[0];
         assert_eq!(piece.voices[0].notes, expected_notes);
@@ -499,4 +508,3 @@ mod tests
         );
     }
 }
-

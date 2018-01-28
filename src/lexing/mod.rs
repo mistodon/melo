@@ -4,31 +4,38 @@ pub mod error;
 
 use regex::Regex;
 
+use error::{SourceInfo, SourceLoc};
 use trust::Trust;
 
 use self::data::*;
 use self::error::{ErrorType, LexingError};
 
 
+// TODO(claire): This code assumes that a newline is a single byte
 fn line_col_at(source: &str, position: usize) -> (usize, usize)
 {
     let mut bytes = 0;
     for (line_no, line) in source.lines().enumerate()
     {
-        if position >= bytes && position < bytes + line.len()
+        if position >= bytes && position < bytes + line.len() + 1
         {
             let col = position - bytes;
             return (line_no + 1, col + 1)
         }
-        bytes += line.len();
+        bytes += line.len() + 1;
     }
-    (0, source.len())
+    (1, source.len())
 }
 
 
-pub fn lex(source: &str) -> Result<Vec<MetaToken>, LexingError>
+pub fn lex<'a>(
+    source: &'a str,
+    filename: Option<&str>,
+) -> Result<Vec<MetaToken<'a>>, LexingError>
 {
     use self::Token::*;
+
+    let source_map = SourceInfo::new(source, filename);
 
     let mut tokens = Vec::new();
 
@@ -206,8 +213,11 @@ pub fn lex(source: &str) -> Result<Vec<MetaToken>, LexingError>
                         "error" =>
                         {
                             return Err(LexingError {
-                                line,
-                                col,
+                                loc: SourceLoc {
+                                    line,
+                                    col,
+                                    info: source_map.clone(),
+                                },
                                 error: ErrorType::UnexpectedCharacter {
                                     text: text.to_owned(),
                                     context: "stave",
@@ -228,8 +238,11 @@ pub fn lex(source: &str) -> Result<Vec<MetaToken>, LexingError>
             "error" =>
             {
                 return Err(LexingError {
-                    line,
-                    col,
+                    loc: SourceLoc {
+                        line,
+                        col,
+                        info: source_map.clone(),
+                    },
                     error: ErrorType::UnexpectedCharacter {
                         text: text.to_owned(),
                         context: "file",
@@ -294,7 +307,7 @@ mod tests
     {
         result.push(EOF);
         assert_eq!(
-            lex(source)
+            lex(source, None)
                 .unwrap()
                 .into_iter()
                 .map(|meta| meta.token)
@@ -313,15 +326,11 @@ mod tests
     fn invalid_tokens()
     {
         assert_eq!(
-            lex("@").unwrap_err(),
-            LexingError {
-                line: 1,
-                col: 1,
-                error: ErrorType::UnexpectedCharacter {
-                    text: "@".to_owned(),
-                    context: "file",
-                },
-            }
+            lex("@", None).unwrap_err().error,
+            ErrorType::UnexpectedCharacter {
+                text: "@".to_owned(),
+                context: "file",
+            },
         );
     }
 
@@ -329,15 +338,11 @@ mod tests
     fn invalid_tokens_in_stave()
     {
         assert_eq!(
-            lex("   :|{}|").unwrap_err(),
-            LexingError {
-                line: 1,
-                col: 6,
-                error: ErrorType::UnexpectedCharacter {
-                    text: "{".to_owned(),
-                    context: "stave",
-                },
-            }
+            lex("   :|{}|", None).unwrap_err().error,
+            ErrorType::UnexpectedCharacter {
+                text: "{".to_owned(),
+                context: "stave",
+            },
         );
     }
 

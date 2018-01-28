@@ -70,7 +70,8 @@ fn main()
         {
             let input_text = read_input(input.as_ref());
 
-            let processed = match midscript::compile_to_abc(&input_text)
+            let filename = input.as_ref().map(|s| s.as_ref());
+            let processed = match midscript::compile_to_abc(&input_text, filename)
             {
                 Err(err) =>
                 {
@@ -89,7 +90,8 @@ fn main()
 
             let input_text = read_input(input.as_ref());
 
-            let processed = match midscript::compile_to_abc(&input_text)
+            let filename = input.as_ref().map(|s| s.as_ref());
+            let processed = match midscript::compile_to_abc(&input_text, filename)
             {
                 Err(err) =>
                 {
@@ -119,7 +121,8 @@ fn main()
 
             let input_text = read_input(input.as_ref());
 
-            let processed = match midscript::compile_to_abc(&input_text)
+            let filename = input.as_ref().map(|s| s.as_ref());
+            let processed = match midscript::compile_to_abc(&input_text, filename)
             {
                 Err(err) =>
                 {
