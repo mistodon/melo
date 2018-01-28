@@ -16,7 +16,7 @@ macro_rules! test_abc
 
 fn test_compilation(before: &str, after: &str)
 {
-    let result = midscript::compile_to_abc(before).unwrap();
+    let result = midscript::compile_to_abc(before, None).unwrap();
     assert_eq!(result, after);
 }
 
