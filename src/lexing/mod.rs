@@ -279,10 +279,7 @@ lazy_static!
         (?P<whitespace>(\\s+|;))|\
         (?P<error>.)\
         ").trust();
-}
 
-lazy_static!
-{
     static ref MUSIC_REGEX: Regex = Regex::new("\
         (?P<note>[a-gA-G][=_\\^]*[,']*)|\
         (?P<part>\\*[a-zA-Z_][a-zA-Z0-9_]*)|\
