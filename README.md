@@ -15,15 +15,12 @@
 
 ### Errors
 
-1.  Sequencing and generation phases need proper errors
+1.  Sequencing and generation errors give you no line information
+2.  No error shows you the line where the error occurs
+3.  Errors about ridiculous tuplets should explain which bar caused the tuplet blowup
 
 ### Features
 
-1.  Urgently need note lengths supported
-2.  Voice volume would be useful
-
-### Bugs
-
-1.  Generation crashes when a voice contains no bars/notes.
-2.  Notes in tuplets are not split up properly
+1.  Repeats of previous bars
+2.  Declaring parts that can be played in multiple places
 
