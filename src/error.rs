@@ -1,3 +1,4 @@
+use std::fmt::{Error, Formatter};
 use std::sync::Arc;
 
 
@@ -39,28 +40,18 @@ pub struct SourceLoc
 
 impl SourceLoc
 {
-    pub fn line_col(&self) -> (usize, usize)
-    {
-        (self.line, self.col)
-    }
-
-    pub fn filename_or(&self, alternative: &'static str) -> &str
+    pub fn filename(&self) -> &str
     {
         self.info
             .filename
             .as_ref()
             .map(AsRef::as_ref)
-            .unwrap_or(alternative)
+            .unwrap_or("<stdin>")
     }
 
     pub fn cause_line(&self) -> &str
     {
         &self.info.lines[self.line - 1]
-    }
-
-    pub fn under_line(&self) -> String
-    {
-        format!("{: >col$}", "^", col = self.col)
     }
 }
 
@@ -74,3 +65,42 @@ impl PartialEq for SourceLoc
 }
 
 impl Eq for SourceLoc {}
+
+
+pub fn fmt_error(
+    f: &mut Formatter,
+    message: &str,
+    filename: &str,
+    context: &str,
+    line: usize,
+    col: usize,
+    width: usize,
+) -> Result<(), Error>
+{
+    use ansi_term::Color;
+
+    let red = Color::Fixed(9).bold();
+    let blue = Color::Fixed(12).bold();
+    let white = Color::Fixed(15).bold();
+
+    let line_prefix = format!("{} |    ", line);
+    let underline = format!(
+        "{: >indent$}",
+        "^".repeat(width),
+        indent = col + line_prefix.len()
+    );
+
+    writeln!(
+        f,
+        "{}: {}\n   {} {}:{}:{}\n\n{}{}\n{}",
+        red.paint("error"),
+        white.paint(message),
+        blue.paint("-->"),
+        filename,
+        line,
+        col,
+        blue.paint(line_prefix),
+        context,
+        blue.paint(underline)
+    )
+}
