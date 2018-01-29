@@ -1,3 +1,6 @@
+use notes::Midi;
+
+
 #[derive(Debug, PartialEq)]
 pub struct Piece<'a>
 {
@@ -29,7 +32,7 @@ pub struct Voice<'a>
     pub name: &'a str,
     pub channel: u8,
     pub program: u8,
-    pub octave: i8,
+    pub transpose: i8,
     pub volume: Option<f64>,
     pub notes: Vec<Note>,
     pub divisions_per_bar: u32,
@@ -43,7 +46,7 @@ impl<'a> Default for Voice<'a>
             name: "error",
             channel: 1,
             program: 0,
-            octave: 0,
+            transpose: 0,
             volume: None,
             notes: Vec::new(),
             divisions_per_bar: 1,
@@ -56,5 +59,5 @@ pub struct Note
 {
     pub position: u32,
     pub length: u32,
-    pub midi: i8,
+    pub midi: Midi,
 }

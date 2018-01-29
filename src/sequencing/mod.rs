@@ -66,14 +66,14 @@ pub fn sequence_pieces<'a>(
             let Voice {
                 channel,
                 program,
-                octave,
+                transpose,
                 ..
             } = Voice::default();
 
             let name = voice_node.name;
             let channel = voice_node.channel.unwrap_or(channel);
             let program = voice_node.program.unwrap_or(program);
-            let octave = voice_node.octave.unwrap_or(octave);
+            let transpose = voice_node.transpose.unwrap_or(transpose);
             let volume = voice_node.volume.map(|vol| f64::from(vol) / 127.0);
 
             let divisions_per_bar = piece_node
@@ -137,14 +137,13 @@ pub fn sequence_pieces<'a>(
                                 {
                                     previous_note_exists = true;
 
-                                    let midi = midi.checked_add(octave * 12).ok_or_else(
-                                        || SequencingError {
+                                    let midi =
+                                        midi.transposed(transpose).ok_or(SequencingError {
                                             loc: bar_node.note_locs[note_index].clone(),
                                             error: ErrorType::InvalidNote {
-                                                octave_offset: octave,
+                                                octave_offset: transpose / 12,
                                             },
-                                        },
-                                    )?;
+                                        })?;
 
                                     let length = note_scale * u32::from(length);
                                     let position = cursor;
@@ -170,7 +169,7 @@ pub fn sequence_pieces<'a>(
                 name,
                 channel,
                 program,
-                octave,
+                transpose,
                 volume,
                 divisions_per_bar,
                 notes,
@@ -200,6 +199,7 @@ mod tests
     use super::*;
     use lexing;
     use parsing;
+    use test_helpers::midi;
 
 
     fn sequence_test(source: &str, expected: Piece)
@@ -276,7 +276,7 @@ mod tests
             "voice OneNote { } play OneNote { :| C }",
             vec![
                 Note {
-                    midi: 60,
+                    midi: midi(60),
                     length: 1,
                     position: 0,
                 },
@@ -291,12 +291,12 @@ mod tests
             "voice TwoNote { } play TwoNote { :| C G }",
             vec![
                 Note {
-                    midi: 60,
+                    midi: midi(60),
                     length: 1,
                     position: 0,
                 },
                 Note {
-                    midi: 67,
+                    midi: midi(67),
                     length: 1,
                     position: 1,
                 },
@@ -311,12 +311,12 @@ mod tests
             "voice Diad { } play Diad { :| C ; :| G }",
             vec![
                 Note {
-                    midi: 60,
+                    midi: midi(60),
                     length: 1,
                     position: 0,
                 },
                 Note {
-                    midi: 67,
+                    midi: midi(67),
                     length: 1,
                     position: 0,
                 },
@@ -331,27 +331,27 @@ mod tests
             "voice Diad { } play Diad { :| C E G ; :| c g }",
             vec![
                 Note {
-                    midi: 60,
+                    midi: midi(60),
                     length: 2,
                     position: 0,
                 },
                 Note {
-                    midi: 72,
+                    midi: midi(72),
                     length: 3,
                     position: 0,
                 },
                 Note {
-                    midi: 64,
+                    midi: midi(64),
                     length: 2,
                     position: 2,
                 },
                 Note {
-                    midi: 79,
+                    midi: midi(79),
                     length: 3,
                     position: 3,
                 },
                 Note {
-                    midi: 67,
+                    midi: midi(67),
                     length: 2,
                     position: 4,
                 },
@@ -372,12 +372,12 @@ mod tests
             "voice A { } play A { :| C4 -2 G2 }",
             vec![
                 Note {
-                    midi: 60,
+                    midi: midi(60),
                     length: 4,
                     position: 0,
                 },
                 Note {
-                    midi: 67,
+                    midi: midi(67),
                     length: 2,
                     position: 6,
                 },
@@ -392,17 +392,17 @@ mod tests
             "voice A { } play A { :| A..B C... .8 }",
             vec![
                 Note {
-                    midi: 57,
+                    midi: midi(57),
                     length: 3,
                     position: 0,
                 },
                 Note {
-                    midi: 59,
+                    midi: midi(59),
                     length: 1,
                     position: 3,
                 },
                 Note {
-                    midi: 60,
+                    midi: midi(60),
                     length: 12,
                     position: 4,
                 },
@@ -417,17 +417,17 @@ mod tests
             "voice A { } play A { :| ...C E... G... -... }",
             vec![
                 Note {
-                    midi: 60,
+                    midi: midi(60),
                     length: 1,
                     position: 3,
                 },
                 Note {
-                    midi: 64,
+                    midi: midi(64),
                     length: 4,
                     position: 4,
                 },
                 Note {
-                    midi: 67,
+                    midi: midi(67),
                     length: 4,
                     position: 8,
                 },
@@ -442,27 +442,27 @@ mod tests
             "voice A { } play A { :| CEGc | ; :| ...g }",
             vec![
                 Note {
-                    midi: 60,
+                    midi: midi(60),
                     length: 1,
                     position: 0,
                 },
                 Note {
-                    midi: 64,
+                    midi: midi(64),
                     length: 1,
                     position: 1,
                 },
                 Note {
-                    midi: 67,
+                    midi: midi(67),
                     length: 1,
                     position: 2,
                 },
                 Note {
-                    midi: 72,
+                    midi: midi(72),
                     length: 1,
                     position: 3,
                 },
                 Note {
-                    midi: 79,
+                    midi: midi(79),
                     length: 1,
                     position: 3,
                 },
@@ -477,27 +477,27 @@ mod tests
             "voice A {} play A { :| CEG. | ..EC }",
             vec![
                 Note {
-                    midi: 60,
+                    midi: midi(60),
                     length: 1,
                     position: 0,
                 },
                 Note {
-                    midi: 64,
+                    midi: midi(64),
                     length: 1,
                     position: 1,
                 },
                 Note {
-                    midi: 67,
+                    midi: midi(67),
                     length: 4,
                     position: 2,
                 },
                 Note {
-                    midi: 64,
+                    midi: midi(64),
                     length: 1,
                     position: 6,
                 },
                 Note {
-                    midi: 60,
+                    midi: midi(60),
                     length: 1,
                     position: 7,
                 },

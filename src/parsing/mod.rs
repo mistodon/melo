@@ -8,7 +8,7 @@ use std::slice::Iter;
 
 use lexing::data::*;
 use lexing::data::Token::*;
-use notes;
+use notes::Midi;
 use trust::Trust;
 
 
@@ -316,7 +316,7 @@ fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, Parsin
     let name = try_parse_name(stream, "in `voice`")?;
     let mut channel = None;
     let mut program = None;
-    let mut octave = None;
+    let mut transpose = None;
     let mut volume = None;
 
     expect_token(stream, LeftBrace, "at `voice`")?;
@@ -337,11 +337,29 @@ fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, Parsin
             Ident("drums") =>
             {
                 channel = Some(10);
-                octave = Some(-2);
+                transpose = Some(-24);
             }
             Key("channel") => channel = Some(try_parse_num(stream, "after `channel:`")? as u8),
             Key("program") => program = Some(try_parse_num(stream, "after `program:`")? as u8),
-            Key("octave") => octave = Some(try_parse_num(stream, "after `octave:`")? as i8),
+            Key("octave") =>
+            {
+                let octave = try_parse_num(stream, "after `octave:`")?;
+                let semitones = octave * 12;
+                match semitones
+                {
+                    semitones if -128 <= semitones && semitones <= 127 =>
+                    {
+                        transpose = Some(semitones as i8)
+                    }
+                    _ =>
+                    {
+                        return Err(ParsingError {
+                            loc: meta.loc.clone(),
+                            error: ErrorType::InvalidOctave { octave },
+                        })
+                    }
+                }
+            }
             Key("volume") => volume = Some(try_parse_num(stream, "after `volume:`")? as u8),
             Key(key) | Ident(key) =>
             {
@@ -367,7 +385,7 @@ fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, Parsin
         name,
         channel,
         program,
-        octave,
+        transpose,
         volume,
     })
 }
@@ -462,7 +480,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                 };
 
 
-                let stave_note = notes::note_to_midi(&stave.prefix);
+                let stave_note = Midi::from_note(raw_prefix);
                 let mut bar = BarNode::default();
 
                 loop
@@ -500,13 +518,12 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                         }
                         Note(note) =>
                         {
-                            let midi =
-                                notes::note_to_midi(note).ok_or_else(|| ParsingError {
-                                    loc: meta.loc.clone(),
-                                    error: ErrorType::InvalidNote {
-                                        note: note.to_owned(),
-                                    },
-                                })?;
+                            let midi = Midi::from_note(note).ok_or_else(|| ParsingError {
+                                loc: meta.loc.clone(),
+                                error: ErrorType::InvalidNote {
+                                    note: note.to_owned(),
+                                },
+                            })?;
                             bar.notes.push(NoteNode::Note { midi, length: 1 });
                             bar.note_locs.push(meta.loc.clone());
                         }
@@ -586,7 +603,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
 mod tests
 {
     use super::*;
-    use test_helpers::stave;
+    use test_helpers::{midi, stave};
 
 
     // TODO(***realname***): Clearly need a better way of carriaging errors
@@ -732,7 +749,7 @@ mod tests
                         name: "Lead",
                         channel: Some(1),
                         program: Some(0),
-                        octave: Some(-2),
+                        transpose: Some(-24),
                         volume: Some(99),
                     },
                 ],
@@ -751,7 +768,7 @@ mod tests
                     VoiceNode {
                         name: "Drums",
                         channel: Some(10),
-                        octave: Some(-2),
+                        transpose: Some(-24),
                         ..Default::default()
                     },
                 ],
@@ -862,7 +879,7 @@ mod tests
                                 vec![
                                     vec![
                                         NoteNode::Note {
-                                            midi: 60,
+                                            midi: midi(60),
                                             length: 1,
                                         },
                                     ],
@@ -891,11 +908,11 @@ mod tests
                                 vec![
                                     vec![
                                         NoteNode::Note {
-                                            midi: 60,
+                                            midi: midi(60),
                                             length: 1,
                                         },
                                         NoteNode::Note {
-                                            midi: 62,
+                                            midi: midi(62),
                                             length: 1,
                                         },
                                     ],
@@ -924,13 +941,13 @@ mod tests
                                 vec![
                                     vec![
                                         NoteNode::Note {
-                                            midi: 60,
+                                            midi: midi(60),
                                             length: 1,
                                         },
                                     ],
                                     vec![
                                         NoteNode::Note {
-                                            midi: 60,
+                                            midi: midi(60),
                                             length: 1,
                                         },
                                     ],
@@ -959,7 +976,7 @@ mod tests
                                 vec![
                                     vec![
                                         NoteNode::Note {
-                                            midi: 60,
+                                            midi: midi(60),
                                             length: 1,
                                         },
                                     ],
@@ -970,7 +987,7 @@ mod tests
                                 vec![
                                     vec![
                                         NoteNode::Note {
-                                            midi: 67,
+                                            midi: midi(67),
                                             length: 1,
                                         },
                                     ],
@@ -999,13 +1016,13 @@ mod tests
                                 vec![
                                     vec![
                                         NoteNode::Note {
-                                            midi: 60,
+                                            midi: midi(60),
                                             length: 1,
                                         },
                                     ],
                                     vec![
                                         NoteNode::Note {
-                                            midi: 67,
+                                            midi: midi(67),
                                             length: 1,
                                         },
                                     ],
@@ -1016,13 +1033,13 @@ mod tests
                                 vec![
                                     vec![
                                         NoteNode::Note {
-                                            midi: 67,
+                                            midi: midi(67),
                                             length: 1,
                                         },
                                     ],
                                     vec![
                                         NoteNode::Note {
-                                            midi: 74,
+                                            midi: midi(74),
                                             length: 1,
                                         },
                                     ],
@@ -1063,7 +1080,7 @@ mod tests
                                 vec![
                                     vec![
                                         NoteNode::Note {
-                                            midi: 60,
+                                            midi: midi(60),
                                             length: 4,
                                         },
                                     ],

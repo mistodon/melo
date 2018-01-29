@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 
 use error::SourceLoc;
+use notes::Midi;
 
 
 #[derive(Debug, PartialEq, Eq)]
@@ -27,7 +28,7 @@ pub struct VoiceNode<'a>
     pub name: &'a str,
     pub program: Option<u8>,
     pub channel: Option<u8>,
-    pub octave: Option<i8>,
+    pub transpose: Option<i8>,
     pub volume: Option<u8>,
 }
 
@@ -66,7 +67,7 @@ pub enum NoteNode
     },
     Note
     {
-        length: u8, midi: i8
+        length: u8, midi: Midi
     },
 }
 

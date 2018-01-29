@@ -52,75 +52,103 @@ pub const ABC_NOTES: [&str; 128] = [
 ];
 
 
-pub fn note_to_midi(note: &str) -> Option<i8>
-{
-    let mut chars = note.chars();
-    let mut midi: i64 = match chars.next().unwrap_or_default()
-    {
-        'A' => 57,
-        'B' => 59,
-        'C' => 60,
-        'D' => 62,
-        'E' => 64,
-        'F' => 65,
-        'G' => 67,
-        'a' => 69,
-        'b' => 71,
-        'c' => 72,
-        'd' => 74,
-        'e' => 76,
-        'f' => 77,
-        'g' => 79,
-        _ => return None,
-    };
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct Midi(i8);
 
-    for ch in chars
+
+impl Midi
+{
+    pub fn midi(&self) -> i8
     {
-        let delta = match ch
+        self.0
+    }
+
+    pub fn transposed(&self, semitones: i8) -> Option<Midi>
+    {
+        let midi = self.0.checked_add(semitones)?;
+        if midi >= 0
         {
-            '^' => 1,
-            '_' => -1,
-            '\'' => 12,
-            ',' => -12,
-            '=' => 0,
+            Some(Midi(midi))
+        }
+        else
+        {
+            None
+        }
+    }
+
+    pub fn from_raw(midi: i8) -> Option<Midi>
+    {
+        if midi >= 0
+        {
+            Some(Midi(midi))
+        }
+        else
+        {
+            None
+        }
+    }
+
+    pub fn from_note(note: &str) -> Option<Midi>
+    {
+        let mut chars = note.chars();
+        let mut midi: i64 = match chars.next().unwrap_or_default()
+        {
+            'A' => 57,
+            'B' => 59,
+            'C' => 60,
+            'D' => 62,
+            'E' => 64,
+            'F' => 65,
+            'G' => 67,
+            'a' => 69,
+            'b' => 71,
+            'c' => 72,
+            'd' => 74,
+            'e' => 76,
+            'f' => 77,
+            'g' => 79,
             _ => return None,
         };
 
-        midi += delta;
+        for ch in chars
+        {
+            let delta = match ch
+            {
+                '^' => 1,
+                '_' => -1,
+                '\'' => 12,
+                ',' => -12,
+                '=' => 0,
+                _ => return None,
+            };
+
+            midi += delta;
+        }
+
+        if midi >= 0 && midi < 128
+        {
+            Some(Midi(midi as i8))
+        }
+        else
+        {
+            None
+        }
     }
 
-    if midi >= 0 && midi < 128
+    pub fn to_abc(&self) -> &'static str
     {
-        Some(midi as i8)
+        ABC_NOTES[self.0 as usize]
     }
-    else
+
+    pub fn to_sharp(&self) -> &'static str
     {
-        None
+        MIDSCRIPT_SHARPS[self.0 as usize]
     }
-}
 
-
-pub fn note_to_abc(note: &str) -> Option<&'static str>
-{
-    note_to_midi(note).and_then(midi_to_abc)
-}
-
-
-pub fn midi_to_flat(note: i8) -> Option<&'static str>
-{
-    MIDSCRIPT_FLATS.get(note as usize).cloned()
-}
-
-
-pub fn midi_to_sharp(note: i8) -> Option<&'static str>
-{
-    MIDSCRIPT_SHARPS.get(note as usize).cloned()
-}
-
-
-pub fn midi_to_abc(note: i8) -> Option<&'static str>
-{
-    ABC_NOTES.get(note as usize).cloned()
+    pub fn to_flat(&self) -> &'static str
+    {
+        MIDSCRIPT_FLATS[self.0 as usize]
+    }
 }
 
 
@@ -145,7 +173,7 @@ mod tests
     {
         fn test(note: &str, midi: i8)
         {
-            assert_eq!(note_to_midi(note).unwrap(), midi);
+            assert_eq!(Midi::from_note(note), Midi::from_raw(midi));
         }
 
         test("C,,,,,", 0);
@@ -168,7 +196,7 @@ mod tests
     {
         fn test(note: &str, abc: &str)
         {
-            assert_eq!(note_to_abc(note).unwrap(), abc);
+            assert_eq!(Midi::from_note(note).unwrap().to_abc(), abc);
         }
 
         test("A", "=A,");
@@ -194,7 +222,12 @@ mod tests
         for i in 0..128
         {
             let i = i as i8;
-            assert_eq!(note_to_midi(midi_to_sharp(i).unwrap()).unwrap(), i);
+            assert_eq!(
+                Midi::from_note(Midi::from_raw(i).unwrap().to_sharp())
+                    .unwrap()
+                    .midi(),
+                i
+            );
         }
     }
 
@@ -204,7 +237,12 @@ mod tests
         for i in 0..128
         {
             let i = i as i8;
-            assert_eq!(note_to_midi(midi_to_flat(i).unwrap()).unwrap(), i);
+            assert_eq!(
+                Midi::from_note(Midi::from_raw(i).unwrap().to_flat())
+                    .unwrap()
+                    .midi(),
+                i
+            );
         }
     }
 }
