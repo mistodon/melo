@@ -16,18 +16,18 @@ voice Cello
 {
     program: 42,
     channel: 2,
-    octave: -2,
+    octave: -1,
 }
 
 
 play Pizz
 {
-    :| - e e | - e e | - e e | - e e |
+    :| - E E | - e e | - E E | - e e |
     :| - c c | - c c | - c c | - c c |
 }
 
 play Cello
 {
-    :| A - - | E, - - | A - - | E, - - |
+    :| A . - | E, . - | A . - | E, . - |
 }
 
