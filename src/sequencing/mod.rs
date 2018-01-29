@@ -92,6 +92,7 @@ pub fn sequence_pieces<'a>(
                 .fold(1, lcm);
 
             let mut notes: Vec<Note> = Vec::new();
+            let mut debug_bar_info: Vec<DebugBarInfo> = Vec::new();
 
 
             for play_node in &piece_node.plays
@@ -111,6 +112,12 @@ pub fn sequence_pieces<'a>(
 
                         let bar_node_length: u32 =
                             bar_node.notes.iter().map(|note| note.length()).sum();
+
+                        let bar_info = DebugBarInfo {
+                            loc: bar_node.note_locs[0].clone(),
+                            divisions_in_source: bar_node_length,
+                        };
+                        debug_bar_info.push(bar_info);
 
                         assert!(divisions_per_bar % bar_node_length == 0);
                         let note_scale = divisions_per_bar / bar_node_length;
@@ -174,6 +181,7 @@ pub fn sequence_pieces<'a>(
                 volume,
                 divisions_per_bar,
                 notes,
+                debug_bar_info,
             };
 
             voices.push(voice);

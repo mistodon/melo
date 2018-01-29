@@ -84,6 +84,7 @@ pub fn generate_abc(
                     piece.beats as u32,
                     voice.divisions_per_bar,
                     Some(source_map),
+                    Some(&voice.debug_bar_info),
                 )?;
 
                 write!(buffer, "{}", stave_text)
@@ -103,6 +104,7 @@ fn write_bars(
     beats_per_bar: u32,
     divisions_per_bar: u32,
     source_map: Option<&SourceMap>,
+    debug_bar_info: Option<&[DebugBarInfo]>,
 ) -> Result<String, AbcGenerationError>
 {
     use self::error::fmt_err;
@@ -118,9 +120,21 @@ fn write_bars(
 
     if tuplet > 9
     {
+        let inciting_bar = debug_bar_info.and_then(|debug_bar_info| {
+            debug_bar_info
+                .iter()
+                .find(|bar| tuplet % bar.divisions_in_source == 0)
+        });
+        let cause_location = inciting_bar.map(|bar| bar.loc.clone());
+        let divisions = inciting_bar.map(|bar| bar.divisions_in_source);
+
         return Err(AbcGenerationError {
             info: source_map.cloned(),
-            error: ErrorType::UnsupportedTuplet { tuplet },
+            error: ErrorType::UnsupportedTuplet {
+                tuplet,
+                cause_location,
+                divisions,
+            },
         })
     }
 
@@ -358,7 +372,13 @@ mod tests
         let voice = &pieces[0].voices[0];
 
         assert_eq!(
-            write_bars(&voice.notes, notes_per_bar, voice.divisions_per_bar, None).unwrap(),
+            write_bars(
+                &voice.notes,
+                notes_per_bar,
+                voice.divisions_per_bar,
+                None,
+                None
+            ).unwrap(),
             expected
         );
     }
@@ -376,7 +396,13 @@ mod tests
         let voice = &pieces[0].voices[0];
 
         assert!(
-            write_bars(&voice.notes, notes_per_bar, voice.divisions_per_bar, None).is_err()
+            write_bars(
+                &voice.notes,
+                notes_per_bar,
+                voice.divisions_per_bar,
+                None,
+                None
+            ).is_err()
         );
     }
 

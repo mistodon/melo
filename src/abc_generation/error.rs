@@ -1,4 +1,4 @@
-use error::{self, SourceMap};
+use error::{self, SourceLoc, SourceMap};
 use std::fmt::{Display, Error, Formatter};
 
 
@@ -20,7 +20,9 @@ pub enum ErrorType
 
     UnsupportedTuplet
     {
-        tuplet: u32
+        tuplet: u32,
+        cause_location: Option<SourceLoc>,
+        divisions: Option<u32>,
     },
 }
 
@@ -40,22 +42,47 @@ impl Display for AbcGenerationError
     {
         use self::ErrorType::*;
 
-        let error_message = match self.error
-        {
-            FormattingError { error } => format!("Internal formatting error: {}", error),
-            UnsupportedTuplet { tuplet } =>
-            {
-                format!("Piece requires a tuplet of {} notes, but only tuplets of 3 to 9 notes are currently supported.",
-                        tuplet)
-            }
-        };
-
         let filename = match self.info
         {
             Some(ref info) => info.filename(),
             None => "<file>",
         };
 
-        error::fmt_simple_error(f, &error_message, filename)
+        match self.error
+        {
+            FormattingError { error } => error::fmt_simple_error(
+                f,
+                &format!("Internal formatting error: {}", error),
+                filename,
+            ),
+
+            UnsupportedTuplet {
+                tuplet,
+                ref cause_location,
+                divisions,
+            } =>
+            {
+                let main_message = format!("Piece requires a tuplet of {} notes, but only tuplets of 3 to 9 notes are currently supported.", tuplet);
+
+                match *cause_location
+                {
+                    Some(ref loc) => error::fmt_error(
+                        f,
+                        &format!(
+                            "{}\n       This tuplet is required because of the following bar, which contains {} divisions.",
+                            main_message,
+                            divisions.unwrap_or(0),
+                        ),
+                        loc.info.filename(),
+                        loc.cause_line(),
+                        loc.line,
+                        loc.col,
+                        loc.width,
+                    ),
+
+                    None => error::fmt_simple_error(f, &main_message, filename),
+                }
+            }
+        }
     }
 }
