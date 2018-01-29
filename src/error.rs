@@ -54,6 +54,11 @@ impl SourceLoc
     {
         &self.info.lines[self.line - 1]
     }
+
+    pub fn text(&self) -> &str
+    {
+        &self.info.lines[self.line - 1][(self.col - 1)..(self.col + self.width - 1)]
+    }
 }
 
 impl PartialEq for SourceLoc

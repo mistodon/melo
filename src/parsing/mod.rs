@@ -376,6 +376,8 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
 {
     expect_token(stream, Play, "in `piece`")?;
 
+    let error_loc = Some(stream.peek().trust().loc.clone());
+
     let voice = try_parse_name(stream, "in `play`").ok();
     let mut staves: Vec<StaveNode> = Vec::new();
 
@@ -480,7 +482,11 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                                 "stave contents".to_owned(),
                             ))
                         }
-                        Rest => bar.notes.push(NoteNode::Rest { length: 1 }),
+                        Rest =>
+                        {
+                            bar.notes.push(NoteNode::Rest { length: 1 });
+                            bar.note_locs.push(meta.loc.clone());
+                        }
                         Hit =>
                         {
                             let midi = stave_note.ok_or_else(|| ParsingError {
@@ -490,6 +496,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                                 },
                             })?;
                             bar.notes.push(NoteNode::Note { midi, length: 1 });
+                            bar.note_locs.push(meta.loc.clone());
                         }
                         Note(note) =>
                         {
@@ -501,10 +508,12 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                                     },
                                 })?;
                             bar.notes.push(NoteNode::Note { midi, length: 1 });
+                            bar.note_locs.push(meta.loc.clone());
                         }
                         ExtendNote =>
                         {
                             bar.notes.push(NoteNode::Extension { length: 1 });
+                            bar.note_locs.push(meta.loc.clone());
                         }
                         Num(num) =>
                         {
@@ -565,7 +574,11 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
         }
     }
 
-    Ok(PlayNode { voice, staves })
+    Ok(PlayNode {
+        voice,
+        staves,
+        error_loc,
+    })
 }
 
 
@@ -576,12 +589,35 @@ mod tests
     use test_helpers::stave;
 
 
+    // TODO(claire): Clearly need a better way of carriaging errors
+    fn doctor(parse_tree: &mut ParseTree)
+    {
+        for piece in &mut parse_tree.pieces
+        {
+            for play in &mut piece.plays
+            {
+                play.error_loc = None;
+
+                for stave in &mut play.staves
+                {
+                    for bar in &mut stave.bars
+                    {
+                        bar.note_locs.clear();
+                    }
+                }
+            }
+        }
+    }
+
     fn parsetest(source: &str, expected: PieceNode)
     {
         use lexing;
 
         let tokens = lexing::lex(source, None).unwrap();
-        let result = parse(&tokens).unwrap();
+        let mut result = parse(&tokens).unwrap();
+
+        doctor(&mut result);
+
         assert_eq!(result.pieces.len(), 1);
         assert_eq!(result.pieces[0], expected);
     }
@@ -599,7 +635,10 @@ mod tests
         use lexing;
 
         let tokens = lexing::lex(source, None).unwrap();
-        let result = parse(&tokens).unwrap();
+        let mut result = parse(&tokens).unwrap();
+
+        doctor(&mut result);
+
         assert_eq!(result.pieces, expected);
     }
 
