@@ -40,7 +40,7 @@ lazy_static!
         (?P<comment>//[^\n]*)\n|\
         (?P<blank>\n\\s*\n)|\
         (?P<newline>\n)|\
-        (?P<whitespace>(\\s+|;))|\
+        (?P<whitespace>([\t ]|;)+)|\
         (?P<error>.)\
         ").trust();
 
@@ -51,12 +51,13 @@ lazy_static!
         (?P<number>\\d+)|\
         (?P<barline>\\|)|\
         (?P<comment>//.*)|\
-        (?P<whitespace>(\\s|;)+)|\
+        (?P<whitespace>([\t ]|;)+)|\
         (?P<error>.)\
         ").trust();
 }
 
 
+#[derive(Debug)]
 enum Context
 {
     Normal,
@@ -118,6 +119,7 @@ pub fn lex<'a>(
 
         let (&group_name, m) = group.trust();
         let text = m.as_str();
+        eprintln!("{}({}) =>", text, group_name);
         let text_len = text.len();
         let span = Span(m.start(), text);
         let (line, col) = line_col_at(source, m.start());
@@ -144,7 +146,8 @@ pub fn lex<'a>(
 
                 tokens.push(MetaToken { token, span, loc });
             }
-            "key" => {
+            "key" =>
+            {
                 tokens.push(MetaToken {
                     token: Key(text[..(text_len - 1)].trim()),
                     span,
@@ -271,18 +274,49 @@ pub fn lex<'a>(
                     }
                 }
             }
-            "blank" => tokens.push(MetaToken {
-                token: BlankLine,
-                span,
-                loc,
-            }),
-            "newline" => {
+            "blank" =>
+            {
                 match context
                 {
-                    Context::InAttribute => tokens.push(MetaToken { token: Comma, span, loc }),
-                    Context::InStave => tokens.push(MetaToken { token: Barline, span, loc }),
-                    _ => ()
+                    Context::InAttribute => tokens.push(MetaToken {
+                        token: Comma,
+                        span,
+                        loc: loc.clone(),
+                    }),
+                    Context::InStave => tokens.push(MetaToken {
+                        token: Barline,
+                        span,
+                        loc: loc.clone(),
+                    }),
+                    _ => (),
                 }
+
+                tokens.push(MetaToken {
+                    token: BlankLine,
+                    span,
+                    loc,
+                });
+
+                context = Context::Normal;
+            }
+            "newline" =>
+            {
+                match context
+                {
+                    Context::InAttribute => tokens.push(MetaToken {
+                        token: Comma,
+                        span,
+                        loc,
+                    }),
+                    Context::InStave => tokens.push(MetaToken {
+                        token: Barline,
+                        span,
+                        loc,
+                    }),
+                    _ => (),
+                }
+
+                context = Context::Normal;
             }
             "whitespace" | "comment" => (),
             "error" =>

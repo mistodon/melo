@@ -199,10 +199,20 @@ impl ParsingError
         expected: String,
     ) -> ParsingError
     {
+        let text = token.span.1.to_owned();
+        let text = if text.trim().is_empty()
+        {
+            token.token.readable_type().into()
+        }
+        else
+        {
+            text
+        };
+
         ParsingError {
             loc: token.loc.clone(),
             error: ErrorType::UnexpectedToken {
-                token: token.span.1.to_owned(),
+                token: text,
                 context,
                 expected,
             },
