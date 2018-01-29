@@ -101,9 +101,16 @@ fn run_command(command: MidscriptCommand) -> Result<(), Error>
 
             let command_output = Command::new("timidity")
                 .arg(mid_out.as_ref().as_os_str())
-                .output();
+                .output()?;
 
-            // TODO(***realname***): Handle and report errors
+            if !command_output.status.success()
+            {
+                use std::io::Write;
+
+                std::io::stderr().write_all(&command_output.stderr)?;
+                return Err(failure::err_msg("    Compile and play failed."));
+            }
+
             Ok(())
         }
 
@@ -174,6 +181,7 @@ where
 
     Ok(())
 }
+
 
 fn read_binary<P>(input: Option<P>) -> Result<Vec<u8>, Error>
 where
@@ -260,9 +268,15 @@ where
         .arg(abc_out.as_ref().as_os_str())
         .arg("-o")
         .arg(mid_out_arg)
-        .output();
+        .output()?;
 
-    // TODO(***realname***): Handle and report errors
+    if !command_output.status.success()
+    {
+        use std::io::Write;
+
+        std::io::stderr().write_all(&command_output.stderr)?;
+        return Err(failure::err_msg("    Compiling to MIDI failed."));
+    }
 
     if output.is_none()
     {
@@ -272,3 +286,4 @@ where
 
     Ok(())
 }
+
