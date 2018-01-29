@@ -27,6 +27,44 @@ fn line_col_at(source: &str, position: usize) -> (usize, usize)
 }
 
 
+lazy_static!
+{
+    static ref STRUCTURE_REGEX: Regex = Regex::new("\
+        (?P<keyword>part|piece|play|section|voice)|\
+        (?P<key>([a-zA-Z_][a-zA-Z0-9_^,'=\\-]*\\s*|:)?:)|\
+        (?P<ident>[a-zA-Z_][a-zA-Z0-9_ ]*)|\
+        (?P<string>\"((\\\\\")|[^\"])*\")|\
+        (?P<number>[+\\-]?\\d+)|\
+        (?P<delim>[{},])|\
+        (?P<staveline>\\|([^;}\n]*))|\
+        (?P<comment>//[^\n]*)\n|\
+        (?P<blank>\n\\s*\n)|\
+        (?P<newline>\n)|\
+        (?P<whitespace>(\\s+|;))|\
+        (?P<error>.)\
+        ").trust();
+
+    static ref MUSIC_REGEX: Regex = Regex::new("\
+        (?P<note>[a-gA-G][=_\\^]*[,']*)|\
+        (?P<part>\\*[a-zA-Z_][a-zA-Z0-9_]*)|\
+        (?P<symbol>[\\.\\-x\"%])|\
+        (?P<number>\\d+)|\
+        (?P<barline>\\|)|\
+        (?P<comment>//.*)|\
+        (?P<whitespace>(\\s|;)+)|\
+        (?P<error>.)\
+        ").trust();
+}
+
+
+enum Context
+{
+    Normal,
+    InAttribute,
+    InStave,
+}
+
+
 pub fn lex<'a>(
     source: &'a str,
     filename: Option<&str>,
@@ -47,6 +85,7 @@ pub fn lex<'a>(
         "delim",
         "staveline",
         "blank",
+        "newline",
         "whitespace",
         "comment",
         "error",
@@ -62,6 +101,8 @@ pub fn lex<'a>(
         "comment",
         "error",
     ];
+
+    let mut context = Context::Normal;
 
     for capture in STRUCTURE_REGEX.captures_iter(source)
     {
@@ -103,11 +144,15 @@ pub fn lex<'a>(
 
                 tokens.push(MetaToken { token, span, loc });
             }
-            "key" => tokens.push(MetaToken {
-                token: Key(text[..(text_len - 1)].trim()),
-                span,
-                loc,
-            }),
+            "key" => {
+                tokens.push(MetaToken {
+                    token: Key(text[..(text_len - 1)].trim()),
+                    span,
+                    loc,
+                });
+
+                context = Context::InAttribute;
+            }
             "ident" =>
             {
                 tokens.push(MetaToken {
@@ -140,9 +185,12 @@ pub fn lex<'a>(
                     _ => unreachable!(),
                 };
                 tokens.push(MetaToken { token, span, loc });
+
+                context = Context::Normal;
             }
             "staveline" =>
             {
+                context = Context::InStave;
                 let start = span.0;
 
                 for capture in MUSIC_REGEX.captures_iter(text)
@@ -228,6 +276,14 @@ pub fn lex<'a>(
                 span,
                 loc,
             }),
+            "newline" => {
+                match context
+                {
+                    Context::InAttribute => tokens.push(MetaToken { token: Comma, span, loc }),
+                    Context::InStave => tokens.push(MetaToken { token: Barline, span, loc }),
+                    _ => ()
+                }
+            }
             "whitespace" | "comment" => (),
             "error" =>
             {
@@ -256,35 +312,6 @@ pub fn lex<'a>(
     });
 
     Ok((tokens, source_map))
-}
-
-
-lazy_static!
-{
-    static ref STRUCTURE_REGEX: Regex = Regex::new("\
-        (?P<keyword>part|piece|play|section|voice)|\
-        (?P<key>([a-zA-Z_][a-zA-Z0-9_^,'=\\-]*\\s*|:)?:)|\
-        (?P<ident>[a-zA-Z_][a-zA-Z0-9_ ]*)|\
-        (?P<string>\"((\\\\\")|[^\"])*\")|\
-        (?P<number>[+\\-]?\\d+)|\
-        (?P<delim>[{},])|\
-        (?P<staveline>\\|([^;}\n]*))|\
-        (?P<comment>//[^\n]*)|\
-        (?P<blank>\n\\s*\n)|\
-        (?P<whitespace>(\\s+|;))|\
-        (?P<error>.)\
-        ").trust();
-
-    static ref MUSIC_REGEX: Regex = Regex::new("\
-        (?P<note>[a-gA-G][=_\\^]*[,']*)|\
-        (?P<part>\\*[a-zA-Z_][a-zA-Z0-9_]*)|\
-        (?P<symbol>[\\.\\-x\"%])|\
-        (?P<number>\\d+)|\
-        (?P<barline>\\|)|\
-        (?P<comment>//.*)|\
-        (?P<whitespace>(\\s|;)+)|\
-        (?P<error>.)\
-        ").trust();
 }
 
 

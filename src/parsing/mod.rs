@@ -718,6 +718,20 @@ mod tests
     }
 
     #[test]
+    fn parse_attributes_without_commas()
+    {
+        parsetest(
+            "title: Title\ncomposer: Composer\nbeats: 4",
+            PieceNode {
+                title: Some("Title"),
+                composer: Some("Composer"),
+                beats: Some(4),
+                ..Default::default()
+            },
+        );
+    }
+
+    #[test]
     fn fail_to_parse_invalid_attributes()
     {
         parsefailtest("titel: Title,");
