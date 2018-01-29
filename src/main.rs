@@ -100,7 +100,7 @@ fn run_command(command: MidscriptCommand) -> Result<(), Error>
             eprintln!("    Playing...");
 
             let midi_player_command =
-                std::env::var_os("MIDSCRIPT_MIDI_PLAYER").unwrap_or("timidity".into());
+                std::env::var_os("MIDSCRIPT_MIDI_PLAYER").unwrap_or_else(|| "timidity".into());
             let command_output = Command::new(midi_player_command)
                 .arg(mid_out.as_ref().as_os_str())
                 .output()?;
