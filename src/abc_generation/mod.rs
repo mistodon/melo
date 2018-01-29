@@ -101,8 +101,6 @@ fn write_bars(
     if tuplet > 9
     {
         return Err(AbcGenerationError {
-            line: 12345,
-            col: 12345,
             error: ErrorType::UnsupportedTuplet { tuplet },
         })
     }

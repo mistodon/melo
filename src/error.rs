@@ -111,3 +111,25 @@ pub fn fmt_error(
         red.paint(underline)
     )
 }
+
+pub fn fmt_simple_error(
+    f: &mut Formatter,
+    message: &str,
+    filename: &str,
+) -> Result<(), Error>
+{
+    use ansi_term::Color;
+
+    let red = Color::Fixed(9).bold();
+    let blue = Color::Fixed(12).bold();
+    let white = Color::Fixed(15).bold();
+
+    writeln!(
+        f,
+        "{}: {}\n   {}: {}",
+        red.paint("error"),
+        white.paint(message),
+        blue.paint("in"),
+        filename,
+    )
+}
