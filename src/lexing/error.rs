@@ -1,6 +1,5 @@
-use std::fmt::{Display, Error, Formatter};
-
 use error::{self, SourceLoc};
+use std::fmt::{Display, Error, Formatter};
 
 
 #[derive(Debug, Fail, PartialEq, Eq)]
@@ -38,7 +37,7 @@ impl Display for LexingError
         error::fmt_error(
             f,
             &error_message,
-            self.loc.filename(),
+            self.loc.info.filename(),
             self.loc.cause_line(),
             self.loc.line,
             self.loc.col,

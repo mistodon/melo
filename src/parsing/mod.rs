@@ -2,18 +2,17 @@ pub mod data;
 pub mod error;
 
 
-use std::borrow::Cow;
-use std::iter::Peekable;
-use std::slice::Iter;
+use self::data::*;
+use self::error::{ErrorType, ParsingError};
 
+use error::SourceMap;
 use lexing::data::*;
 use lexing::data::Token::*;
 use notes::Midi;
+use std::borrow::Cow;
+use std::iter::Peekable;
+use std::slice::Iter;
 use trust::Trust;
-
-
-use self::data::*;
-use self::error::{ErrorType, ParsingError};
 
 
 type TokenStream<'a> = Peekable<Iter<'a, MetaToken<'a>>>;
@@ -37,7 +36,10 @@ where
 }
 
 
-pub fn parse<'a>(tokens: &'a [MetaToken<'a>]) -> Result<ParseTree<'a>, ParsingError>
+pub fn parse<'a>(
+    tokens: &'a [MetaToken<'a>],
+    _source_map: &SourceMap,
+) -> Result<ParseTree<'a>, ParsingError>
 {
     assert_eq!(
         tokens.last().map(|meta| meta.token),
@@ -630,8 +632,8 @@ mod tests
     {
         use lexing;
 
-        let tokens = lexing::lex(source, None).unwrap();
-        let mut result = parse(&tokens).unwrap();
+        let (tokens, source_map) = lexing::lex(source, None).unwrap();
+        let mut result = parse(&tokens, &source_map).unwrap();
 
         doctor(&mut result);
 
@@ -643,16 +645,16 @@ mod tests
     {
         use lexing;
 
-        let tokens = lexing::lex(source, None).unwrap();
-        assert!(parse(&tokens).is_err());
+        let (tokens, source_map) = lexing::lex(source, None).unwrap();
+        assert!(parse(&tokens, &source_map).is_err());
     }
 
     fn multiparsetest(source: &str, expected: Vec<PieceNode>)
     {
         use lexing;
 
-        let tokens = lexing::lex(source, None).unwrap();
-        let mut result = parse(&tokens).unwrap();
+        let (tokens, source_map) = lexing::lex(source, None).unwrap();
+        let mut result = parse(&tokens, &source_map).unwrap();
 
         doctor(&mut result);
 

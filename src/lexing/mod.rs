@@ -2,13 +2,12 @@ pub mod data;
 pub mod error;
 
 
-use regex::Regex;
-
-use error::{SourceInfo, SourceLoc};
-use trust::Trust;
-
 use self::data::*;
 use self::error::{ErrorType, LexingError};
+
+use error::{SourceInfo, SourceLoc, SourceMap};
+use regex::Regex;
+use trust::Trust;
 
 
 // TODO(***realname***): This code assumes that a newline is a single byte
@@ -31,7 +30,7 @@ fn line_col_at(source: &str, position: usize) -> (usize, usize)
 pub fn lex<'a>(
     source: &'a str,
     filename: Option<&str>,
-) -> Result<Vec<MetaToken<'a>>, LexingError>
+) -> Result<(Vec<MetaToken<'a>>, SourceMap), LexingError>
 {
     use self::Token::*;
 
@@ -246,7 +245,7 @@ pub fn lex<'a>(
         },
     });
 
-    Ok(tokens)
+    Ok((tokens, source_map))
 }
 
 
@@ -291,6 +290,7 @@ mod tests
         assert_eq!(
             lex(source, None)
                 .unwrap()
+                .0
                 .into_iter()
                 .map(|meta| meta.token)
                 .collect::<Vec<_>>(),

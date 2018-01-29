@@ -1,7 +1,6 @@
-use std::borrow::Cow;
-
 use error::SourceLoc;
 use notes::Midi;
+use std::borrow::Cow;
 
 
 #[derive(Debug, PartialEq, Eq)]

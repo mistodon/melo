@@ -2,22 +2,23 @@ pub mod data;
 pub mod error;
 
 
+use self::data::*;
+use self::error::{ErrorType, SequencingError};
+use error::SourceMap;
 use parsing::data::*;
 use trust::Trust;
 
-use self::data::*;
-use self::error::{ErrorType, SequencingError};
-
 
 pub fn sequence_pieces<'a>(
-    piece_nodes: &[PieceNode<'a>],
+    parse_tree: &ParseTree<'a>,
+    _source_map: &SourceMap,
 ) -> Result<Vec<Piece<'a>>, SequencingError>
 {
     use notes::lcm;
 
     let mut pieces = Vec::new();
 
-    for piece_node in piece_nodes
+    for piece_node in &parse_tree.pieces
     {
         // validation
         {
@@ -204,24 +205,24 @@ mod tests
 
     fn sequence_test(source: &str, expected: Piece)
     {
-        let tokens = &lexing::lex(source, None).expect("ERROR IN LEXER");
-        let parse_tree = parsing::parse(tokens).expect("ERROR IN PARSER");
-        let piece = &sequence_pieces(&parse_tree.pieces).unwrap()[0];
+        let (tokens, source_map) = lexing::lex(source, None).expect("ERROR IN LEXER");
+        let parse_tree = parsing::parse(&tokens, &source_map).expect("ERROR IN PARSER");
+        let piece = &sequence_pieces(&parse_tree, &source_map).unwrap()[0];
         assert_eq!(piece, &expected);
     }
 
     fn sequence_test_fail(source: &str)
     {
-        let tokens = &lexing::lex(source, None).expect("ERROR IN LEXER");
-        let parse_tree = parsing::parse(tokens).expect("ERROR IN PARSER");
-        assert!(sequence_pieces(&parse_tree.pieces).is_err());
+        let (tokens, source_map) = lexing::lex(source, None).expect("ERROR IN LEXER");
+        let parse_tree = parsing::parse(&tokens, &source_map).expect("ERROR IN PARSER");
+        assert!(sequence_pieces(&parse_tree, &source_map).is_err());
     }
 
     fn voice_test(source: &str, expected_notes: Vec<Note>)
     {
-        let tokens = &lexing::lex(source, None).expect("ERROR IN LEXER");
-        let parse_tree = parsing::parse(tokens).expect("ERROR IN PARSER");
-        let piece = &sequence_pieces(&parse_tree.pieces).unwrap()[0];
+        let (tokens, source_map) = lexing::lex(source, None).expect("ERROR IN LEXER");
+        let parse_tree = parsing::parse(&tokens, &source_map).expect("ERROR IN PARSER");
+        let piece = &sequence_pieces(&parse_tree, &source_map).unwrap()[0];
         assert_eq!(piece.voices[0].notes, expected_notes);
     }
 
