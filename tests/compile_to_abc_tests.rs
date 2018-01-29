@@ -8,8 +8,8 @@ macro_rules! test_abc
 {
     ($test_name: tt) => {
         test_compilation(
-            include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/test_files/", $test_name, ".midscript")),
-            include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/test_files/", $test_name, ".abc")))
+            include_str!(concat!("abc_tests/", $test_name, ".midscript")),
+            include_str!(concat!("abc_tests/", $test_name, ".abc")))
     }
 }
 
