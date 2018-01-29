@@ -1,13 +1,13 @@
 use std::fmt::{Display, Error, Formatter};
 
+use error::{self, SourceLoc};
 use lexing::data::MetaToken;
 
 
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub struct ParsingError
 {
-    pub line: usize,
-    pub col: usize,
+    pub loc: SourceLoc,
     pub error: ErrorType,
 }
 
@@ -129,11 +129,14 @@ impl Display for ParsingError
                 _ => unreachable!()
             };
 
-            writeln!(
+            error::fmt_error(
                 f,
-                "{}: {}",
-                Color::Fixed(9).paint(format!("error:{}:{}", self.line, self.col)),
-                Color::Fixed(15).paint(error_message)
+                &error_message,
+                self.loc.filename(),
+                self.loc.cause_line(),
+                self.loc.line,
+                self.loc.col,
+                1,
             )
         }
     }
@@ -144,10 +147,8 @@ impl ParsingError
     pub fn eof(eof_token: &MetaToken, context: &'static str, expected: String)
         -> ParsingError
     {
-        let (line, col) = (eof_token.line, eof_token.col);
         ParsingError {
-            line,
-            col,
+            loc: eof_token.loc.clone(),
             error: ErrorType::UnexpectedEOF { context, expected },
         }
     }
@@ -158,10 +159,8 @@ impl ParsingError
         expected: String,
     ) -> ParsingError
     {
-        let (line, col) = (token.line, token.col);
         ParsingError {
-            line,
-            col,
+            loc: token.loc.clone(),
             error: ErrorType::UnexpectedToken {
                 token: token.span.1.to_owned(),
                 context,
@@ -176,8 +175,7 @@ impl From<Vec<ParsingError>> for ParsingError
     fn from(errors: Vec<ParsingError>) -> Self
     {
         ParsingError {
-            line: 0,
-            col: 0,
+            loc: errors[0].loc.clone(),
             error: ErrorType::MultipleParsingErrors { errors },
         }
     }

@@ -1,10 +1,12 @@
+use error::SourceLoc;
+
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct MetaToken<'a>
 {
     pub token: Token<'a>,
     pub span: Span<'a>,
-    pub line: usize,
-    pub col: usize,
+    pub loc: SourceLoc,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

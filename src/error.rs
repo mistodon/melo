@@ -30,7 +30,7 @@ impl SourceInfo
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SourceLoc
 {
     pub line: usize,
