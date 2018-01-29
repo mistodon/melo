@@ -80,14 +80,18 @@ pub fn lex<'a>(
         let text_len = text.len();
         let span = Span(m.start(), text);
         let (line, col) = line_col_at(source, m.start());
+        let loc = SourceLoc {
+            line,
+            col,
+            info: source_map.clone(),
+        };
 
         match group_name
         {
             "key" => tokens.push(MetaToken {
                 token: Key(text[..(text_len - 1)].trim()),
                 span,
-                line,
-                col,
+                loc,
             }),
             "ident" =>
             {
@@ -100,18 +104,12 @@ pub fn lex<'a>(
                     "play" => Play,
                     s => Ident(s),
                 };
-                tokens.push(MetaToken {
-                    token,
-                    span,
-                    line,
-                    col,
-                });
+                tokens.push(MetaToken { token, span, loc });
             }
             "string" => tokens.push(MetaToken {
                 token: Str(&text[1..(text_len - 1)]),
                 span,
-                line,
-                col,
+                loc,
             }),
             "number" =>
             {
@@ -119,8 +117,7 @@ pub fn lex<'a>(
                 tokens.push(MetaToken {
                     token: Num(number),
                     span,
-                    line,
-                    col,
+                    loc,
                 });
             }
             "delim" =>
@@ -132,12 +129,7 @@ pub fn lex<'a>(
                     "," => Comma,
                     _ => unreachable!(),
                 };
-                tokens.push(MetaToken {
-                    token,
-                    span,
-                    line,
-                    col,
-                });
+                tokens.push(MetaToken { token, span, loc });
             }
             "staveline" =>
             {
@@ -160,26 +152,28 @@ pub fn lex<'a>(
                     let start = start + m.start();
                     let span = Span(start, text);
                     let (line, col) = line_col_at(source, start);
+                    let loc = SourceLoc {
+                        line,
+                        col,
+                        info: source_map.clone(),
+                    };
 
                     match group_name
                     {
                         "note" => tokens.push(MetaToken {
                             token: Note(text),
                             span,
-                            line,
-                            col,
+                            loc,
                         }),
                         "part" => tokens.push(MetaToken {
                             token: PlayPart(&text[1..]),
                             span,
-                            line,
-                            col,
+                            loc,
                         }),
                         "barline" => tokens.push(MetaToken {
                             token: Barline,
                             span,
-                            line,
-                            col,
+                            loc,
                         }),
                         "symbol" =>
                         {
@@ -192,12 +186,7 @@ pub fn lex<'a>(
                                 "." => ExtendNote,
                                 _ => unreachable!(),
                             };
-                            tokens.push(MetaToken {
-                                token,
-                                span,
-                                line,
-                                col,
-                            });
+                            tokens.push(MetaToken { token, span, loc });
                         }
                         "number" =>
                         {
@@ -205,19 +194,14 @@ pub fn lex<'a>(
                             tokens.push(MetaToken {
                                 token: Num(number),
                                 span,
-                                line,
-                                col,
+                                loc,
                             });
                         }
                         "whitespace" | "comment" => (),
                         "error" =>
                         {
                             return Err(LexingError {
-                                loc: SourceLoc {
-                                    line,
-                                    col,
-                                    info: source_map.clone(),
-                                },
+                                loc,
                                 error: ErrorType::UnexpectedCharacter {
                                     text: text.to_owned(),
                                     context: "stave",
@@ -231,18 +215,13 @@ pub fn lex<'a>(
             "blank" => tokens.push(MetaToken {
                 token: BlankLine,
                 span,
-                line,
-                col,
+                loc,
             }),
             "whitespace" | "comment" => (),
             "error" =>
             {
                 return Err(LexingError {
-                    loc: SourceLoc {
-                        line,
-                        col,
-                        info: source_map.clone(),
-                    },
+                    loc,
                     error: ErrorType::UnexpectedCharacter {
                         text: text.to_owned(),
                         context: "file",
@@ -257,8 +236,11 @@ pub fn lex<'a>(
     tokens.push(MetaToken {
         token: EOF,
         span: Span(source.len(), ""),
-        line,
-        col,
+        loc: SourceLoc {
+            line,
+            col,
+            info: source_map.clone(),
+        },
     });
 
     Ok(tokens)
