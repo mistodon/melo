@@ -1,11 +1,12 @@
 use std::fmt::{Display, Error, Formatter};
 
+use error::{self, SourceLoc};
+
 
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub struct SequencingError
 {
-    pub line: usize,
-    pub col: usize,
+    pub loc: SourceLoc,
     pub error: ErrorType,
 }
 
@@ -15,7 +16,6 @@ pub enum ErrorType
 {
     InvalidNote
     {
-        midi: i8,
         octave_offset: i8,
     },
 
@@ -33,23 +33,17 @@ impl Display for SequencingError
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error>
     {
         use self::ErrorType::*;
-        use ansi_term::Color;
 
         let error_message = match self.error
         {
-            InvalidNote {
-                midi,
-                octave_offset,
-            } =>
+            InvalidNote { octave_offset } =>
             {
-                use notes::{self, MAX_SHARP, MIN_SHARP};
-                use trust::Trust;
+                use notes::{MAX_SHARP, MIN_SHARP};
 
-                let note = notes::midi_to_sharp(midi).trust();
                 let dir = if octave_offset <= 0 { "down" } else { "up" };
                 let oct = octave_offset.abs();
 
-                format!("Note `{}` is invalid after being shifted {} {} octaves. Notes must lie between `{}` and `{}`.", note, dir, oct, MIN_SHARP, MAX_SHARP)
+                format!("Note `{}` is invalid after being shifted {} {} octaves. Notes must lie between `{}` and `{}`.", self.loc.text(), dir, oct, MIN_SHARP, MAX_SHARP)
             }
             UndeclaredVoice { ref voice_name } =>
             {
@@ -58,11 +52,14 @@ impl Display for SequencingError
             VoicelessPlayBlock => "Voiceless `play` blocks are not yet supported.".to_owned(),
         };
 
-        writeln!(
+        error::fmt_error(
             f,
-            "{}: {}",
-            Color::Fixed(9).paint(format!("error:{}:{}", self.line, self.col)),
-            Color::Fixed(15).paint(error_message)
+            &error_message,
+            self.loc.filename(),
+            self.loc.cause_line(),
+            self.loc.line,
+            self.loc.col,
+            self.loc.width,
         )
     }
 }

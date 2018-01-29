@@ -39,8 +39,7 @@ pub fn sequence_pieces<'a>(
 
                     // TODO(***realname***): This error needs file position information
                     return Err(SequencingError {
-                        line: 123456789,
-                        col: 123456789,
+                        loc: play.error_loc.as_ref().trust().clone(),
                         error,
                     })
                 }
@@ -115,9 +114,9 @@ pub fn sequence_pieces<'a>(
                         assert!(divisions_per_bar % bar_node_length == 0);
                         let note_scale = divisions_per_bar / bar_node_length;
 
-                        for note_node in &bar_node.notes
+                        for (note_index, &note_node) in bar_node.notes.iter().enumerate()
                         {
-                            match *note_node
+                            match note_node
                             {
                                 NoteNode::Rest { length } =>
                                 {
@@ -140,10 +139,8 @@ pub fn sequence_pieces<'a>(
 
                                     let midi = midi.checked_add(octave * 12).ok_or_else(
                                         || SequencingError {
-                                            line: 12345,
-                                            col: 12345,
+                                            loc: bar_node.note_locs[note_index].clone(),
                                             error: ErrorType::InvalidNote {
-                                                midi,
                                                 octave_offset: octave,
                                             },
                                         },

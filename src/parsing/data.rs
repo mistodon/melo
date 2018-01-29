@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use error::SourceLoc;
+
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseTree<'a>
@@ -34,6 +36,7 @@ pub struct PlayNode<'a>
 {
     pub voice: Option<&'a str>,
     pub staves: Vec<StaveNode<'a>>,
+    pub error_loc: Option<SourceLoc>,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -47,6 +50,7 @@ pub struct StaveNode<'a>
 pub struct BarNode
 {
     pub notes: Vec<NoteNode>,
+    pub note_locs: Vec<SourceLoc>,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

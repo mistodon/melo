@@ -210,6 +210,7 @@ fn write_bars(
                 {
                     let chord_notes_string = chord
                         .iter()
+                        // TODO(***realname***): This breaks trust when shifting down octaves D:
                         .map(|note| notes::midi_to_abc(note.midi).trust())
                         .collect::<Vec<&str>>()
                         .join("");
