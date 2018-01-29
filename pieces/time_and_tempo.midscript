@@ -1,22 +1,22 @@
 // Top-level attributes apply to the whole piece
 
-title: Waltz,       // Title of the piece
-beats: 3,           // 3 beats in a bar
-tempo: 100,         // 100bpm
+title: Waltz        // Title of the piece
+beats: 3            // 3 beats in a bar
+tempo: 100          // 100bpm
 
 
 voice Pizz
 {
-    program: 45,
-    channel: 1,
+    program: 45
+    channel: 1
 }
 
 
 voice Cello
 {
-    program: 42,
-    channel: 2,
-    octave: -1,
+    program: 42
+    channel: 2
+    octave: -1
 }
 
 
