@@ -1,0 +1,33 @@
+// Top-level attributes apply to the whole piece
+
+title: Waltz,       // Title of the piece
+beats: 3,           // 3 beats in a bar
+tempo: 100,         // 100bpm
+
+
+voice Pizz
+{
+    program: 45,
+    channel: 1,
+}
+
+
+voice Cello
+{
+    program: 42,
+    channel: 2,
+    octave: -2,
+}
+
+
+play Pizz
+{
+    :| - e e | - e e | - e e | - e e |
+    :| - c c | - c c | - c c | - c c |
+}
+
+play Cello
+{
+    :| A - - | E, - - | A - - | E, - - |
+}
+

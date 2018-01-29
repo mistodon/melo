@@ -1,0 +1,14 @@
+voice Piano {}
+
+play Piano
+{
+    // Multiple `:` staves will play simultaneously.
+    :| G | a | a | G |
+    :| E | F | E | D |
+    :| C | C | C | B |
+
+    // A blank line is used to continue each of the three staves.
+    :| G | . |
+    :| E | . |
+    :| C | . |
+}
