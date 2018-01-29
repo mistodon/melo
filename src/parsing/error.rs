@@ -87,13 +87,7 @@ impl Display for ParsingError
 
             if errors.len() > 1
             {
-                writeln!(
-                    f,
-                    "{}: {}",
-                    Color::Fixed(9).paint("error"),
-                    Color::Fixed(15)
-                        .paint(format!("Aborting due to {} previous errors.", errors.len()))
-                )?;
+                error::fmt_simple_error(f, &format!("Aborting due to {} previous errors.", errors.len()), self.loc.filename())?;
             }
 
             Ok(())
