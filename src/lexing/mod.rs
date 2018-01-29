@@ -37,7 +37,7 @@ lazy_static!
         (?P<number>[+\\-]?\\d+)|\
         (?P<delim>[{},])|\
         (?P<staveline>\\|([^;}\n]*))|\
-        (?P<comment>//[^\n]*)\n|\
+        (?P<comment>//[^\n]*)|\
         (?P<blank>\n\\s*\n)|\
         (?P<newline>\n)|\
         (?P<whitespace>([\t ]|;)+)|\
@@ -50,7 +50,7 @@ lazy_static!
         (?P<symbol>[\\.\\-x\"%])|\
         (?P<number>\\d+)|\
         (?P<barline>\\|)|\
-        (?P<comment>//.*)|\
+        (?P<comment>//[^\n]*)|\
         (?P<whitespace>([\t ]|;)+)|\
         (?P<error>.)\
         ").trust();
@@ -119,7 +119,6 @@ pub fn lex<'a>(
 
         let (&group_name, m) = group.trust();
         let text = m.as_str();
-        eprintln!("{}({}) =>", text, group_name);
         let text_len = text.len();
         let span = Span(m.start(), text);
         let (line, col) = line_col_at(source, m.start());
