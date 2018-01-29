@@ -4,6 +4,7 @@ voice Trumpet
 {
     program: 56,
     channel: 1,
+    volume: 35,     // Between 0 and 127
 }
 
 voice Bass
@@ -25,6 +26,6 @@ play Trumpet
 play Bass
 {
     // Each bar here has four notes and so are made quarter notes.
-    :| D F a F | G D G D | C G, C E | G |
+    :| D F a F | G D G D | C G F E | C |
 }
 
