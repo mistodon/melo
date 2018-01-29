@@ -45,6 +45,7 @@ pub fn generate_abc(
     {
         writeln!(buffer, "X:{}", index + 1).map_err(|e| fmt_err(e, Some(source_map.clone())))?;
 
+        // TODO(***realname***): We need to escape `\"` to `"` before writing title/composer/voice name
         if let Some(title) = piece.title
         {
             writeln!(buffer, "T:{}", title).map_err(|e| fmt_err(e, Some(source_map.clone())))?;
