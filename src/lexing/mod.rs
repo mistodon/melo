@@ -39,6 +39,7 @@ pub fn lex<'a>(
     let mut tokens = Vec::new();
 
     const CAPTURE_PRIORITIES: &[&str] = &[
+        "keyword",
         "key",
         "ident",
         "string",
@@ -88,12 +89,7 @@ pub fn lex<'a>(
 
         match group_name
         {
-            "key" => tokens.push(MetaToken {
-                token: Key(text[..(text_len - 1)].trim()),
-                span,
-                loc,
-            }),
-            "ident" =>
+            "keyword" =>
             {
                 let token = match text
                 {
@@ -102,9 +98,23 @@ pub fn lex<'a>(
                     "part" => Part,
                     "section" => Section,
                     "play" => Play,
-                    s => Ident(s),
+                    _ => unreachable!(),
                 };
+
                 tokens.push(MetaToken { token, span, loc });
+            }
+            "key" => tokens.push(MetaToken {
+                token: Key(text[..(text_len - 1)].trim()),
+                span,
+                loc,
+            }),
+            "ident" =>
+            {
+                tokens.push(MetaToken {
+                    token: Ident(text.trim()),
+                    span,
+                    loc,
+                });
             }
             "string" => tokens.push(MetaToken {
                 token: Str(&text[1..(text_len - 1)]),
@@ -252,8 +262,9 @@ pub fn lex<'a>(
 lazy_static!
 {
     static ref STRUCTURE_REGEX: Regex = Regex::new("\
+        (?P<keyword>part|piece|play|section|voice)|\
         (?P<key>([a-zA-Z_][a-zA-Z0-9_^,'=\\-]*\\s*|:)?:)|\
-        (?P<ident>[a-zA-Z_][a-zA-Z0-9_]*)|\
+        (?P<ident>[a-zA-Z_][a-zA-Z0-9_ ]*)|\
         (?P<string>\"((\\\\\")|[^\"])*\")|\
         (?P<number>[+\\-]?\\d+)|\
         (?P<delim>[{},])|\
@@ -388,6 +399,15 @@ mod tests
         lextest(
             r#"piece "Lust for Life" {}"#,
             vec![Piece, Str("Lust for Life"), LeftBrace, RightBrace],
+        );
+    }
+
+    #[test]
+    fn lex_name_with_spaces()
+    {
+        lextest(
+            r#"piece Lust for Life {}"#,
+            vec![Piece, Ident("Lust for Life"), LeftBrace, RightBrace],
         );
     }
 
