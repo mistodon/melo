@@ -44,6 +44,11 @@ pub enum ErrorType
         structure: &'static str,
     },
 
+    InvalidOctave
+    {
+        octave: i64
+    },
+
     UndeclaredStave
     {
         stave_prefix: String
@@ -116,6 +121,9 @@ impl Display for ParsingError
                 InvalidAttribute { ref attribute, structure } =>
                     format!("Invalid attribute `{}` for `{}`.",
                         attribute, structure),
+
+                InvalidOctave { octave } =>
+                    format!("Invalid octave `{}` would throw every note out of range. Must be in the range [-10, 10].", octave),
 
                 UndeclaredStave { ref stave_prefix } =>
                     format!("The `{}:` stave wasn't declared at the start of the `play` block. All staves must be declared before the first blank line.", stave_prefix),

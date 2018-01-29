@@ -1,3 +1,4 @@
+use notes::Midi;
 use parsing::data::*;
 
 
@@ -15,4 +16,10 @@ pub fn stave(prefix: &str, notes: Vec<Vec<NoteNode>>) -> StaveNode
             })
             .collect(),
     }
+}
+
+
+pub fn midi(num: i8) -> Midi
+{
+    Midi::from_raw(num).unwrap()
 }
