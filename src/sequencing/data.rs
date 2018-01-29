@@ -1,3 +1,4 @@
+use error::SourceLoc;
 use notes::Midi;
 
 
@@ -36,6 +37,7 @@ pub struct Voice<'a>
     pub volume: Option<f64>,
     pub notes: Vec<Note>,
     pub divisions_per_bar: u32,
+    pub debug_bar_info: Vec<DebugBarInfo>,
 }
 
 impl<'a> Default for Voice<'a>
@@ -50,6 +52,7 @@ impl<'a> Default for Voice<'a>
             volume: None,
             notes: Vec::new(),
             divisions_per_bar: 1,
+            debug_bar_info: Vec::new(),
         }
     }
 }
@@ -60,4 +63,11 @@ pub struct Note
     pub position: u32,
     pub length: u32,
     pub midi: Midi,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct DebugBarInfo
+{
+    pub loc: SourceLoc,
+    pub divisions_in_source: u32,
 }
