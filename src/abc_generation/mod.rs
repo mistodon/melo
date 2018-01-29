@@ -1,10 +1,10 @@
 pub mod error;
 
-use sequencing::data::*;
-use trust::Trust;
-
 
 use self::error::{AbcGenerationError, ErrorType};
+use error::SourceMap;
+use sequencing::data::*;
+use trust::Trust;
 
 
 fn div_tuplet(notes_per_beat: u32) -> (u32, u32)
@@ -31,52 +31,68 @@ fn div_tuplet(notes_per_beat: u32) -> (u32, u32)
 }
 
 
-pub fn generate_abc(pieces: &[Piece]) -> Result<String, AbcGenerationError>
+pub fn generate_abc(
+    pieces: &[Piece],
+    source_map: &SourceMap,
+) -> Result<String, AbcGenerationError>
 {
+    use self::error::fmt_err;
     use std::fmt::Write;
 
     let mut buffer = String::new();
 
     for (index, piece) in pieces.iter().enumerate()
     {
-        writeln!(buffer, "X:{}", index + 1)?;
+        writeln!(buffer, "X:{}", index + 1).map_err(|e| fmt_err(e, Some(source_map.clone())))?;
 
         if let Some(title) = piece.title
         {
-            writeln!(buffer, "T:{}", title)?;
+            writeln!(buffer, "T:{}", title).map_err(|e| fmt_err(e, Some(source_map.clone())))?;
         }
         if let Some(composer) = piece.composer
         {
-            writeln!(buffer, "C:{}", composer)?;
+            writeln!(buffer, "C:{}", composer)
+                .map_err(|e| fmt_err(e, Some(source_map.clone())))?;
         }
 
-        writeln!(buffer, "M:{}/4", piece.beats)?;
-        writeln!(buffer, "Q:1/4={}", piece.tempo)?;
-        writeln!(buffer, "K:C")?;
+        writeln!(buffer, "M:{}/4", piece.beats)
+            .map_err(|e| fmt_err(e, Some(source_map.clone())))?;
+        writeln!(buffer, "Q:1/4={}", piece.tempo)
+            .map_err(|e| fmt_err(e, Some(source_map.clone())))?;
+        writeln!(buffer, "K:C").map_err(|e| fmt_err(e, Some(source_map.clone())))?;
 
         for voice in &piece.voices
         {
-            writeln!(buffer, "V:{}", voice.name)?;
-            writeln!(buffer, "%%MIDI channel {}", voice.channel)?;
-            writeln!(buffer, "%%MIDI program {}", voice.program)?;
+            writeln!(buffer, "V:{}", voice.name)
+                .map_err(|e| fmt_err(e, Some(source_map.clone())))?;
+            writeln!(buffer, "%%MIDI channel {}", voice.channel)
+                .map_err(|e| fmt_err(e, Some(source_map.clone())))?;
+            writeln!(buffer, "%%MIDI program {}", voice.program)
+                .map_err(|e| fmt_err(e, Some(source_map.clone())))?;
 
             if let Some(volume) = voice.volume
             {
                 let volume = (volume * 127.0).round() as u8;
-                writeln!(buffer, "%%MIDI control 7 {}", volume)?;
+                writeln!(buffer, "%%MIDI control 7 {}", volume)
+                    .map_err(|e| fmt_err(e, Some(source_map.clone())))?;
             }
 
             if !voice.notes.is_empty()
             {
-                let stave_text =
-                    write_bars(&voice.notes, piece.beats as u32, voice.divisions_per_bar)?;
+                let stave_text = write_bars(
+                    &voice.notes,
+                    piece.beats as u32,
+                    voice.divisions_per_bar,
+                    Some(source_map),
+                )?;
 
-                write!(buffer, "{}", stave_text)?;
+                write!(buffer, "{}", stave_text)
+                    .map_err(|e| fmt_err(e, Some(source_map.clone())))?;
             }
         }
     }
 
-    writeln!(buffer)?;
+    writeln!(buffer).map_err(|e| fmt_err(e, Some(source_map.clone())))?;
 
     Ok(buffer)
 }
@@ -86,8 +102,10 @@ fn write_bars(
     stave_notes: &[Note],
     beats_per_bar: u32,
     divisions_per_bar: u32,
+    source_map: Option<&SourceMap>,
 ) -> Result<String, AbcGenerationError>
 {
+    use self::error::fmt_err;
     use notes::lcm;
     use std::fmt::Write;
 
@@ -101,11 +119,12 @@ fn write_bars(
     if tuplet > 9
     {
         return Err(AbcGenerationError {
+            info: source_map.cloned(),
             error: ErrorType::UnsupportedTuplet { tuplet },
         })
     }
 
-    writeln!(buffer, "L:1/{}", beat_division)?;
+    writeln!(buffer, "L:1/{}", beat_division).map_err(|e| fmt_err(e, source_map.cloned()))?;
 
     let scale = notes_per_bar as u32 / divisions_per_bar;
 
@@ -291,10 +310,10 @@ fn write_bars(
             {
                 written_notes -= notes_per_bar;
                 assert!(written_notes < notes_per_bar);
-                writeln!(buffer, "|")?;
+                writeln!(buffer, "|").map_err(|e| fmt_err(e, source_map.cloned()))?;
             }
 
-            write!(buffer, "{}", note)?;
+            write!(buffer, "{}", note).map_err(|e| fmt_err(e, source_map.cloned()))?;
             written_notes += length;
         },
         n => for chunk in abc_notes.chunks(n as usize)
@@ -303,19 +322,19 @@ fn write_bars(
             {
                 written_notes -= notes_per_bar;
                 assert!(written_notes < notes_per_bar);
-                writeln!(buffer, "|")?;
+                writeln!(buffer, "|").map_err(|e| fmt_err(e, source_map.cloned()))?;
             }
 
-            write!(buffer, "({}", n)?;
+            write!(buffer, "({}", n).map_err(|e| fmt_err(e, source_map.cloned()))?;
             for &(ref note, length) in chunk
             {
-                write!(buffer, "{}", note)?;
+                write!(buffer, "{}", note).map_err(|e| fmt_err(e, source_map.cloned()))?;
                 written_notes += length;
             }
         },
     }
 
-    writeln!(buffer, "|")?;
+    writeln!(buffer, "|").map_err(|e| fmt_err(e, source_map.cloned()))?;
 
     Ok(buffer)
 }
@@ -332,14 +351,14 @@ mod tests
         use parsing;
         use sequencing;
 
-        let tokens = lexing::lex(source, None).expect("ERROR IN LEXER");
-        let parse_tree = parsing::parse(&tokens).expect("ERROR IN PARSER");
+        let (tokens, source_map) = lexing::lex(source, None).expect("ERROR IN LEXER");
+        let parse_tree = parsing::parse(&tokens, &source_map).expect("ERROR IN PARSER");
         let pieces =
-            sequencing::sequence_pieces(&parse_tree.pieces).expect("ERROR IN SEQUENCER");
+            sequencing::sequence_pieces(&parse_tree, &source_map).expect("ERROR IN SEQUENCER");
         let voice = &pieces[0].voices[0];
 
         assert_eq!(
-            write_bars(&voice.notes, notes_per_bar, voice.divisions_per_bar).unwrap(),
+            write_bars(&voice.notes, notes_per_bar, voice.divisions_per_bar, None).unwrap(),
             expected
         );
     }
@@ -350,13 +369,15 @@ mod tests
         use parsing;
         use sequencing;
 
-        let tokens = lexing::lex(source, None).expect("ERROR IN LEXER");
-        let parse_tree = parsing::parse(&tokens).expect("ERROR IN PARSER");
+        let (tokens, source_map) = lexing::lex(source, None).expect("ERROR IN LEXER");
+        let parse_tree = parsing::parse(&tokens, &source_map).expect("ERROR IN PARSER");
         let pieces =
-            sequencing::sequence_pieces(&parse_tree.pieces).expect("ERROR IN SEQUENCER");
+            sequencing::sequence_pieces(&parse_tree, &source_map).expect("ERROR IN SEQUENCER");
         let voice = &pieces[0].voices[0];
 
-        assert!(write_bars(&voice.notes, notes_per_bar, voice.divisions_per_bar).is_err());
+        assert!(
+            write_bars(&voice.notes, notes_per_bar, voice.divisions_per_bar, None).is_err()
+        );
     }
 
     #[test]
@@ -509,14 +530,18 @@ mod tests
     {
         // TODO(claire): This and similar tests should be able to be expressed as a single triplet of 1/2 notes
         let source = "voice A {} play A { :| C C C ; :| E E E ; :| G G G }";
-        write_bars_test(source, "L:1/8\n(3[=C=E=G]-[=C=E=G]-[=C=E=G]-(3[=C=E=G][=C=E=G]-[=C=E=G]-(3[=C=E=G]-[=C=E=G][=C=E=G]-(3[=C=E=G]-[=C=E=G]-[=C=E=G]|\n", 4);
+        write_bars_test(source,
+                        "L:1/8\n(3[=C=E=G]-[=C=E=G]-[=C=E=G]-(3[=C=E=G][=C=E=G]-[=C=E=G]-(3[=C=E=G]-[=C=E=G][=C=E=G]-(3[=C=E=G]-[=C=E=G]-[=C=E=G]|\n",
+                        4);
     }
 
     #[test]
     fn long_notes_in_triplets()
     {
         let source = "voice A {} play A { :| C | CC | CCC CCC | }";
-        write_bars_test(source, "L:1/8\n(3=C-=C-=C-(3=C-=C-=C-(3=C-=C-=C-(3=C-=C-=C|\n(3=C-=C-=C-(3=C-=C-=C(3=C-=C-=C-(3=C-=C-=C|\n(3=C-=C=C-(3=C=C-=C(3=C-=C=C-(3=C=C-=C|\n", 4);
+        write_bars_test(source,
+                        "L:1/8\n(3=C-=C-=C-(3=C-=C-=C-(3=C-=C-=C-(3=C-=C-=C|\n(3=C-=C-=C-(3=C-=C-=C(3=C-=C-=C-(3=C-=C-=C|\n(3=C-=C=C-(3=C=C-=C(3=C-=C=C-(3=C=C-=C|\n",
+                        4);
     }
 
     #[test]
@@ -569,11 +594,9 @@ mod tests
     fn note_tied_across_triplet_bars()
     {
         let source = "voice A {} play A { :| C E G | . E C }";
-        write_bars_test(
-            source,
-            "L:1/8\n(3=C-=C-=C-(3=C=E-=E-(3=E-=E=G-(3=G-=G-=G-|\n(3=G-=G-=G-(3=G=E-=E-(3=E-=E=C-(3=C-=C-=C|\n",
-            4,
-        );
+        write_bars_test(source,
+                        "L:1/8\n(3=C-=C-=C-(3=C=E-=E-(3=E-=E=G-(3=G-=G-=G-|\n(3=G-=G-=G-(3=G=E-=E-(3=E-=E=C-(3=C-=C-=C|\n",
+                        4);
     }
 
     #[test]

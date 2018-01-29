@@ -1,11 +1,11 @@
+use error::{self, SourceMap};
 use std::fmt::{Display, Error, Formatter};
 
-use error;
 
-
-#[derive(Debug, Fail, PartialEq, Eq)]
+#[derive(Debug, Fail)]
 pub struct AbcGenerationError
 {
+    pub info: Option<SourceMap>,
     pub error: ErrorType,
 }
 
@@ -24,13 +24,12 @@ pub enum ErrorType
     },
 }
 
-impl From<Error> for AbcGenerationError
+
+pub fn fmt_err(error: Error, info: Option<SourceMap>) -> AbcGenerationError
 {
-    fn from(error: Error) -> Self
-    {
-        AbcGenerationError {
-            error: ErrorType::FormattingError { error },
-        }
+    AbcGenerationError {
+        info,
+        error: ErrorType::FormattingError { error },
     }
 }
 
@@ -43,17 +42,20 @@ impl Display for AbcGenerationError
 
         let error_message = match self.error
         {
-            FormattingError { error } =>
-                format!("Internal formatting error: {}", error),
+            FormattingError { error } => format!("Internal formatting error: {}", error),
             UnsupportedTuplet { tuplet } =>
-                format!("Piece requires a tuplet of {} notes, but only tuplets of 3 to 9 notes are currently supported.", tuplet),
+            {
+                format!("Piece requires a tuplet of {} notes, but only tuplets of 3 to 9 notes are currently supported.",
+                        tuplet)
+            }
         };
 
-        error::fmt_simple_error(
-            f,
-            &error_message,
-            "<file>",
-        )
+        let filename = match self.info
+        {
+            Some(ref info) => info.filename(),
+            None => "<file>",
+        };
+
+        error::fmt_simple_error(f, &error_message, filename)
     }
 }
-

@@ -28,10 +28,10 @@ use failure::Error;
 
 pub fn compile_to_abc(input: &str, filename: Option<&str>) -> Result<String, Error>
 {
-    let tokens = lexing::lex(input, filename)?;
-    let parse_tree = parsing::parse(&tokens)?;
-    let pieces = sequencing::sequence_pieces(&parse_tree.pieces)?;
-    let abc = abc_generation::generate_abc(&pieces)?;
+    let (tokens, source_map) = lexing::lex(input, filename)?;
+    let parse_tree = parsing::parse(&tokens, &source_map)?;
+    let pieces = sequencing::sequence_pieces(&parse_tree, &source_map)?;
+    let abc = abc_generation::generate_abc(&pieces, &source_map)?;
 
     Ok(abc)
 }

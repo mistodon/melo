@@ -1,6 +1,5 @@
-use std::fmt::{Display, Error, Formatter};
-
 use error::{self, SourceLoc};
+use std::fmt::{Display, Error, Formatter};
 
 
 #[derive(Debug, Fail, PartialEq, Eq)]
@@ -43,7 +42,12 @@ impl Display for SequencingError
                 let dir = if octave_offset <= 0 { "down" } else { "up" };
                 let oct = octave_offset.abs();
 
-                format!("Note `{}` is invalid after being shifted {} {} octaves. Notes must lie between `{}` and `{}`.", self.loc.text(), dir, oct, MIN_SHARP, MAX_SHARP)
+                format!("Note `{}` is invalid after being shifted {} {} octaves. Notes must lie between `{}` and `{}`.",
+                        self.loc.text(),
+                        dir,
+                        oct,
+                        MIN_SHARP,
+                        MAX_SHARP)
             }
             UndeclaredVoice { ref voice_name } =>
             {
@@ -55,7 +59,7 @@ impl Display for SequencingError
         error::fmt_error(
             f,
             &error_message,
-            self.loc.filename(),
+            self.loc.info.filename(),
             self.loc.cause_line(),
             self.loc.line,
             self.loc.col,

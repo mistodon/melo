@@ -1,7 +1,6 @@
-use std::fmt::{Display, Error, Formatter};
-
 use error::{self, SourceLoc};
 use lexing::data::MetaToken;
+use std::fmt::{Display, Error, Formatter};
 
 
 #[derive(Debug, Fail, PartialEq, Eq)]
@@ -76,7 +75,6 @@ impl Display for ParsingError
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error>
     {
         use self::ErrorType::*;
-        use ansi_term::Color;
 
         if let MultipleParsingErrors { ref errors } = self.error
         {
@@ -87,7 +85,11 @@ impl Display for ParsingError
 
             if errors.len() > 1
             {
-                error::fmt_simple_error(f, &format!("Aborting due to {} previous errors.", errors.len()), self.loc.filename())?;
+                error::fmt_simple_error(
+                    f,
+                    &format!("Aborting due to {} previous errors.", errors.len()),
+                    self.loc.info.filename(),
+                )?;
             }
 
             Ok(())
@@ -98,43 +100,79 @@ impl Display for ParsingError
 
             let error_message = match self.error
             {
-                UnexpectedToken { ref token, context, ref expected } =>
-                    format!("Unexpected token `{}` {}. Expected {}.", token, context, expected),
+                UnexpectedToken {
+                    ref token,
+                    context,
+                    ref expected,
+                } =>
+                {
+                    format!("Unexpected token `{}` {}. Expected {}.",
+                            token,
+                            context,
+                            expected)
+                }
 
-                UnexpectedEOF { context, ref expected } =>
-                    format!("Unexpected end of input {}. Expected {}.", context, expected),
+                UnexpectedEOF {
+                    context,
+                    ref expected,
+                } =>
+                {
+                    format!("Unexpected end of input {}. Expected {}.",
+                            context,
+                            expected)
+                }
 
                 InvalidNote { ref note } =>
+                {
                     format!("Note `{}` is out of range. Must be between `{}` and `{}`.",
-                            note, MIN_SHARP, MAX_SHARP),
+                            note,
+                            MIN_SHARP,
+                            MAX_SHARP)
+                }
 
                 InvalidHit { ref stave_prefix } =>
-                    format!("Hit markers (`x`) cannot be used in `{}:` staves. They are only valid in single-note staves.", stave_prefix),
+                {
+                    format!("Hit markers (`x`) cannot be used in `{}:` staves. They are only valid in single-note staves.",
+                            stave_prefix)
+                }
 
                 // TODO(claire): which ones are valid?
-                InvalidAttribute { ref attribute, structure } =>
-                    format!("Invalid attribute `{}` for `{}`.",
-                        attribute, structure),
+                InvalidAttribute {
+                    ref attribute,
+                    structure,
+                } => format!("Invalid attribute `{}` for `{}`.", attribute, structure),
 
                 InvalidOctave { octave } =>
-                    format!("Invalid octave `{}` would throw every note out of range. Must be in the range [-10, 10].", octave),
+                {
+                    format!("Invalid octave `{}` would throw every note out of range. Must be in the range [-10, 10].",
+                            octave)
+                }
 
                 UndeclaredStave { ref stave_prefix } =>
-                    format!("The `{}:` stave wasn't declared at the start of the `play` block. All staves must be declared before the first blank line.", stave_prefix),
+                {
+                    format!("The `{}:` stave wasn't declared at the start of the `play` block. All staves must be declared before the first blank line.",
+                            stave_prefix)
+                }
 
                 InvalidLength { ref length } =>
-                    format!("Invalid note length `{}`. Lengths must be between 0 and 255.", length),
+                {
+                    format!("Invalid note length `{}`. Lengths must be between 0 and 255.",
+                            length)
+                }
 
                 UnexpectedLength { ref length } =>
-                    format!("Unexpected note length `{}`. Lengths must follow a note or rest.", length),
+                {
+                    format!("Unexpected note length `{}`. Lengths must follow a note or rest.",
+                            length)
+                }
 
-                _ => unreachable!()
+                _ => unreachable!(),
             };
 
             error::fmt_error(
                 f,
                 &error_message,
-                self.loc.filename(),
+                self.loc.info.filename(),
                 self.loc.cause_line(),
                 self.loc.line,
                 self.loc.col,

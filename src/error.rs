@@ -27,6 +27,14 @@ impl SourceInfo
             lines,
         })
     }
+
+    pub fn filename(&self) -> &str
+    {
+        self.filename
+            .as_ref()
+            .map(AsRef::as_ref)
+            .unwrap_or("<stdin>")
+    }
 }
 
 
@@ -41,15 +49,6 @@ pub struct SourceLoc
 
 impl SourceLoc
 {
-    pub fn filename(&self) -> &str
-    {
-        self.info
-            .filename
-            .as_ref()
-            .map(AsRef::as_ref)
-            .unwrap_or("<stdin>")
-    }
-
     pub fn cause_line(&self) -> &str
     {
         &self.info.lines[self.line - 1]
@@ -112,11 +111,8 @@ pub fn fmt_error(
     )
 }
 
-pub fn fmt_simple_error(
-    f: &mut Formatter,
-    message: &str,
-    filename: &str,
-) -> Result<(), Error>
+pub fn fmt_simple_error(f: &mut Formatter, message: &str, filename: &str)
+    -> Result<(), Error>
 {
     use ansi_term::Color;
 
