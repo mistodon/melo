@@ -36,6 +36,7 @@ pub struct SourceLoc
     pub line: usize,
     pub col: usize,
     pub info: SourceMap,
+    pub width: usize,
 }
 
 impl SourceLoc
@@ -85,22 +86,23 @@ pub fn fmt_error(
 
     let line_prefix = format!("{} |    ", line);
     let underline = format!(
-        "{: >indent$}",
+        "{: >indent$}{}",
+        "",
         "^".repeat(width),
-        indent = col + line_prefix.len()
+        indent = col + line_prefix.len() - 1
     );
 
     writeln!(
         f,
-        "{}: {}\n   {} {}:{}:{}\n\n{}{}\n{}",
+        "{}: {}\n   {}: {}:{}:{}\n\n{}{}\n{}",
         red.paint("error"),
         white.paint(message),
-        blue.paint("-->"),
+        blue.paint("in"),
         filename,
         line,
         col,
         blue.paint(line_prefix),
         context,
-        blue.paint(underline)
+        red.paint(underline)
     )
 }

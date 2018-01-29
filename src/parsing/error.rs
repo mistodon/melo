@@ -136,7 +136,7 @@ impl Display for ParsingError
                 self.loc.cause_line(),
                 self.loc.line,
                 self.loc.col,
-                1,
+                self.loc.width,
             )
         }
     }

@@ -84,6 +84,7 @@ pub fn lex<'a>(
             line,
             col,
             info: source_map.clone(),
+            width: text_len,
         };
 
         match group_name
@@ -156,6 +157,7 @@ pub fn lex<'a>(
                         line,
                         col,
                         info: source_map.clone(),
+                        width: text.len(),
                     };
 
                     match group_name
@@ -240,6 +242,7 @@ pub fn lex<'a>(
             line,
             col,
             info: source_map.clone(),
+            width: 1,
         },
     });
 

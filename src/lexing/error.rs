@@ -42,7 +42,7 @@ impl Display for LexingError
             self.loc.cause_line(),
             self.loc.line,
             self.loc.col,
-            1,
+            self.loc.width,
         )
     }
 }
