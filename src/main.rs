@@ -99,7 +99,9 @@ fn run_command(command: MidscriptCommand) -> Result<(), Error>
 
             eprintln!("    Playing...");
 
-            let command_output = Command::new("timidity")
+            let midi_player_command =
+                std::env::var_os("MIDSCRIPT_MIDI_PLAYER").unwrap_or("timidity".into());
+            let command_output = Command::new(midi_player_command)
                 .arg(mid_out.as_ref().as_os_str())
                 .output()?;
 
@@ -108,7 +110,7 @@ fn run_command(command: MidscriptCommand) -> Result<(), Error>
                 use std::io::Write;
 
                 std::io::stderr().write_all(&command_output.stderr)?;
-                return Err(failure::err_msg("    Compile and play failed."));
+                return Err(failure::err_msg("    Compile and play failed."))
             }
 
             Ok(())
@@ -275,7 +277,7 @@ where
         use std::io::Write;
 
         std::io::stderr().write_all(&command_output.stderr)?;
-        return Err(failure::err_msg("    Compiling to MIDI failed."));
+        return Err(failure::err_msg("    Compiling to MIDI failed."))
     }
 
     if output.is_none()
@@ -286,4 +288,3 @@ where
 
     Ok(())
 }
-
