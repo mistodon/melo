@@ -1,4 +1,4 @@
-extern crate midscript;
+extern crate melo;
 
 #[macro_use]
 extern crate pretty_assertions;
@@ -10,10 +10,10 @@ macro_rules! test_abc
         #[test]
         fn $test_name()
         {
-            let source = include_str!(concat!("abc_tests/", stringify!($test_name), ".midscript"));
+            let source = include_str!(concat!("abc_tests/", stringify!($test_name), ".melo"));
             let expected = include_str!(concat!("abc_tests/", stringify!($test_name), ".abc"));
 
-            let result = midscript::compile_to_abc(source, None).unwrap();
+            let result = melo::compile_to_abc(source, None).unwrap();
             assert_eq!(result, expected);
         }
     }
