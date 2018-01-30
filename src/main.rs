@@ -1,5 +1,5 @@
 extern crate failure;
-extern crate midscript;
+extern crate melo;
 extern crate mktemp;
 extern crate structopt;
 
@@ -13,9 +13,9 @@ use failure::Error;
 
 
 #[derive(Debug, StructOpt)]
-enum MidscriptCommand
+enum MeloCommand
 {
-    #[structopt(name = "abc", about = "Compile midscript to abc notation.")]
+    #[structopt(name = "abc", about = "Compile melo to abc notation.")]
     Abc
     {
         #[structopt(help = "Input file, or stdin if not specified.")]
@@ -27,7 +27,7 @@ enum MidscriptCommand
     },
 
     #[structopt(name = "mid",
-                about = "Compile midscript to a MIDI file. (Currently requires abc2midi.)")]
+                about = "Compile melo to a MIDI file. (Currently requires abc2midi.)")]
     Mid
     {
         #[structopt(help = "Input file, or stdin if not specified.")]
@@ -39,7 +39,7 @@ enum MidscriptCommand
     },
 
     #[structopt(name = "play",
-                about = "Compile and play midscript as MIDI. (Currently requires timidity.)")]
+                about = "Compile and play melo as MIDI. (Currently requires timidity.)")]
     Play
     {
         #[structopt(help = "Input file, or stdin if not specified.")]
@@ -68,7 +68,7 @@ fn main()
 {
     use structopt::StructOpt;
 
-    let command = MidscriptCommand::from_args();
+    let command = MeloCommand::from_args();
 
     if let Err(err) = run_command(command)
     {
@@ -77,22 +77,22 @@ fn main()
 }
 
 
-fn run_command(command: MidscriptCommand) -> Result<(), Error>
+fn run_command(command: MeloCommand) -> Result<(), Error>
 {
     use mktemp::Temp;
     use std::process::Command;
 
     match command
     {
-        MidscriptCommand::Abc { input, output } =>
+        MeloCommand::Abc { input, output } =>
         {
             let abc = compile_to_abc(&input)?;
             write_output(&abc, output)
         }
 
-        MidscriptCommand::Mid { input, output } => compile_to_midi(&input, &output),
+        MeloCommand::Mid { input, output } => compile_to_midi(&input, &output),
 
-        MidscriptCommand::Play { input } =>
+        MeloCommand::Play { input } =>
         {
             let mid_out = Temp::new_file()?;
             compile_to_midi(&input, &Some(&mid_out))?;
@@ -100,7 +100,7 @@ fn run_command(command: MidscriptCommand) -> Result<(), Error>
             eprintln!("    Playing...");
 
             let midi_player_command =
-                std::env::var_os("MIDSCRIPT_MIDI_PLAYER").unwrap_or_else(|| "timidity".into());
+                std::env::var_os("MELO_MIDI_PLAYER").unwrap_or_else(|| "timidity".into());
             let command_output = Command::new(midi_player_command)
                 .arg(mid_out.as_ref().as_os_str())
                 .output()?;
@@ -116,7 +116,7 @@ fn run_command(command: MidscriptCommand) -> Result<(), Error>
             Ok(())
         }
 
-        MidscriptCommand::Ref { subcommand } =>
+        MeloCommand::Ref { subcommand } =>
         {
             match subcommand
             {
@@ -238,7 +238,7 @@ where
     let source = read_input(input.as_ref())?;
     let filename = input.as_ref().map(|s| s.as_ref());
 
-    let result = midscript::compile_to_abc(&source, filename.and_then(Path::to_str))?;
+    let result = melo::compile_to_abc(&source, filename.and_then(Path::to_str))?;
 
     Ok(result)
 }

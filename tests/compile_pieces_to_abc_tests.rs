@@ -1,4 +1,4 @@
-extern crate midscript;
+extern crate melo;
 
 
 macro_rules! test_piece
@@ -7,10 +7,10 @@ macro_rules! test_piece
         #[test]
         fn $test_name()
         {
-            let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/pieces/", stringify!($test_name), ".midscript"));
-            let filename = concat!(env!("CARGO_MANIFEST_DIR"), "/pieces/", stringify!($test_name), ".midscript");
+            let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/pieces/", stringify!($test_name), ".melo"));
+            let filename = concat!(env!("CARGO_MANIFEST_DIR"), "/pieces/", stringify!($test_name), ".melo");
 
-            match midscript::compile_to_abc(source, Some(filename))
+            match melo::compile_to_abc(source, Some(filename))
             {
                 Ok(_) => (),
                 Err(err) => {

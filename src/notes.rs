@@ -1,4 +1,4 @@
-pub const MIDSCRIPT_SHARPS: [&str; 128] = [
+pub const MELO_SHARPS: [&str; 128] = [
     "C,,,,,", "C^,,,,,", "D,,,,,", "D^,,,,,", "E,,,,,", "F,,,,,", "F^,,,,,", "G,,,,,",
     "G^,,,,,", "A,,,,", "A^,,,,", "B,,,,", "C,,,,", "C^,,,,", "D,,,,", "D^,,,,", "E,,,,",
     "F,,,,", "F^,,,,", "G,,,,", "G^,,,,", "A,,,", "A^,,,", "B,,,", "C,,,", "C^,,,", "D,,,",
@@ -13,11 +13,11 @@ pub const MIDSCRIPT_SHARPS: [&str; 128] = [
     "f^''''", "g''''",
 ];
 
-pub const MIN_SHARP: &str = MIDSCRIPT_SHARPS[0];
-pub const MAX_SHARP: &str = MIDSCRIPT_SHARPS[127];
+pub const MIN_SHARP: &str = MELO_SHARPS[0];
+pub const MAX_SHARP: &str = MELO_SHARPS[127];
 
 
-pub const MIDSCRIPT_FLATS: [&str; 128] = [
+pub const MELO_FLATS: [&str; 128] = [
     "C,,,,,", "D_,,,,,", "D,,,,,", "E_,,,,,", "E,,,,,", "F,,,,,", "G_,,,,,", "G,,,,,",
     "A_,,,,", "A,,,,", "B_,,,,", "B,,,,", "C,,,,", "D_,,,,", "D,,,,", "E_,,,,", "E,,,,",
     "F,,,,", "G_,,,,", "G,,,,", "A_,,,", "A,,,", "B_,,,", "B,,,", "C,,,", "D_,,,", "D,,,",
@@ -32,8 +32,8 @@ pub const MIDSCRIPT_FLATS: [&str; 128] = [
     "f''''", "g_''''", "g''''",
 ];
 
-pub const MIN_FLAT: &str = MIDSCRIPT_FLATS[0];
-pub const MAX_FLAT: &str = MIDSCRIPT_FLATS[127];
+pub const MIN_FLAT: &str = MELO_FLATS[0];
+pub const MAX_FLAT: &str = MELO_FLATS[127];
 
 
 pub const ABC_NOTES: [&str; 128] = [
@@ -142,12 +142,12 @@ impl Midi
 
     pub fn to_sharp(&self) -> &'static str
     {
-        MIDSCRIPT_SHARPS[self.0 as usize]
+        MELO_SHARPS[self.0 as usize]
     }
 
     pub fn to_flat(&self) -> &'static str
     {
-        MIDSCRIPT_FLATS[self.0 as usize]
+        MELO_FLATS[self.0 as usize]
     }
 }
 
