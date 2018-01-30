@@ -1,0 +1,21 @@
+beats: 4
+
+
+voice PianoA { channel: 1 }
+voice PianoB { channel: 2 }
+
+
+play PianoA
+{
+    // Since we have 4 beats per bar, but three beats here, these are interpreted as triplets
+    :| E E E | E E E | E E E | E E E |
+    :| C C C | C C C | C C C | C C C |
+    :| G, G, G, | G, G, G, | G, G, G, | G, G, G, |
+}
+
+
+play PianoB
+{
+    :| c c c c | g g g g | d d d d | G G G G |
+}
+
