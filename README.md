@@ -1,21 +1,22 @@
 # Midscript (working title)
 
-## TODOs
 
-### Syntax
 
-1.  Requiring commas after every attribute is error-prone - take newlines into account
-2.  Requiring you to quote strings also sucks
-3.  A missed out stave line before a blank line should be filled with rests instead of just unintuitively skipping ahead.
-4.  On that note - maybe groups of stave lines should be required to be the same length in bars, with an optional `~` at the end to pad with rests.
-5.  It kind of sucks having to manually set the channel for each voice - might default them to auto-incrementing.
+## TODO
 
-### Errors
+### Future features
 
-1.  Error about unsupported tuplets cannot always tell you which bar caused the problem.
+1.  Repeats of bars/sections
+2.  Keys
+3.  Dynamics
+4.  Support pitch bends / panning / other MIDI features
+5.  Explicit tuplets
+6.  Changing attributes (tempo, volume, ...) during piece
+7.  Direct compilation to MIDI (SMF format)
 
-### Features
 
-1.  Repeats of previous bars
-2.  Declaring parts that can be played in multiple places
+### Future fixes
+
+1.  Better warnings/errors about absurd tuplets
+2.  Warnings/errors about missed bars/staves
 
