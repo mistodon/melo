@@ -31,7 +31,7 @@ lazy_static!
 {
     static ref STRUCTURE_REGEX: Regex = Regex::new("\
         (?P<keyword>part|piece|play|section|voice)|\
-        (?P<key>([a-zA-Z_][a-zA-Z0-9_^,'=\\-]*\\s*|:)?:)|\
+        (?P<key>([a-zA-Z_][a-zA-Z0-9_#,'=\\-]*\\s*|:)?:)|\
         (?P<ident>[a-zA-Z_][a-zA-Z0-9_ ]*)|\
         (?P<string>\"((\\\\\")|[^\"])*\")|\
         (?P<number>[+\\-]?\\d+)|\
@@ -45,7 +45,7 @@ lazy_static!
         ").trust();
 
     static ref MUSIC_REGEX: Regex = Regex::new("\
-        (?P<note>[a-gA-G][=_\\^]*[,']*)|\
+        (?P<note>[a-gA-G][=_\\#]*[,']*)|\
         (?P<part>\\*[a-zA-Z_][a-zA-Z0-9_]*)|\
         (?P<symbol>[\\.\\-x\"%])|\
         (?P<number>\\d+)|\
@@ -517,12 +517,12 @@ mod tests
     fn lex_ridiculous_field_name()
     {
         lextest(
-            r#"piece LFL { F^_=,,''   : "Party Girl" }"#,
+            r#"piece LFL { F#_=,,''   : "Party Girl" }"#,
             vec![
                 Piece,
                 Ident("LFL"),
                 LeftBrace,
-                Key("F^_=,,''"),
+                Key("F#_=,,''"),
                 Str("Party Girl"),
                 RightBrace,
             ],
@@ -590,8 +590,8 @@ mod tests
     fn lex_complex_notes()
     {
         lextest(
-            ": | B^,,c_''d=",
-            vec![Key(""), Barline, Note("B^,,"), Note("c_''"), Note("d=")],
+            ": | B#,,c_''d=",
+            vec![Key(""), Barline, Note("B#,,"), Note("c_''"), Note("d=")],
         );
     }
 

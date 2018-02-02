@@ -371,7 +371,7 @@ mod tests
     #[test]
     fn fail_when_notes_moved_out_of_range()
     {
-        sequence_test_fail("voice V { octave: 1} play V { :| g^'''}");
+        sequence_test_fail("voice V { octave: 1} play V { :| g#'''}");
     }
 
     #[test]

@@ -10,18 +10,18 @@ voice Left { channel: 1, octave: -1 }
 
 play Right
 {
-    :   | ---- B A G^, A |
-        | C4 D C B C | E4 F E D^ E | b a G^ a b a G^ a | c8 a.-- c-G^a |
-        | b--- a--- G--- a-G^a | b--- a--- G--- a-G^a | b--- a--- G--- F^--- | E4 B A G^, A |
+    :   | ---- B A G#, A |
+        | C4 D C B C | E4 F E D# E | b a G# a b a G# a | c8 a.-- c-G#a |
+        | b--- a--- G--- a-G#a | b--- a--- G--- a-G#a | b--- a--- G--- F#--- | E4 B A G#, A |
 
-    :   | C4 D C B C | E4 F E D^ E | b a G^ a b a G^ a | c8 a--- c-G^a |
-        | b--- a--- G--- a-G^a | b--- a--- G--- a-G^a | b--- a--- G--- F^--- | E4 E- F- |
+    :   | C4 D C B C | E4 F E D# E | b a G# a b a G# a | c8 a--- c-G#a |
+        | b--- a--- G--- a-G#a | b--- a--- G--- a-G#a | b--- a--- G--- F#--- | E4 E- F- |
 
     :   | G- G- aGFE | D4 E- F- | G- G- aGFE | D4 C- D- |
-        | E- E- FEDC | B4 C- D- | E- E- FEDC | B4 B A G^, A |
+        | E- E- FEDC | B4 C- D- | E- E- FEDC | B4 B A G#, A |
 
-    :   | C4 D C B C | E4 F E D^ E | b a G^ a b a G^ a | c8  a.-- b-ab |
-        | c- b- a- G^- | a- E- F- D- | C8 CBCBCBCB | A |
+    :   | C4 D C B C | E4 F E D# E | b a G# a b a G# a | c8  a.-- b-ab |
+        | c- b- a- G#- | a- E- F- D- | C8 CBCBCBCB | A |
 }
 
 
@@ -45,10 +45,10 @@ play Left
     :   | -  A -  C | -  | -  A -  C | -  |
     :   | A, - C, - | E, | A, - C, - | E, |
 
-    :   | -- E- E- E- | - E E E | - E - E | - D^ D^ D^ |
+    :   | -- E- E- E- | - E E E | - E - E | - D# D# D# |
     :   | A. C- C- C- | A C C C | A C A C | F A  A  A  |
 
-    :   | - E  -  F | - E  -  F | A  A  G^ G^ | A  |
+    :   | - E  -  F | - E  -  F | A  A  G# G# | A  |
     :   | E, A D, B | C, A D, B | E, E, E, E, | A, |
 }
 

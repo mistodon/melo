@@ -5,7 +5,7 @@ voice Drums
 
 play Drums
 {
-    F^: | xxxxxxxx | xxxxxxxx |
+    F#: | xxxxxxxx | xxxxxxxx |
     D:  | --x---x- | --x---x- |
     C:  | x---x--- | x---xx-- |
 }

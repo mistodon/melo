@@ -2,7 +2,7 @@ voice Drums { drums }
 
 play Drums
 {
-    F^: | xxxxx xxxxx xxxxx xxxxx |
+    F#: | xxxxx xxxxx xxxxx xxxxx |
     C:  | xxxx |
 }
 
