@@ -38,6 +38,17 @@ enum MeloCommand
         output: Option<String>,
     },
 
+    #[structopt(name = "midi", about = "Compile melo to a MIDI file.")]
+    Midi
+    {
+        #[structopt(help = "Input file, or stdin if not specified.")]
+        input: Option<String>,
+
+        #[structopt(short = "o", long = "output",
+                    help = "Output file, or stdout if not specified.")]
+        output: Option<String>,
+    },
+
     #[structopt(name = "play",
                 about = "Compile and play melo as MIDI. (Currently requires timidity.)")]
     Play
@@ -91,6 +102,12 @@ fn run_command(command: MeloCommand) -> Result<(), Error>
         }
 
         MeloCommand::Mid { input, output } => compile_to_midi(&input, &output),
+
+        MeloCommand::Midi { input, output } =>
+        {
+            let midi = compile_to_midi_new(&input)?;
+            write_binary(&midi, output)
+        }
 
         MeloCommand::Play { input } =>
         {
@@ -239,6 +256,20 @@ where
     let filename = input.as_ref().map(|s| s.as_ref());
 
     let result = melo::compile_to_abc(&source, filename.and_then(Path::to_str))?;
+
+    Ok(result)
+}
+
+
+fn compile_to_midi_new<P>(input: &Option<P>) -> Result<Vec<u8>, Error>
+where
+    P: AsRef<Path>,
+{
+    eprintln!("     Compiling directly to MIDI...");
+    let source = read_input(input.as_ref())?;
+    let filename = input.as_ref().map(|s| s.as_ref());
+
+    let result = melo::compile_to_midi(&source, filename.and_then(Path::to_str))?;
 
     Ok(result)
 }
