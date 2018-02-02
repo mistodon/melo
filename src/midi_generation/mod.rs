@@ -9,6 +9,9 @@ pub fn generate_midi(piece: &Piece, _source_map: &SourceMap) -> Option<Vec<u8>>
     let smf = {
         const MICROSECONDS_PER_MIN: u32 = 60_000_000;
         const TICKS_PER_BEAT: i16 = 480;
+        const VEL_FIRST: u8 = 105;
+        const VEL_STRONG: u8 = 95;
+        const VEL_WEAK: u8 = 80;
 
         let tempo = MICROSECONDS_PER_MIN / piece.tempo as u32;
 
@@ -65,12 +68,28 @@ pub fn generate_midi(piece: &Piece, _source_map: &SourceMap) -> Option<Vec<u8>>
                 let ticks_per_division = ticks_per_bar / u64::from(voice.divisions_per_bar);
                 let pos_ticks = ticks_per_division * u64::from(note.position);
                 let len_ticks = ticks_per_division * u64::from(note.length);
+                let vel = {
+                    let divisions_per_beat = voice.divisions_per_bar / piece.beats as u32;
+
+                    if note.position % voice.divisions_per_bar == 0
+                    {
+                        VEL_FIRST
+                    }
+                    else if note.position % divisions_per_beat == 0
+                    {
+                        VEL_STRONG
+                    }
+                    else
+                    {
+                        VEL_WEAK
+                    }
+                };
 
                 events.push(TrackEvent {
                     vtime: pos_ticks - cursor,
                     event: Event::Midi(MidiMessage::note_on(
                         midi_note,
-                        100,
+                        vel,
                         voice.channel - 1,
                     )),
                 });
