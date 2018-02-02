@@ -2,6 +2,12 @@
 name = "melo"
 version = "0.1.0"
 authors = ["***Realname*** ***Lastname*** <***redacted.email@redacted.nope***>"]
+description = "A music notation language and compiler to (abc notation, but eventually) MIDI."
+repository = "https://github.com/Pirh/melo"
+readme = "README.md"
+keywords = ["music", "notation", "language", "midi"]
+categories = ["command-line-utilities", "multimedia::audio"]
+license = "MIT"
 
 [dependencies]
 ansi_term = "~0.10.2"
