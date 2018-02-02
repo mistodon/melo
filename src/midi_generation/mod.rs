@@ -56,50 +56,67 @@ pub fn generate_midi(piece: &Piece, _source_map: &SourceMap) -> Option<Vec<u8>>
                 },
             ];
 
-            // TODO(claire): Handle overlapping notes:
-            //      -   Break up each note into a start and end (remember end-1)
-            //      -   Sort those by start time
-            //      -   Use dt since last event as vtime
-            let mut cursor = 0;
-            for note in &voice.notes
-            {
-                let midi_note = note.midi.midi() as u8;
-                let ticks_per_bar = TICKS_PER_BEAT as u64 * piece.beats;
-                let ticks_per_division = ticks_per_bar / u64::from(voice.divisions_per_bar);
-                let pos_ticks = ticks_per_division * u64::from(note.position);
-                let len_ticks = ticks_per_division * u64::from(note.length);
-                let vel = {
-                    let divisions_per_beat = voice.divisions_per_bar / piece.beats as u32;
+            let split_notes = {
+                let mut split_notes = Vec::new();
 
-                    if note.position % voice.divisions_per_bar == 0
+                for note in &voice.notes
+                {
+                    let midi_note = note.midi.midi() as u8;
+                    let ticks_per_bar = TICKS_PER_BEAT as u64 * piece.beats;
+                    let ticks_per_division = ticks_per_bar / u64::from(voice.divisions_per_bar);
+                    let pos_ticks = ticks_per_division * u64::from(note.position);
+                    let len_ticks = ticks_per_division * u64::from(note.length);
+                    let vel = {
+                        let divisions_per_beat = voice.divisions_per_bar / piece.beats as u32;
+
+                        if note.position % voice.divisions_per_bar == 0
+                        {
+                            VEL_FIRST
+                        }
+                        else if note.position % divisions_per_beat == 0
+                        {
+                            VEL_STRONG
+                        }
+                        else
+                        {
+                            VEL_WEAK
+                        }
+                    };
+
+                    let note_on = (true, midi_note, pos_ticks, vel);
+                    let note_off = (false, midi_note, pos_ticks + len_ticks - 1, 0);
+                    split_notes.push(note_on);
+                    split_notes.push(note_off);
+                }
+
+                // Sort by start time
+                split_notes.sort_by_key(|note| note.2);
+
+                split_notes
+            };
+
+            let mut cursor = 0;
+            for note in split_notes
+            {
+                let (on, midi_note, pos_ticks, vel) = note;
+                let vtime = pos_ticks - cursor;
+                let message = {
+                    if on
                     {
-                        VEL_FIRST
-                    }
-                    else if note.position % divisions_per_beat == 0
-                    {
-                        VEL_STRONG
+                        MidiMessage::note_on(midi_note, vel, voice.channel - 1)
                     }
                     else
                     {
-                        VEL_WEAK
+                        MidiMessage::note_off(midi_note, vel, voice.channel - 1)
                     }
                 };
 
                 events.push(TrackEvent {
-                    vtime: pos_ticks - cursor,
-                    event: Event::Midi(MidiMessage::note_on(
-                        midi_note,
-                        vel,
-                        voice.channel - 1,
-                    )),
+                    vtime,
+                    event: Event::Midi(message),
                 });
 
-                events.push(TrackEvent {
-                    vtime: len_ticks - 1,
-                    event: Event::Midi(MidiMessage::note_off(midi_note, 0, voice.channel - 1)),
-                });
-
-                cursor = pos_ticks + len_ticks - 1;
+                cursor = pos_ticks;
             }
 
             tracks.push(Track {
@@ -126,3 +143,4 @@ pub fn generate_midi(piece: &Piece, _source_map: &SourceMap) -> Option<Vec<u8>>
 
     Some(buffer)
 }
+
