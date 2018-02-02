@@ -28,3 +28,6 @@ test_piece!(minimal_drums);
 test_piece!(minimal_chords);
 test_piece!(multiple_instruments);
 test_piece!(time_and_tempo);
+test_piece!(polyrhythms);
+test_piece!(rondo_alla_turca);
+test_piece!(too_many_staves);

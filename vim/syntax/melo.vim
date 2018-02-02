@@ -11,14 +11,14 @@ endif
 syn match meloError '.'
 syn match meloWhitespace '\s'
 syn match meloDelim '[{},]'
-syn match meloNote '[a-gA-G][_\^=]*[,\']*'
+syn match meloNote '[a-gA-G][_\#=]*[,\']*'
 syn match meloSymbol '[\-x.]'
 syn match meloLength '\d\+'
 syn match meloBarline '[|]'
 syn match meloName '[a-zA-Z0-9_][a-zA-Z0-9_ ]*'
 syn match meloName '".*"'
 syn match meloValue '[a-zA-Z0-9_][a-zA-Z0-9_ ]*'
-syn match meloKey '[a-zA-Z\^=_,':]\?[a-zA-Z0-9\^=_,':]*:'
+syn match meloKey '[a-zA-Z\#=_,':]\?[a-zA-Z0-9\#=_,':]*:'
 syn match meloComment '//.*$'
 
 syn keyword meloKeyword piece voice play section part nextgroup=meloName skipwhite
