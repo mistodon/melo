@@ -28,6 +28,7 @@ mod test_helpers;
 use failure::Error;
 
 
+#[deprecated]
 pub fn compile_to_abc(input: &str, filename: Option<&str>) -> Result<String, Error>
 {
     let (tokens, source_map) = lexing::lex(input, filename)?;

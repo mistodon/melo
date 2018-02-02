@@ -1,3 +1,4 @@
+extern crate ansi_term;
 extern crate failure;
 extern crate melo;
 extern crate mktemp;
@@ -9,13 +10,15 @@ extern crate structopt_derive;
 
 use std::path::Path;
 
+use ansi_term::Color;
 use failure::Error;
 
 
 #[derive(Debug, StructOpt)]
 enum MeloCommand
 {
-    #[structopt(name = "abc", about = "Compile melo to abc notation.")]
+    #[structopt(name = "abc", about = "Compile melo to abc notation.\n\
+                (Note that this is deprecated and will be removed soon.)")]
     Abc
     {
         #[structopt(help = "Input file, or stdin if not specified.")]
@@ -27,7 +30,7 @@ enum MeloCommand
     },
 
     #[structopt(name = "mid",
-                about = "Compile melo to a MIDI file. (Currently requires abc2midi.)")]
+                about = "Compile melo to a MIDI file.")]
     Mid
     {
         #[structopt(help = "Input file, or stdin if not specified.")]
@@ -36,17 +39,11 @@ enum MeloCommand
         #[structopt(short = "o", long = "output",
                     help = "Output file, or stdout if not specified.")]
         output: Option<String>,
-    },
 
-    #[structopt(name = "midi", about = "Compile melo to a MIDI file.")]
-    Midi
-    {
-        #[structopt(help = "Input file, or stdin if not specified.")]
-        input: Option<String>,
-
-        #[structopt(short = "o", long = "output",
-                    help = "Output file, or stdout if not specified.")]
-        output: Option<String>,
+        #[structopt(long = "abcmidi",
+                    help = "First generate ABC, the convert that to MIDI. Requires `abc2midi`.\n\
+                        Note that this is deprecated and will be removed soon.")]
+        abcmidi: bool,
     },
 
     #[structopt(name = "play",
@@ -55,6 +52,12 @@ enum MeloCommand
     {
         #[structopt(help = "Input file, or stdin if not specified.")]
         input: Option<String>,
+
+        #[structopt(long = "abcmidi",
+                    help = "First generate ABC, the convert that to MIDI and play. \
+                        Requires `abc2midi`.\n\
+                        Note that this is deprecated and will be removed soon.")]
+        abcmidi: bool,
     },
 
     #[structopt(name = "ref", about = "View useful information for composing in miscript.")]
@@ -75,6 +78,11 @@ enum RefCommand
 }
 
 
+const RED: Color = Color::Fixed(9);
+const YELLOW: Color = Color::Fixed(11);
+const CYAN: Color = Color::Fixed(14);
+
+
 fn main()
 {
     use structopt::StructOpt;
@@ -83,8 +91,20 @@ fn main()
 
     if let Err(err) = run_command(command)
     {
-        eprintln!("{}\n    Command failed.", err);
+        eprintln!("{}", err);
+        log(RED, "error:", "Command failed.");
+        std::process::exit(1)
     }
+}
+
+
+
+fn log(color: Color, prefix: &str, message: &str)
+{
+    let white = Color::Fixed(15).bold();
+    let color = color.bold();
+
+    eprintln!("{} {}", color.paint(prefix), white.paint(message));
 }
 
 
@@ -101,23 +121,42 @@ fn run_command(command: MeloCommand) -> Result<(), Error>
             write_output(&abc, output)
         }
 
-        MeloCommand::Mid { input, output } => compile_to_midi(&input, &output),
-
-        MeloCommand::Midi { input, output } =>
+        MeloCommand::Mid {
+            input,
+            output,
+            abcmidi,
+        } =>
         {
-            let midi = compile_to_midi_new(&input)?;
-            write_binary(&midi, output)
+            if abcmidi
+            {
+                compile_to_midi_via_abc(&input, &output)
+            }
+            else
+            {
+                let midi = compile_to_midi(&input)?;
+                write_binary(&midi, output)
+            }
         }
 
-        MeloCommand::Play { input } =>
+        MeloCommand::Play { input, abcmidi } =>
         {
             let mid_out = Temp::new_file()?;
-            compile_to_midi(&input, &Some(&mid_out))?;
 
-            eprintln!("    Playing...");
+            if abcmidi
+            {
+                compile_to_midi_via_abc(&input, &Some(&mid_out))?;
+            }
+            else
+            {
+                let midi = compile_to_midi(&input)?;
+                write_binary(&midi, Some(&mid_out))?;
+            }
+
+            log(CYAN, "Playing", "...");
 
             let midi_player_command =
                 std::env::var_os("MELO_MIDI_PLAYER").unwrap_or_else(|| "timidity".into());
+
             let command_output = Command::new(midi_player_command)
                 .arg(mid_out.as_ref().as_os_str())
                 .output()?;
@@ -127,7 +166,7 @@ fn run_command(command: MeloCommand) -> Result<(), Error>
                 use std::io::Write;
 
                 std::io::stderr().write_all(&command_output.stderr)?;
-                return Err(failure::err_msg("    Compile and play failed."))
+                return Err(failure::err_msg("Compile and play failed."))
             }
 
             Ok(())
@@ -251,7 +290,9 @@ fn compile_to_abc<P>(input: &Option<P>) -> Result<String, Error>
 where
     P: AsRef<Path>,
 {
-    eprintln!("    Compiling to abc...");
+    log(CYAN, "Compiling", "to abc ...");
+    log(YELLOW, "warning:", "Compilation to abc is deprecated and will be removed soon.\n");
+
     let source = read_input(input.as_ref())?;
     let filename = input.as_ref().map(|s| s.as_ref());
 
@@ -261,11 +302,11 @@ where
 }
 
 
-fn compile_to_midi_new<P>(input: &Option<P>) -> Result<Vec<u8>, Error>
+fn compile_to_midi<P>(input: &Option<P>) -> Result<Vec<u8>, Error>
 where
     P: AsRef<Path>,
 {
-    eprintln!("     Compiling directly to MIDI...");
+    log(CYAN, "Compiling", "to MIDI ...");
     let source = read_input(input.as_ref())?;
     let filename = input.as_ref().map(|s| s.as_ref());
 
@@ -275,7 +316,7 @@ where
 }
 
 
-fn compile_to_midi<P, Q>(input: &Option<P>, output: &Option<Q>) -> Result<(), Error>
+fn compile_to_midi_via_abc<P, Q>(input: &Option<P>, output: &Option<Q>) -> Result<(), Error>
 where
     P: AsRef<Path>,
     Q: AsRef<Path>,
@@ -295,7 +336,7 @@ where
         None => mid_out.as_ref().as_os_str(),
     };
 
-    eprintln!("    Compiling to MIDI...");
+    log(CYAN, "Compiling", "to MIDI via abc ...");
 
     let command_output = Command::new("abc2midi")
         .arg(abc_out.as_ref().as_os_str())
@@ -308,7 +349,7 @@ where
         use std::io::Write;
 
         std::io::stderr().write_all(&command_output.stderr)?;
-        return Err(failure::err_msg("    Compiling to MIDI failed."))
+        return Err(failure::err_msg("Compiling to MIDI failed."))
     }
 
     if output.is_none()
