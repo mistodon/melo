@@ -160,10 +160,8 @@ If you copy the files in [this directory](https://github.com/Pirh/melo/tree/mast
 4.  Support pitch bends / panning / other MIDI features
 5.  Explicit tuplets
 6.  Changing attributes (tempo, volume, ...) during piece
-7.  Direct compilation to MIDI (SMF format)
 
 ### Future fixes
 
-1.  Better warnings/errors about absurd tuplets
-2.  Warnings/errors about missed bars/staves
+1.  Warnings/errors about missed bars/staves
 
