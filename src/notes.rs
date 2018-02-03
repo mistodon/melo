@@ -189,6 +189,10 @@ mod tests
         test("c#',", 73);
         test("c_,'", 71);
         test("g''''", 127);
+        test("A", 57);
+        test("A#", 58);
+        test("A_", 56);
+        test("G#,", 56);
     }
 
     #[test]
