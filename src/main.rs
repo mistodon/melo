@@ -13,6 +13,8 @@ use std::path::Path;
 use ansi_term::Color;
 use failure::Error;
 
+use melo::MidiGenerationOptions;
+
 
 #[derive(Debug, StructOpt)]
 enum MeloCommand
@@ -36,6 +38,10 @@ enum MeloCommand
         #[structopt(help = "Input file, or stdin if not specified.")]
         input: Option<String>,
 
+        #[structopt(short = "d", long = "division", help = "MIDI ticks per beat.",
+                    default_value = "480")]
+        ticks_per_beat: i16,
+
         #[structopt(short = "o", long = "output",
                     help = "Output file, or stdout if not specified.")]
         output: Option<String>,
@@ -52,6 +58,10 @@ enum MeloCommand
     {
         #[structopt(help = "Input file, or stdin if not specified.")]
         input: Option<String>,
+
+        #[structopt(short = "d", long = "division", help = "MIDI ticks per beat.",
+                    default_value = "480")]
+        ticks_per_beat: i16,
 
         #[structopt(long = "abcmidi",
                     help = "First generate ABC, the convert that to MIDI and play. \
@@ -124,6 +134,7 @@ fn run_command(command: MeloCommand) -> Result<(), Error>
         MeloCommand::Mid {
             input,
             output,
+            ticks_per_beat,
             abcmidi,
         } =>
         {
@@ -133,12 +144,13 @@ fn run_command(command: MeloCommand) -> Result<(), Error>
             }
             else
             {
-                let midi = compile_to_midi(&input)?;
+                let options = MidiGenerationOptions { ticks_per_beat };
+                let midi = compile_to_midi(&input, &options)?;
                 write_binary(&midi, output)
             }
         }
 
-        MeloCommand::Play { input, abcmidi } =>
+        MeloCommand::Play { input, ticks_per_beat, abcmidi } =>
         {
             let mid_out = Temp::new_file()?;
 
@@ -148,7 +160,8 @@ fn run_command(command: MeloCommand) -> Result<(), Error>
             }
             else
             {
-                let midi = compile_to_midi(&input)?;
+                let options = MidiGenerationOptions { ticks_per_beat };
+                let midi = compile_to_midi(&input, &options)?;
                 write_binary(&midi, Some(&mid_out))?;
             }
 
@@ -302,7 +315,7 @@ where
 }
 
 
-fn compile_to_midi<P>(input: &Option<P>) -> Result<Vec<u8>, Error>
+fn compile_to_midi<P>(input: &Option<P>, options: &MidiGenerationOptions) -> Result<Vec<u8>, Error>
 where
     P: AsRef<Path>,
 {
@@ -310,7 +323,7 @@ where
     let source = read_input(input.as_ref())?;
     let filename = input.as_ref().map(|s| s.as_ref());
 
-    let result = melo::compile_to_midi(&source, filename.and_then(Path::to_str))?;
+    let result = melo::compile_to_midi(&source, filename.and_then(Path::to_str), options)?;
 
     Ok(result)
 }

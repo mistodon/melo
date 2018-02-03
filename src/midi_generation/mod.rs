@@ -1,14 +1,23 @@
+pub mod data;
+
+
+use self::data::*;
+
+
 use error::SourceMap;
 use sequencing::data::*;
 
 
-pub fn generate_midi(piece: &Piece, _source_map: &SourceMap) -> Option<Vec<u8>>
+pub fn generate_midi(
+    piece: &Piece,
+    _source_map: &SourceMap,
+    options: &MidiGenerationOptions,
+) -> Option<Vec<u8>>
 {
     use rimd::*;
 
     let smf = {
         const MICROSECONDS_PER_MIN: u32 = 60_000_000;
-        const TICKS_PER_BEAT: i16 = 480;
         const VEL_FIRST: u8 = 105;
         const VEL_STRONG: u8 = 95;
         const VEL_WEAK: u8 = 80;
@@ -58,7 +67,11 @@ pub fn generate_midi(piece: &Piece, _source_map: &SourceMap) -> Option<Vec<u8>>
                 },
                 TrackEvent {
                     vtime: 0,
-                    event: Event::Midi(MidiMessage::control_change(7, volume, voice.channel - 1)),
+                    event: Event::Midi(MidiMessage::control_change(
+                        7,
+                        volume,
+                        voice.channel - 1,
+                    )),
                 },
             ];
 
@@ -68,7 +81,7 @@ pub fn generate_midi(piece: &Piece, _source_map: &SourceMap) -> Option<Vec<u8>>
                 for note in &voice.notes
                 {
                     let midi_note = note.midi.midi() as u8;
-                    let ticks_per_bar = TICKS_PER_BEAT as u64 * piece.beats;
+                    let ticks_per_bar = options.ticks_per_beat as u64 * piece.beats;
                     let ticks_per_division =
                         ticks_per_bar / u64::from(voice.divisions_per_bar);
                     let pos_ticks = ticks_per_division * u64::from(note.position);
@@ -135,7 +148,7 @@ pub fn generate_midi(piece: &Piece, _source_map: &SourceMap) -> Option<Vec<u8>>
 
         SMF {
             format: SMFFormat::MultiTrack,
-            division: TICKS_PER_BEAT,
+            division: options.ticks_per_beat,
             tracks,
         }
     };
