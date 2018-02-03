@@ -26,6 +26,7 @@ mod test_helpers;
 
 
 use failure::Error;
+pub use midi_generation::data::MidiGenerationOptions;
 
 
 #[deprecated]
@@ -40,7 +41,11 @@ pub fn compile_to_abc(input: &str, filename: Option<&str>) -> Result<String, Err
 }
 
 
-pub fn compile_to_midi(input: &str, filename: Option<&str>) -> Result<Vec<u8>, Error>
+pub fn compile_to_midi(
+    input: &str,
+    filename: Option<&str>,
+    options: &MidiGenerationOptions,
+) -> Result<Vec<u8>, Error>
 {
     let (tokens, source_map) = lexing::lex(input, filename)?;
     let parse_tree = parsing::parse(&tokens, &source_map)?;
@@ -48,6 +53,7 @@ pub fn compile_to_midi(input: &str, filename: Option<&str>) -> Result<Vec<u8>, E
     let midi = midi_generation::generate_midi(
         pieces.get(0).ok_or(failure::err_msg("No pieces found"))?,
         &source_map,
+        options,
     ).ok_or(failure::err_msg("Compilation to MIDI failed!"))?;
 
     Ok(midi)
