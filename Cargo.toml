@@ -1,8 +1,8 @@
 [package]
 name = "melo"
 version = "0.1.0"
-authors = ["Claire Harris <pirh.badger@gmail.com>"]
-description = "A music notation language and compiler to (abc notation, but eventually) MIDI."
+authors = ["Claire Harris <claire.harris.000@gmail.com>"]
+description = "A music notation language and compiler to MIDI."
 repository = "https://github.com/Pirh/melo"
 readme = "README.md"
 keywords = ["music", "notation", "language", "midi"]

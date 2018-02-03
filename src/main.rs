@@ -53,7 +53,8 @@ enum MeloCommand
     },
 
     #[structopt(name = "play",
-                about = "Compile and play melo as MIDI. (Currently requires timidity.)")]
+                about = "Compile and play melo as MIDI. Uses `timidity` by default.\n\
+                You can change this with the `MELO_MIDI_PLAYER` environment variable.")]
     Play
     {
         #[structopt(help = "Input file, or stdin if not specified.")]
@@ -70,7 +71,7 @@ enum MeloCommand
         abcmidi: bool,
     },
 
-    #[structopt(name = "ref", about = "View useful information for composing in miscript.")]
+    #[structopt(name = "ref", about = "View useful information for composing in melo.")]
     Ref
     {
         #[structopt(subcommand)]
