@@ -42,6 +42,8 @@ pub fn generate_midi(piece: &Piece, _source_map: &SourceMap) -> Option<Vec<u8>>
 
         for voice in &piece.voices
         {
+            let volume = (voice.volume.unwrap_or(1.0) * 127.0).round() as u8;
+
             let mut events = vec![
                 TrackEvent {
                     vtime: 0,
@@ -53,6 +55,10 @@ pub fn generate_midi(piece: &Piece, _source_map: &SourceMap) -> Option<Vec<u8>>
                         voice.program,
                         voice.channel - 1,
                     )),
+                },
+                TrackEvent {
+                    vtime: 0,
+                    event: Event::Midi(MidiMessage::control_change(7, volume, voice.channel - 1)),
                 },
             ];
 
