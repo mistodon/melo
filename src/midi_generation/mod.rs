@@ -88,6 +88,7 @@ pub fn generate_midi(
                     let len_ticks = ticks_per_division * u64::from(note.length);
                     let vel = {
                         let divisions_per_beat = voice.divisions_per_bar / piece.beats as u32;
+                        let divisions_per_beat = ::std::cmp::max(divisions_per_beat, 1);
 
                         if note.position % voice.divisions_per_bar == 0
                         {
