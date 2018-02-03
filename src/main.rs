@@ -170,9 +170,21 @@ fn run_command(command: MeloCommand) -> Result<(), Error>
             let midi_player_command =
                 std::env::var_os("MELO_MIDI_PLAYER").unwrap_or_else(|| "timidity".into());
 
-            let command_output = Command::new(midi_player_command)
+            let command_output = Command::new(&midi_player_command)
                 .arg(mid_out.as_ref().as_os_str())
-                .output()?;
+                .output();
+
+            let command_output = match command_output
+            {
+                Ok(x) => x,
+                Err(e) => {
+                    log(RED, "error:", &format!(
+                            "Failed to run external command {:?}.\n\
+                            You can change the command used to play MIDI files by setting \
+                            the `MELO_MIDI_PLAYER` environment variable.", midi_player_command));
+                    return Err(e.into())
+                }
+            };
 
             if !command_output.status.success()
             {
