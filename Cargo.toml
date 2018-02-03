@@ -2,7 +2,7 @@
 name = "melo"
 version = "0.1.0"
 authors = ["***Realname*** ***Lastname*** <***redacted.email@redacted.nope***>"]
-description = "A music notation language and compiler to (abc notation, but eventually) MIDI."
+description = "A music notation language and compiler to MIDI."
 repository = "https://github.com/Pirh/melo"
 readme = "README.md"
 keywords = ["music", "notation", "language", "midi"]
