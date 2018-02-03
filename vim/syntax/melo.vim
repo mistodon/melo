@@ -21,7 +21,7 @@ syn match meloValue '[a-zA-Z0-9_][a-zA-Z0-9_ ]*'
 syn match meloKey '[a-zA-Z\#=_,':]\?[a-zA-Z0-9\#=_,':]*:'
 syn match meloComment '//.*$'
 
-syn keyword meloKeyword piece voice play section part nextgroup=meloName skipwhite
+syn keyword meloKeyword piece voice play section part drums nextgroup=meloName skipwhite
 
 syn region meloStave start="|" end="\n" fold transparent contains=meloNote,meloLength,meloBarline,meloSymbol,meloComment,meloError,meloWhitespace,meloDelim
 
