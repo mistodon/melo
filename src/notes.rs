@@ -152,14 +152,18 @@ impl Midi
 }
 
 
-pub fn lcm(a: u32, b: u32) -> u32
-{
-    let mut lcm = ::std::cmp::max(a, b);
-    while !(lcm % a == 0 && lcm % b == 0)
-    {
-        lcm += 1
+pub fn lcm(a: u32, b: u32) -> u32 {
+    if a == 0 || b == 0 {
+        return 0;
     }
-    lcm
+    let mut ra = a;
+    let mut rb = b;
+    while rb != 0 {
+        let t = rb;
+        rb = ra % rb;
+        ra = t;
+    }
+    (a / ra) * b
 }
 
 
