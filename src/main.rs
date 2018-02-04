@@ -322,6 +322,7 @@ where
     let source = read_input(input.as_ref())?;
     let filename = input.as_ref().map(|s| s.as_ref());
 
+    #[allow(deprecated)]
     let result = melo::compile_to_abc(&source, filename.and_then(Path::to_str))?;
 
     Ok(result)
