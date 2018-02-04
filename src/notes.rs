@@ -253,4 +253,25 @@ mod tests
             );
         }
     }
+
+    #[test]
+    fn test_lcm()
+    {
+        fn test(a: u32, b: u32, expected: u32)
+        {
+            assert_eq!(lcm(a, b), expected);
+        }
+
+        test(0, 0, 0);
+        test(1, 0, 0);
+        test(0, 1, 0);
+        test(1, 1, 1);
+        test(2, 1, 2);
+        test(1, 2, 2);
+        test(3, 6, 6);
+        test(4, 3, 12);
+        test(6, 4, 12);
+        test(2, 64, 64);
+        test(7, 11, 77);
+    }
 }
