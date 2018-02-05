@@ -152,13 +152,16 @@ impl Midi
 }
 
 
-pub fn lcm(a: u32, b: u32) -> u32 {
-    if a == 0 || b == 0 {
-        return 0;
+pub fn lcm(a: u32, b: u32) -> u32
+{
+    if a == 0 || b == 0
+    {
+        return 0
     }
     let mut ra = a;
     let mut rb = b;
-    while rb != 0 {
+    while rb != 0
+    {
         let t = rb;
         rb = ra % rb;
         ra = t;

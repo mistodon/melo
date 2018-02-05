@@ -556,6 +556,15 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                                 | NoteNode::Note { ref mut length, .. } => *length = num as u8,
                             }
                         }
+                        RepeatBar =>
+                        {
+                            if !bar.notes.is_empty()
+                            {
+                                unimplemented!("Return error!")
+                            }
+                            stave.bars.push(BarTypeNode::RepeatBar);
+                            // TODO(***realname***): Prevent notes _after_ the repeat sign
+                        }
                         Barline => bar_full = true,
                         Key(_) | BlankLine | RightBrace => stave_full = true,
                         _ =>
@@ -571,7 +580,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                     if (bar_full || stave_full) && !bar.notes.is_empty()
                     {
                         let complete_bar = ::std::mem::replace(&mut bar, BarNode::default());
-                        stave.bars.push(complete_bar);
+                        stave.bars.push(BarTypeNode::Bar(complete_bar));
                     }
 
                     if stave_full
@@ -621,7 +630,10 @@ mod tests
                 {
                     for bar in &mut stave.bars
                     {
-                        bar.note_locs.clear();
+                        if let &mut BarTypeNode::Bar(ref mut bar) = bar
+                        {
+                            bar.note_locs.clear();
+                        }
                     }
                 }
             }
