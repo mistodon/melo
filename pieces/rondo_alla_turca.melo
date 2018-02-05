@@ -12,10 +12,10 @@ play Right
 {
     :   | ---- B A G#, A |
         | C4 D C B C | E4 F E D# E | b a G# a b a G# a | c8 a.-- c-G#a |
-        | b--- a--- G--- a-G#a | b--- a--- G--- a-G#a | b--- a--- G--- F#--- | E4 B A G#, A |
+        | b--- a--- G--- a-G#a | % | b--- a--- G--- F#--- | E4 B A G#, A |
 
     :   | C4 D C B C | E4 F E D# E | b a G# a b a G# a | c8 a--- c-G#a |
-        | b--- a--- G--- a-G#a | b--- a--- G--- a-G#a | b--- a--- G--- F#--- | E4 E- F- |
+        | b--- a--- G--- a-G#a | % | b--- a--- G--- F#--- | E4 E- F- |
 
     :   | G- G- aGFE | D4 E- F- | G- G- aGFE | D4 C- D- |
         | E- E- FEDC | B4 C- D- | E- E- FEDC | B4 B A G#, A |
@@ -30,14 +30,14 @@ play Left
     :   | - | -- E- E- E- | - E E E | - E - E | - E E E |
     :   | - | A. C- C- C- | A C C C | A C A C | A C C C |
 
-    :   | -  E E E | -  E E E | -  E -  B | -  |
-    :   | E, B B B | E, B B B | E, B B, - | E, |
+    :   | -  E E E | % | -  E -  B | -  |
+    :   | E, B B B | % | E, B B, - | E, |
 
     :   | -- E- E- E- | - E E E | - E - E | - E E E |
     :   | A. C- C- C- | A C C C | A C A C | A C C C |
 
-    :   | -  E E E | -  E E E | -  E -  B | -  |
-    :   | E, B B B | E, B B B | E, B B, - | E, |
+    :   | -  E E E | % | -  E -  B | -  |
+    :   | E, B B B | % | E, B B, - | E, |
 
     :   | -  C -  E | -  | -  C -  E | -  |
     :   | C, - E, - | G, | C, - E, - | G, |
