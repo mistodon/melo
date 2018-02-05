@@ -44,6 +44,7 @@ pub struct StaveNode<'a>
 {
     pub prefix: Cow<'a, str>,
     pub bars: Vec<BarTypeNode>,
+    pub bar_locs: Vec<SourceLoc>,
 }
 
 #[derive(Debug, PartialEq, Eq)]

@@ -63,6 +63,11 @@ pub enum ErrorType
         length: i64
     },
 
+    ExcessNotesInRepeatBar
+    {
+        placement: &'static str
+    },
+
     MultipleParsingErrors
     {
         errors: Vec<ParsingError>
@@ -164,6 +169,11 @@ impl Display for ParsingError
                 {
                     format!("Unexpected note length `{}`. Lengths must follow a note or rest.",
                             length)
+                }
+
+                ExcessNotesInRepeatBar { placement } =>
+                {
+                    format!("Unexpected notes {} repeat sign `%`. Bars with repeat signs should contain nothing else.", placement)
                 }
 
                 _ => unreachable!(),

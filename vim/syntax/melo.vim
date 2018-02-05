@@ -12,7 +12,7 @@ syn match meloError '.'
 syn match meloWhitespace '\s'
 syn match meloDelim '[{},]'
 syn match meloNote '[a-gA-G][_\#=]*[,\']*'
-syn match meloSymbol '[\-x.]'
+syn match meloSymbol '[\-x.%]'
 syn match meloLength '\d\+'
 syn match meloBarline '[|]'
 syn match meloName '[a-zA-Z0-9_][a-zA-Z0-9_ ]*'
@@ -34,6 +34,6 @@ hi def link meloName Type
 hi def link meloNote Identifier
 hi def link meloLength Constant
 hi def link meloBarline PreProc
-hi def link meloSymbol Normal
+hi def link meloSymbol Identifier
 hi def link meloComment Comment
 hi def link meloError Error
