@@ -43,7 +43,14 @@ pub struct PlayNode<'a>
 pub struct StaveNode<'a>
 {
     pub prefix: Cow<'a, str>,
-    pub bars: Vec<BarNode>,
+    pub bars: Vec<BarTypeNode>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum BarTypeNode
+{
+    Bar(BarNode),
+    RepeatBar,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]

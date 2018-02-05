@@ -83,10 +83,14 @@ pub fn sequence_pieces<'a>(
                 .filter(|play| play.voice == Some(name))
                 .flat_map(|play| {
                     play.staves.iter().flat_map(|stave| {
-                        stave
-                            .bars
-                            .iter()
-                            .map(|bar| bar.notes.iter().map(|note| note.length()).sum())
+                        stave.bars.iter().map(|bar_type| match *bar_type
+                        {
+                            BarTypeNode::Bar(ref bar) =>
+                            {
+                                bar.notes.iter().map(|note| note.length()).sum()
+                            }
+                            BarTypeNode::RepeatBar => 1,
+                        })
                     })
                 })
                 .fold(1, lcm);
@@ -109,6 +113,32 @@ pub fn sequence_pieces<'a>(
                     for (index, bar_node) in stave_node.bars.iter().enumerate()
                     {
                         let mut cursor = index as u32 * divisions_per_bar;
+
+                        let bar_node = match *bar_node
+                        {
+                            BarTypeNode::Bar(ref bar) => bar,
+                            BarTypeNode::RepeatBar =>
+                            {
+                                previous_note_exists = false;
+
+                                let mut previous_bar = None;
+                                let mut previous_index = index;
+                                while previous_index > 0
+                                {
+                                    previous_index -= 1;
+                                    match stave_node.bars[previous_index]
+                                    {
+                                        BarTypeNode::Bar(ref bar) =>
+                                        {
+                                            previous_bar = Some(bar);
+                                            break
+                                        }
+                                        BarTypeNode::RepeatBar => (),
+                                    }
+                                }
+                                previous_bar.unwrap()
+                            }
+                        };
 
                         let bar_node_length: u32 =
                             bar_node.notes.iter().map(|note| note.length()).sum();

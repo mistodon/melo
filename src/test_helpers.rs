@@ -10,9 +10,11 @@ pub fn stave(prefix: &str, notes: Vec<Vec<NoteNode>>) -> StaveNode
         prefix: Cow::Borrowed(prefix),
         bars: notes
             .into_iter()
-            .map(|bar| BarNode {
-                notes: bar,
-                note_locs: Vec::new(),
+            .map(|bar| {
+                BarTypeNode::Bar(BarNode {
+                    notes: bar,
+                    note_locs: Vec::new(),
+                })
             })
             .collect(),
     }
