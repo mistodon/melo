@@ -33,3 +33,4 @@ test_piece!(time_and_tempo);
 test_piece!(polyrhythms);
 test_piece!(rondo_alla_turca);
 test_piece!(too_many_staves);
+test_piece!(repeats);
