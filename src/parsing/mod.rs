@@ -436,6 +436,9 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
             }
             Key(raw_prefix) =>
             {
+                let mut bar_loc = &stream.peek().trust().loc;
+                let mut next_bar_loc = bar_loc;
+
                 expect_token(stream, Barline, "after stave prefix")?;
 
                 let prefix = match raw_prefix
@@ -465,6 +468,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                             staves.push(StaveNode {
                                 prefix,
                                 bars: Vec::new(),
+                                bar_locs: Vec::new(),
                             });
                         }
                         else
@@ -484,6 +488,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
 
                 let stave_note = Midi::from_note(raw_prefix);
                 let mut bar = BarNode::default();
+                let mut bar_is_repeat = false;
 
                 loop
                 {
@@ -560,12 +565,20 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                         {
                             if !bar.notes.is_empty()
                             {
-                                unimplemented!("Return error!")
+                                return Err(ParsingError {
+                                    loc: bar_loc.clone(),
+                                    error: ErrorType::ExcessNotesInRepeatBar {
+                                        placement: "before",
+                                    },
+                                })
                             }
-                            stave.bars.push(BarTypeNode::RepeatBar);
-                            // TODO(claire): Prevent notes _after_ the repeat sign
+                            bar_is_repeat = true;
                         }
-                        Barline => bar_full = true,
+                        Barline =>
+                        {
+                            next_bar_loc = &meta.loc;
+                            bar_full = true;
+                        }
                         Key(_) | BlankLine | RightBrace => stave_full = true,
                         _ =>
                         {
@@ -577,10 +590,35 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                         }
                     }
 
-                    if (bar_full || stave_full) && !bar.notes.is_empty()
+                    if bar_full || stave_full
                     {
-                        let complete_bar = ::std::mem::replace(&mut bar, BarNode::default());
-                        stave.bars.push(BarTypeNode::Bar(complete_bar));
+                        let bar_is_nonempty = !bar.notes.is_empty();
+
+                        if bar_is_repeat || bar_is_nonempty
+                        {
+                            if bar_is_repeat
+                            {
+                                if bar_is_nonempty
+                                {
+                                    return Err(ParsingError {
+                                        loc: bar_loc.clone(),
+                                        error: ErrorType::ExcessNotesInRepeatBar {
+                                            placement: "after",
+                                        },
+                                    })
+                                }
+                                stave.bars.push(BarTypeNode::RepeatBar);
+                            }
+                            else
+                            {
+                                let complete_bar =
+                                    ::std::mem::replace(&mut bar, BarNode::default());
+                                stave.bars.push(BarTypeNode::Bar(complete_bar));
+                            }
+
+                            stave.bar_locs.push(bar_loc.clone());
+                            bar_is_repeat = false;
+                        }
                     }
 
                     if stave_full
@@ -588,6 +626,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                         break
                     }
 
+                    bar_loc = next_bar_loc;
                     stream.next();
                 }
             }
@@ -635,6 +674,8 @@ mod tests
                             bar.note_locs.clear();
                         }
                     }
+
+                    stave.bar_locs.clear();
                 }
             }
         }
@@ -1156,5 +1197,51 @@ mod tests
     fn fail_on_underflowed_length()
     {
         parsefailtest("play { :| -0 }");
+    }
+
+    #[test]
+    fn parse_repeat()
+    {
+        parsetest(
+            "play { :| A | % | }",
+            PieceNode {
+                plays: vec![
+                    PlayNode {
+                        staves: vec![
+                            StaveNode {
+                                prefix: "V0".into(),
+                                bars: vec![
+                                    BarTypeNode::Bar(BarNode {
+                                        notes: vec![
+                                            NoteNode::Note {
+                                                length: 1,
+                                                midi: Midi::from_raw(57).trust(),
+                                            },
+                                        ],
+                                        note_locs: Vec::new(),
+                                    }),
+                                    BarTypeNode::RepeatBar,
+                                ],
+                                ..Default::default()
+                            },
+                        ],
+                        ..Default::default()
+                    },
+                ],
+                ..Default::default()
+            },
+        )
+    }
+
+    #[test]
+    fn fail_when_notes_before_repeat_sign()
+    {
+        parsefailtest("play { :| A | A % }");
+    }
+
+    #[test]
+    fn fail_when_notes_after_repeat_sign()
+    {
+        parsefailtest("play { :| A | % A }");
     }
 }

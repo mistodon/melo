@@ -38,7 +38,6 @@ pub fn sequence_pieces<'a>(
                         None => ErrorType::VoicelessPlayBlock,
                     };
 
-                    // TODO(claire): This error needs file position information
                     return Err(SequencingError {
                         loc: play.error_loc.as_ref().trust().clone(),
                         error,
@@ -136,7 +135,11 @@ pub fn sequence_pieces<'a>(
                                         BarTypeNode::RepeatBar => (),
                                     }
                                 }
-                                previous_bar.unwrap()
+
+                                previous_bar.ok_or_else(|| SequencingError {
+                                    loc: stave_node.bar_locs[index].clone(),
+                                    error: ErrorType::NothingToRepeat,
+                                })?
                             }
                         };
 
@@ -542,5 +545,81 @@ mod tests
                 },
             ],
         );
+    }
+
+    #[test]
+    fn repeat_bars()
+    {
+        voice_test(
+            "voice A {} play A { :| A C | % | }",
+            vec![
+                Note {
+                    midi: midi(57),
+                    length: 1,
+                    position: 0,
+                },
+                Note {
+                    midi: midi(60),
+                    length: 1,
+                    position: 1,
+                },
+                Note {
+                    midi: midi(57),
+                    length: 1,
+                    position: 2,
+                },
+                Note {
+                    midi: midi(60),
+                    length: 1,
+                    position: 3,
+                },
+            ],
+        );
+    }
+
+    #[test]
+    fn repeat_bars_twice()
+    {
+        voice_test(
+            "voice A {} play A { :| A C | % | % | }",
+            vec![
+                Note {
+                    midi: midi(57),
+                    length: 1,
+                    position: 0,
+                },
+                Note {
+                    midi: midi(60),
+                    length: 1,
+                    position: 1,
+                },
+                Note {
+                    midi: midi(57),
+                    length: 1,
+                    position: 2,
+                },
+                Note {
+                    midi: midi(60),
+                    length: 1,
+                    position: 3,
+                },
+                Note {
+                    midi: midi(57),
+                    length: 1,
+                    position: 4,
+                },
+                Note {
+                    midi: midi(60),
+                    length: 1,
+                    position: 5,
+                },
+            ],
+        );
+    }
+
+    #[test]
+    fn fail_first_bar_repeat()
+    {
+        sequence_test_fail("voice A {} play A { :| % | }");
     }
 }

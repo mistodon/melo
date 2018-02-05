@@ -24,6 +24,8 @@ pub enum ErrorType
     },
 
     VoicelessPlayBlock,
+
+    NothingToRepeat,
 }
 
 
@@ -49,11 +51,15 @@ impl Display for SequencingError
                         MIN_SHARP,
                         MAX_SHARP)
             }
+
             UndeclaredVoice { ref voice_name } =>
             {
                 format!("No voice named `{}` was declared.", voice_name)
             }
+
             VoicelessPlayBlock => "Voiceless `play` blocks are not yet supported.".to_owned(),
+
+            NothingToRepeat => "There is no previous bar to repeat.".to_owned(),
         };
 
         error::fmt_error(

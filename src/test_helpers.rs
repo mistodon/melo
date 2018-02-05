@@ -17,6 +17,7 @@ pub fn stave(prefix: &str, notes: Vec<Vec<NoteNode>>) -> StaveNode
                 })
             })
             .collect(),
+        bar_locs: Vec::new(),
     }
 }
 
