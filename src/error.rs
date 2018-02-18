@@ -2,7 +2,57 @@ use std::fmt::{Error, Formatter};
 use std::sync::Arc;
 
 
-pub type SourceMap = Arc<SourceInfo>;
+#[derive(Debug)]
+pub struct SourceMap<'a>
+{
+    pub filename: String,
+    pub source: &'a str,
+    line_boundaries: Vec<usize>,
+    end_line_col: (usize, usize),
+}
+
+impl<'a> SourceMap<'a>
+{
+    pub fn new(filename: String, source: &'a str) -> Self
+    {
+        let mut byte_pos = 0;
+        let mut line_boundaries = Vec::new();
+        let mut last_line_len = 0;
+
+        for line in source.lines()
+        {
+            line_boundaries.push(byte_pos);
+            byte_pos += line.len() + 1;
+            last_line_len = line.len();
+        }
+        line_boundaries.push(byte_pos);
+
+        let end_line = line_boundaries.len();
+        let end_col = last_line_len;
+        let end_line_col = (end_line, end_col);
+
+        SourceMap { filename, source, line_boundaries, end_line_col }
+    }
+
+    pub fn line_col(&self, offset: usize) -> (usize, usize)
+    {
+        let mut line_start = 0;
+        for (line, &byte_pos) in self.line_boundaries.iter().enumerate()
+        {
+            if byte_pos > offset
+            {
+                let col = offset - line_start + 1;
+                let line = line + 1;
+                return (line, col)
+            }
+            line_start = byte_pos;
+        }
+        self.end_line_col
+    }
+}
+
+
+pub type SourceInfoPtr = Arc<SourceInfo>;
 
 
 #[derive(Debug)]
@@ -15,7 +65,7 @@ pub struct SourceInfo
 
 impl SourceInfo
 {
-    pub fn new(source: &str, filename: Option<&str>) -> SourceMap
+    pub fn new(source: &str, filename: Option<&str>) -> SourceInfoPtr
     {
         let filename = filename.map(str::to_owned);
         let source = source.to_owned();
@@ -43,7 +93,7 @@ pub struct SourceLoc
 {
     pub line: usize,
     pub col: usize,
-    pub info: SourceMap,
+    pub info: SourceInfoPtr,
     pub width: usize,
 }
 

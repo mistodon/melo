@@ -209,15 +209,18 @@ impl ParsingError
         expected: String,
     ) -> ParsingError
     {
-        let text = token.span.1.to_owned();
-        let text = if text.trim().is_empty()
-        {
-            token.token.readable_type().into()
-        }
-        else
-        {
-            text
-        };
+//         TODO(claire): Reinstate this once we have source maps.
+//         let text = token.span.1.to_owned();
+//         let text = if text.trim().is_empty()
+//         {
+//             token.token.readable_type().into()
+//         }
+//         else
+//         {
+//             text
+//         };
+
+        let text = token.token.readable_type().into();
 
         ParsingError {
             loc: token.loc.clone(),

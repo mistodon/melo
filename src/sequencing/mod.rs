@@ -4,14 +4,14 @@ pub mod error;
 
 use self::data::*;
 use self::error::{ErrorType, SequencingError};
-use error::SourceMap;
+use error::SourceInfoPtr;
 use parsing::data::*;
 use trust::Trust;
 
 
 pub fn sequence_pieces<'a>(
     parse_tree: &ParseTree<'a>,
-    _source_map: &SourceMap,
+    _source_map: &SourceInfoPtr,
 ) -> Result<Vec<Piece<'a>>, SequencingError>
 {
     use notes::lcm;

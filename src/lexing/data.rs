@@ -5,12 +5,12 @@ use error::SourceLoc;
 pub struct MetaToken<'a>
 {
     pub token: Token<'a>,
-    pub span: Span<'a>,
+    pub span: Span,
     pub loc: SourceLoc,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct Span<'a>(pub usize, pub &'a str);
+pub struct Span(pub usize, pub usize);
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Token<'a>

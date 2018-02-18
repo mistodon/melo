@@ -4,13 +4,13 @@ pub mod data;
 use self::data::*;
 
 
-use error::SourceMap;
+use error::SourceInfoPtr;
 use sequencing::data::*;
 
 
 pub fn generate_midi(
     piece: &Piece,
-    _source_map: &SourceMap,
+    _source_map: &SourceInfoPtr,
     options: &MidiGenerationOptions,
 ) -> Option<Vec<u8>>
 {

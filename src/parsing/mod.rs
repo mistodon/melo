@@ -5,7 +5,7 @@ pub mod error;
 use self::data::*;
 use self::error::{ErrorType, ParsingError};
 
-use error::SourceMap;
+use error::SourceInfoPtr;
 use lexing::data::*;
 use lexing::data::Token::*;
 use notes::Midi;
@@ -38,7 +38,7 @@ where
 
 pub fn parse<'a>(
     tokens: &'a [MetaToken<'a>],
-    _source_map: &SourceMap,
+    _source_map: &SourceInfoPtr,
 ) -> Result<ParseTree<'a>, ParsingError>
 {
     assert_eq!(

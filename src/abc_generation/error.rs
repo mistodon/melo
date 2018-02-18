@@ -1,11 +1,11 @@
-use error::{self, SourceLoc, SourceMap};
+use error::{self, SourceLoc, SourceInfoPtr};
 use std::fmt::{Display, Error, Formatter};
 
 
 #[derive(Debug, Fail)]
 pub struct AbcGenerationError
 {
-    pub info: Option<SourceMap>,
+    pub info: Option<SourceInfoPtr>,
     pub error: ErrorType,
 }
 
@@ -27,7 +27,7 @@ pub enum ErrorType
 }
 
 
-pub fn fmt_err(error: Error, info: Option<SourceMap>) -> AbcGenerationError
+pub fn fmt_err(error: Error, info: Option<SourceInfoPtr>) -> AbcGenerationError
 {
     AbcGenerationError {
         info,

@@ -2,7 +2,7 @@ pub mod error;
 
 
 use self::error::{AbcGenerationError, ErrorType};
-use error::SourceMap;
+use error::SourceInfoPtr;
 use sequencing::data::*;
 use trust::Trust;
 
@@ -33,7 +33,7 @@ fn div_tuplet(notes_per_beat: u32) -> (u32, u32)
 
 pub fn generate_abc(
     pieces: &[Piece],
-    source_map: &SourceMap,
+    source_map: &SourceInfoPtr,
 ) -> Result<String, AbcGenerationError>
 {
     use self::error::fmt_err;
@@ -105,7 +105,7 @@ fn write_bars(
     stave_notes: &[Note],
     beats_per_bar: u32,
     divisions_per_bar: u32,
-    source_map: Option<&SourceMap>,
+    source_map: Option<&SourceInfoPtr>,
     debug_bar_info: Option<&[DebugBarInfo]>,
 ) -> Result<String, AbcGenerationError>
 {

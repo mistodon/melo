@@ -5,7 +5,7 @@ pub mod error;
 use self::data::*;
 use self::error::{ErrorType, LexingError};
 
-use error::{SourceInfo, SourceLoc, SourceMap};
+use error::{SourceMap, SourceInfo, SourceLoc, SourceInfoPtr};
 use regex::Regex;
 use trust::Trust;
 
@@ -69,11 +69,12 @@ enum Context
 pub fn lex<'a>(
     source: &'a str,
     filename: Option<&str>,
-) -> Result<(Vec<MetaToken<'a>>, SourceMap), LexingError>
+    source_map: &SourceMap,
+) -> Result<(Vec<MetaToken<'a>>, SourceInfoPtr), LexingError>
 {
     use self::Token::*;
 
-    let source_map = SourceInfo::new(source, filename);
+    let source_info = SourceInfo::new(source, filename);
 
     let mut tokens = Vec::new();
 
@@ -120,12 +121,12 @@ pub fn lex<'a>(
         let (&group_name, m) = group.trust();
         let text = m.as_str();
         let text_len = text.len();
-        let span = Span(m.start(), text);
+        let span = Span(m.start(), m.end());
         let (line, col) = line_col_at(source, m.start());
         let loc = SourceLoc {
             line,
             col,
-            info: source_map.clone(),
+            info: source_info.clone(),
             width: text_len,
         };
 
@@ -210,12 +211,13 @@ pub fn lex<'a>(
                     let (&group_name, m) = group.trust();
                     let text = m.as_str();
                     let start = start + m.start();
-                    let span = Span(start, text);
+                    let end = start + m.end();
+                    let span = Span(start, end);
                     let (line, col) = line_col_at(source, start);
                     let loc = SourceLoc {
                         line,
                         col,
-                        info: source_map.clone(),
+                        info: source_info.clone(),
                         width: text.len(),
                     };
 
@@ -335,16 +337,16 @@ pub fn lex<'a>(
     let (line, col) = line_col_at(source, source.len());
     tokens.push(MetaToken {
         token: EOF,
-        span: Span(source.len(), ""),
+        span: Span(source.len(), source.len()),
         loc: SourceLoc {
             line,
             col,
-            info: source_map.clone(),
+            info: source_info.clone(),
             width: 1,
         },
     });
 
-    Ok((tokens, source_map))
+    Ok((tokens, source_info))
 }
 
 
