@@ -74,7 +74,8 @@ pub fn generate_abc(
 
             if let Some(volume) = voice.volume
             {
-                let volume = (volume * 127.0).round() as u8;
+                // Using +0.5 instead of round for wasm compatibility.
+                let volume = ((volume * 127.0) + 0.5) as u8;
                 writeln!(buffer, "%%MIDI control 7 {}", volume)
                     .map_err(|e| fmt_err(e, Some(source_map.clone())))?;
             }

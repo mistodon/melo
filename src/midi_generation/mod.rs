@@ -51,7 +51,8 @@ pub fn generate_midi(
 
         for voice in &piece.voices
         {
-            let volume = (voice.volume.unwrap_or(1.0) * 127.0).round() as u8;
+            // Using +0.5 instead of round for wasm compatibility.
+            let volume = ((voice.volume.unwrap_or(1.0) * 127.0) + 0.5) as u8;
 
             let mut events = vec![
                 TrackEvent {
