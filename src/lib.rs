@@ -25,7 +25,7 @@ mod trust;
 mod test_helpers;
 
 
-use failure::Error;
+pub use failure::Error;
 pub use midi_generation::data::MidiGenerationOptions;
 
 
