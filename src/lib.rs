@@ -25,6 +25,7 @@ mod trust;
 mod test_helpers;
 
 
+pub use error::colors;
 pub use failure::Error;
 pub use midi_generation::data::MidiGenerationOptions;
 
@@ -51,10 +52,12 @@ pub fn compile_to_midi(
     let parse_tree = parsing::parse(&tokens, &source_map)?;
     let pieces = sequencing::sequence_pieces(&parse_tree, &source_map)?;
     let midi = midi_generation::generate_midi(
-        pieces.get(0).ok_or(failure::err_msg("No pieces found"))?,
+        pieces
+            .get(0)
+            .ok_or_else(|| failure::err_msg("No pieces found"))?,
         &source_map,
         options,
-    ).ok_or(failure::err_msg("Compilation to MIDI failed!"))?;
+    ).ok_or_else(|| failure::err_msg("Compilation to MIDI failed!"))?;
 
     Ok(midi)
 }

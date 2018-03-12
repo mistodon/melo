@@ -2,6 +2,75 @@ use std::fmt::{Error, Formatter};
 use std::sync::Arc;
 
 
+pub mod colors
+{
+    pub use self::inner::*;
+    use ansi_term::Style;
+
+    const DEFAULTSTYLE: Style = Style {
+        foreground: None,
+        background: None,
+        is_bold: false,
+        is_dimmed: false,
+        is_italic: false,
+        is_underline: false,
+        is_blink: false,
+        is_reverse: false,
+        is_hidden: false,
+        is_strikethrough: false,
+    };
+
+    #[cfg(feature = "color")]
+    mod inner
+    {
+        use super::*;
+        use ansi_term::Colour;
+
+        pub const RED: Style = Style {
+            foreground: Some(Colour::Fixed(9)),
+            is_bold: true,
+            ..DEFAULTSTYLE
+        };
+
+        pub const YELLOW: Style = Style {
+            foreground: Some(Colour::Fixed(11)),
+            is_bold: true,
+            ..DEFAULTSTYLE
+        };
+
+        pub const BLUE: Style = Style {
+            foreground: Some(Colour::Fixed(12)),
+            is_bold: true,
+            ..DEFAULTSTYLE
+        };
+
+        pub const CYAN: Style = Style {
+            foreground: Some(Colour::Fixed(14)),
+            is_bold: true,
+            ..DEFAULTSTYLE
+        };
+
+        pub const WHITE: Style = Style {
+            foreground: Some(Colour::Fixed(15)),
+            is_bold: true,
+            ..DEFAULTSTYLE
+        };
+    }
+
+    #[cfg(not(feature = "color"))]
+    mod inner
+    {
+        use super::*;
+
+        pub const RED: Style = DEFAULTSTYLE;
+        pub const YELLOW: Style = DEFAULTSTYLE;
+        pub const BLUE: Style = DEFAULTSTYLE;
+        pub const CYAN: Style = DEFAULTSTYLE;
+        pub const WHITE: Style = DEFAULTSTYLE;
+    }
+}
+
+
 pub type SourceMap = Arc<SourceInfo>;
 
 
@@ -82,11 +151,7 @@ pub fn fmt_error(
     width: usize,
 ) -> Result<(), Error>
 {
-    use ansi_term::Color;
-
-    let red = Color::Fixed(9).bold();
-    let blue = Color::Fixed(12).bold();
-    let white = Color::Fixed(15).bold();
+    use self::colors::{BLUE, RED, WHITE};
 
     let line_prefix = format!("{} |    ", line);
     let underline = format!(
@@ -99,33 +164,29 @@ pub fn fmt_error(
     writeln!(
         f,
         "{}: {}\n   {}: {}:{}:{}\n\n{}{}\n{}",
-        red.paint("error"),
-        white.paint(message),
-        blue.paint("in"),
+        RED.paint("error"),
+        WHITE.paint(message),
+        BLUE.paint("in"),
         filename,
         line,
         col,
-        blue.paint(line_prefix),
+        BLUE.paint(line_prefix),
         context,
-        red.paint(underline)
+        RED.paint(underline)
     )
 }
 
 pub fn fmt_simple_error(f: &mut Formatter, message: &str, filename: &str)
     -> Result<(), Error>
 {
-    use ansi_term::Color;
-
-    let red = Color::Fixed(9).bold();
-    let blue = Color::Fixed(12).bold();
-    let white = Color::Fixed(15).bold();
+    use self::colors::{BLUE, RED, WHITE};
 
     writeln!(
         f,
         "{}: {}\n   {}: {}",
-        red.paint("error"),
-        white.paint(message),
-        blue.paint("in"),
+        RED.paint("error"),
+        WHITE.paint(message),
+        BLUE.paint("in"),
         filename,
     )
 }

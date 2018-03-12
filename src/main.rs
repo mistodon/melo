@@ -10,10 +10,11 @@ extern crate structopt_derive;
 
 use std::path::Path;
 
-use ansi_term::Color;
+use ansi_term::Style;
 use failure::Error;
 
 use melo::MidiGenerationOptions;
+use melo::colors::{CYAN, RED, WHITE, YELLOW};
 
 
 #[derive(Debug, StructOpt)]
@@ -82,16 +83,12 @@ enum MeloCommand
 #[derive(Debug, StructOpt)]
 enum RefCommand
 {
-    #[structopt(name = "notes", about = "View information about valid notes.")] Notes,
+    #[structopt(name = "notes", about = "View information about valid notes.")]
+    Notes,
 
     #[structopt(name = "instruments", about = "View the program numbers for GM instruments.")]
     Instruments,
 }
-
-
-const RED: Color = Color::Fixed(9);
-const YELLOW: Color = Color::Fixed(11);
-const CYAN: Color = Color::Fixed(14);
 
 
 fn main()
@@ -109,13 +106,9 @@ fn main()
 }
 
 
-
-fn log(color: Color, prefix: &str, message: &str)
+fn log(color: Style, prefix: &str, message: &str)
 {
-    let white = Color::Fixed(15).bold();
-    let color = color.bold();
-
-    eprintln!("{} {}", color.paint(prefix), white.paint(message));
+    eprintln!("{} {}", color.paint(prefix), WHITE.paint(message));
 }
 
 
@@ -151,7 +144,11 @@ fn run_command(command: MeloCommand) -> Result<(), Error>
             }
         }
 
-        MeloCommand::Play { input, ticks_per_beat, abcmidi } =>
+        MeloCommand::Play {
+            input,
+            ticks_per_beat,
+            abcmidi,
+        } =>
         {
             let mid_out = Temp::new_file()?;
 
@@ -178,11 +175,18 @@ fn run_command(command: MeloCommand) -> Result<(), Error>
             let command_output = match command_output
             {
                 Ok(x) => x,
-                Err(e) => {
-                    log(RED, "error:", &format!(
+                Err(e) =>
+                {
+                    log(
+                        RED,
+                        "error:",
+                        &format!(
                             "Failed to run external command {:?}.\n\
-                            You can change the command used to play MIDI files by setting \
-                            the `MELO_MIDI_PLAYER` environment variable.", midi_player_command));
+                             You can change the command used to play MIDI files by setting \
+                             the `MELO_MIDI_PLAYER` environment variable.",
+                            midi_player_command
+                        ),
+                    );
                     return Err(e.into())
                 }
             };
@@ -317,7 +321,11 @@ where
     P: AsRef<Path>,
 {
     log(CYAN, "Compiling", "to abc ...");
-    log(YELLOW, "warning:", "Compilation to abc is deprecated and will be removed soon.\n");
+    log(
+        YELLOW,
+        "warning:",
+        "Compilation to abc is deprecated and will be removed soon.\n",
+    );
 
     let source = read_input(input.as_ref())?;
     let filename = input.as_ref().map(|s| s.as_ref());
@@ -329,7 +337,10 @@ where
 }
 
 
-fn compile_to_midi<P>(input: &Option<P>, options: &MidiGenerationOptions) -> Result<Vec<u8>, Error>
+fn compile_to_midi<P>(
+    input: &Option<P>,
+    options: &MidiGenerationOptions,
+) -> Result<Vec<u8>, Error>
 where
     P: AsRef<Path>,
 {
