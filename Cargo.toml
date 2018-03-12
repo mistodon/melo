@@ -29,6 +29,7 @@ structopt-derive = { version = "~0.1.6", optional = true }
 pretty_assertions = "~0.4.1"
 
 [features]
-default = ["cli"]
+default = ["cli", "color"]
 cli = ["mktemp", "structopt", "structopt-derive"]
+color = []
 

@@ -35,4 +35,3 @@ test_abc!(simple_melody);
 test_abc!(complex_melody);
 test_abc!(longer_melody);
 test_abc!(fifths);
-
