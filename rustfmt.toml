@@ -1,0 +1,6 @@
+unstable_features = true
+blank_lines_upper_bound = 2
+control_brace_style = "ClosingNextLine"
+imports_indent = "Block"
+max_width = 95
+reorder_imports_in_group = true
