@@ -1,5 +1,7 @@
+use std::fmt::{Display, Result, Formatter, Write};
+
 use error::{self, SourceLoc};
-use std::fmt::{Display, Error, Formatter};
+use formatting::{MultiFormat, StyleType};
 
 
 #[derive(Debug, Fail, PartialEq, Eq)]
@@ -20,9 +22,9 @@ pub enum ErrorType
 }
 
 
-impl Display for LexingError
+impl<'a> MultiFormat<StyleType<'a>> for LexingError
 {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error>
+    fn multi_fmt<W: Write>(&self, f: &mut W, style_type: &StyleType) -> Result
     {
         use self::ErrorType::*;
 
@@ -34,8 +36,9 @@ impl Display for LexingError
             }
         };
 
-        error::fmt_error(
+        error::fmt_error_multi(
             f,
+            style_type,
             &error_message,
             self.loc.info.filename(),
             self.loc.cause_line(),
@@ -43,5 +46,13 @@ impl Display for LexingError
             self.loc.col,
             self.loc.width,
         )
+    }
+}
+
+impl Display for LexingError
+{
+    fn fmt(&self, f: &mut Formatter) -> Result
+    {
+        self.multi_fmt(f, &StyleType::Normal)
     }
 }

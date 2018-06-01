@@ -11,8 +11,9 @@ extern crate ansi_term;
 extern crate regex;
 extern crate rimd;
 
-
+pub mod formatting;
 pub mod notes;
+
 mod abc_generation;
 mod error;
 mod lexing;
@@ -21,9 +22,7 @@ mod parsing;
 mod sequencing;
 mod trust;
 
-#[cfg(test)]
-mod test_helpers;
-
+#[cfg(test)] mod test_helpers;
 
 pub use error::colors;
 pub use failure::Error;

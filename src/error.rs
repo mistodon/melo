@@ -1,5 +1,7 @@
-use std::fmt::{Error, Formatter};
+use std::fmt::{Result, Formatter, Write};
 use std::sync::Arc;
+
+use formatting::{self, StyleType, Style};
 
 
 pub mod colors
@@ -149,7 +151,7 @@ pub fn fmt_error(
     line: usize,
     col: usize,
     width: usize,
-) -> Result<(), Error>
+) -> Result
 {
     use self::colors::{BLUE, RED, WHITE};
 
@@ -176,8 +178,43 @@ pub fn fmt_error(
     )
 }
 
+
+pub fn fmt_error_multi<W: Write>(
+    f: &mut W,
+    style_type: &StyleType,
+    message: &str,
+    filename: &str,
+    context: &str,
+    line: usize,
+    col: usize,
+    width: usize,
+) -> Result
+{
+    let line_prefix = format!("{} |    ", line);
+    let underline = format!(
+        "{: >indent$}{}",
+        "",
+        "^".repeat(width),
+        indent = col + line_prefix.len() - 1
+    );
+
+    writeln!(
+        f,
+        "{}: {}\n   {}: {}:{}:{}\n\n{}{}\n{}",
+        formatting::paint("error", Style::Red, style_type)?,
+        formatting::paint(message, Style::White, style_type)?,
+        formatting::paint("in", Style::Blue, style_type)?,
+        filename,
+        line,
+        col,
+        formatting::paint(&line_prefix, Style::Blue, style_type)?,
+        context,
+        formatting::paint(&underline, Style::Red, style_type)?,
+    )
+}
+
 pub fn fmt_simple_error(f: &mut Formatter, message: &str, filename: &str)
-    -> Result<(), Error>
+    -> Result
 {
     use self::colors::{BLUE, RED, WHITE};
 
