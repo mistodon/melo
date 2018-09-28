@@ -1,35 +1,23 @@
 use error::{self, SourceLoc};
 use std::fmt::{Display, Error, Formatter};
 
-
 #[derive(Debug, Fail, PartialEq, Eq)]
-pub struct LexingError
-{
+pub struct LexingError {
     pub loc: SourceLoc,
     pub error: ErrorType,
 }
 
-
 #[derive(Debug, PartialEq, Eq)]
-pub enum ErrorType
-{
-    UnexpectedCharacter
-    {
-        text: String, context: &'static str
-    },
+pub enum ErrorType {
+    UnexpectedCharacter { text: String, context: &'static str },
 }
 
-
-impl Display for LexingError
-{
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error>
-    {
+impl Display for LexingError {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         use self::ErrorType::*;
 
-        let error_message = match self.error
-        {
-            UnexpectedCharacter { ref text, context } =>
-            {
+        let error_message = match self.error {
+            UnexpectedCharacter { ref text, context } => {
                 format!("Unexpected character `{}` in {}.", text, context)
             }
         };

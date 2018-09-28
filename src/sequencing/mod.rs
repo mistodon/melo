@@ -1,37 +1,30 @@
 pub mod data;
 pub mod error;
 
-
 use self::data::*;
 use self::error::{ErrorType, SequencingError};
 use error::SourceMap;
 use parsing::data::*;
 use trust::Trust;
 
-
 pub fn sequence_pieces<'a>(
     parse_tree: &ParseTree<'a>,
     _source_map: &SourceMap,
-) -> Result<Vec<Piece<'a>>, SequencingError>
-{
+) -> Result<Vec<Piece<'a>>, SequencingError> {
     use notes::lcm;
 
     let mut pieces = Vec::new();
 
-    for piece_node in &parse_tree.pieces
-    {
+    for piece_node in &parse_tree.pieces {
         // validation
         {
-            for play in &piece_node.plays
-            {
+            for play in &piece_node.plays {
                 let matched = piece_node
                     .voices
                     .iter()
                     .any(|voice| Some(voice.name) == play.voice);
-                if !matched
-                {
-                    let error = match play.voice
-                    {
+                if !matched {
+                    let error = match play.voice {
                         Some(voice_name) => ErrorType::UndeclaredVoice {
                             voice_name: voice_name.to_owned(),
                         },
@@ -41,7 +34,7 @@ pub fn sequence_pieces<'a>(
                     return Err(SequencingError {
                         loc: play.error_loc.as_ref().trust().clone(),
                         error,
-                    })
+                    });
                 }
             }
         }
@@ -61,8 +54,7 @@ pub fn sequence_pieces<'a>(
 
         let mut voices = Vec::new();
 
-        for voice_node in &piece_node.voices
-        {
+        for voice_node in &piece_node.voices {
             let Voice {
                 channel,
                 program,
@@ -82,55 +74,42 @@ pub fn sequence_pieces<'a>(
                 .filter(|play| play.voice == Some(name))
                 .flat_map(|play| {
                     play.staves.iter().flat_map(|stave| {
-                        stave.bars.iter().map(|bar_type| match *bar_type
-                        {
-                            BarTypeNode::Bar(ref bar) =>
-                            {
+                        stave.bars.iter().map(|bar_type| match *bar_type {
+                            BarTypeNode::Bar(ref bar) => {
                                 bar.notes.iter().map(|note| note.length()).sum()
                             }
                             BarTypeNode::RepeatBar => 1,
                         })
                     })
-                })
-                .fold(1, lcm);
+                }).fold(1, lcm);
 
             let mut notes: Vec<Note> = Vec::new();
             let mut debug_bar_info: Vec<DebugBarInfo> = Vec::new();
 
-
-            for play_node in &piece_node.plays
-            {
-                if play_node.voice != Some(name)
-                {
-                    continue
+            for play_node in &piece_node.plays {
+                if play_node.voice != Some(name) {
+                    continue;
                 }
 
-                for stave_node in &play_node.staves
-                {
+                for stave_node in &play_node.staves {
                     let mut previous_note_exists = false;
 
-                    for (index, bar_node) in stave_node.bars.iter().enumerate()
-                    {
+                    for (index, bar_node) in stave_node.bars.iter().enumerate() {
                         let mut cursor = index as u32 * divisions_per_bar;
 
-                        let bar_node = match *bar_node
-                        {
+                        let bar_node = match *bar_node {
                             BarTypeNode::Bar(ref bar) => bar,
-                            BarTypeNode::RepeatBar =>
-                            {
+                            BarTypeNode::RepeatBar => {
                                 previous_note_exists = false;
 
                                 let mut previous_bar = None;
                                 let mut previous_index = index;
-                                while previous_index > 0
-                                {
+                                while previous_index > 0 {
                                     previous_index -= 1;
-                                    match stave_node.bars[previous_index]
-                                    {
-                                        BarTypeNode::Bar(ref bar) =>
-                                        {
+                                    match stave_node.bars[previous_index] {
+                                        BarTypeNode::Bar(ref bar) => {
                                             previous_bar = Some(bar);
-                                            break
+                                            break;
                                         }
                                         BarTypeNode::RepeatBar => (),
                                     }
@@ -155,27 +134,21 @@ pub fn sequence_pieces<'a>(
                         assert!(divisions_per_bar % bar_node_length == 0);
                         let note_scale = divisions_per_bar / bar_node_length;
 
-                        for (note_index, &note_node) in bar_node.notes.iter().enumerate()
-                        {
-                            match note_node
-                            {
-                                NoteNode::Rest { length } =>
-                                {
+                        for (note_index, &note_node) in bar_node.notes.iter().enumerate() {
+                            match note_node {
+                                NoteNode::Rest { length } => {
                                     previous_note_exists = false;
                                     cursor += note_scale * u32::from(length);
                                 }
-                                NoteNode::Extension { length } =>
-                                {
-                                    if previous_note_exists
-                                    {
+                                NoteNode::Extension { length } => {
+                                    if previous_note_exists {
                                         let previous_note = notes.last_mut().trust();
                                         previous_note.length += note_scale * u32::from(length);
                                     }
 
                                     cursor += note_scale * u32::from(length);
                                 }
-                                NoteNode::Note { midi, length } =>
-                                {
+                                NoteNode::Note { midi, length } => {
                                     previous_note_exists = true;
 
                                     let midi =
@@ -234,33 +207,27 @@ pub fn sequence_pieces<'a>(
     Ok(pieces)
 }
 
-
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use super::*;
     use lexing;
     use parsing;
     use test_helpers::midi;
 
-
-    fn sequence_test(source: &str, expected: Piece)
-    {
+    fn sequence_test(source: &str, expected: Piece) {
         let (tokens, source_map) = lexing::lex(source, None).expect("ERROR IN LEXER");
         let parse_tree = parsing::parse(&tokens, &source_map).expect("ERROR IN PARSER");
         let piece = &sequence_pieces(&parse_tree, &source_map).unwrap()[0];
         assert_eq!(piece, &expected);
     }
 
-    fn sequence_test_fail(source: &str)
-    {
+    fn sequence_test_fail(source: &str) {
         let (tokens, source_map) = lexing::lex(source, None).expect("ERROR IN LEXER");
         let parse_tree = parsing::parse(&tokens, &source_map).expect("ERROR IN PARSER");
         assert!(sequence_pieces(&parse_tree, &source_map).is_err());
     }
 
-    fn voice_test(source: &str, expected_notes: Vec<Note>)
-    {
+    fn voice_test(source: &str, expected_notes: Vec<Note>) {
         let (tokens, source_map) = lexing::lex(source, None).expect("ERROR IN LEXER");
         let parse_tree = parsing::parse(&tokens, &source_map).expect("ERROR IN PARSER");
         let piece = &sequence_pieces(&parse_tree, &source_map).unwrap()[0];
@@ -268,14 +235,12 @@ mod tests
     }
 
     #[test]
-    fn sequence_empty_piece()
-    {
+    fn sequence_empty_piece() {
         sequence_test("", Piece::default());
     }
 
     #[test]
-    fn piece_with_attributes()
-    {
+    fn piece_with_attributes() {
         sequence_test(
             "piece { title: One, composer: Two, tempo: 3, beats: 4 }",
             Piece {
@@ -289,46 +254,38 @@ mod tests
     }
 
     #[test]
-    fn piece_with_empty_voice()
-    {
+    fn piece_with_empty_voice() {
         sequence_test(
             "voice Empty { }",
             Piece {
-                voices: vec![
-                    Voice {
-                        name: "Empty",
-                        ..Default::default()
-                    },
-                ],
+                voices: vec![Voice {
+                    name: "Empty",
+                    ..Default::default()
+                }],
                 ..Default::default()
             },
         );
     }
 
     #[test]
-    fn voice_with_mismatched_play()
-    {
+    fn voice_with_mismatched_play() {
         sequence_test_fail("voice OneNote { } play Different { :| C }");
     }
 
     #[test]
-    fn voice_with_single_note()
-    {
+    fn voice_with_single_note() {
         voice_test(
             "voice OneNote { } play OneNote { :| C }",
-            vec![
-                Note {
-                    midi: midi(60),
-                    length: 1,
-                    position: 0,
-                },
-            ],
+            vec![Note {
+                midi: midi(60),
+                length: 1,
+                position: 0,
+            }],
         );
     }
 
     #[test]
-    fn voice_with_two_notes()
-    {
+    fn voice_with_two_notes() {
         voice_test(
             "voice TwoNote { } play TwoNote { :| C G }",
             vec![
@@ -347,8 +304,7 @@ mod tests
     }
 
     #[test]
-    fn voice_with_two_staves()
-    {
+    fn voice_with_two_staves() {
         voice_test(
             "voice Diad { } play Diad { :| C ; :| G }",
             vec![
@@ -367,8 +323,7 @@ mod tests
     }
 
     #[test]
-    fn threes_against_twos()
-    {
+    fn threes_against_twos() {
         voice_test(
             "voice Diad { } play Diad { :| C E G ; :| c g }",
             vec![
@@ -402,14 +357,12 @@ mod tests
     }
 
     #[test]
-    fn fail_when_notes_moved_out_of_range()
-    {
+    fn fail_when_notes_moved_out_of_range() {
         sequence_test_fail("voice V { octave: 1} play V { :| g#'''}");
     }
 
     #[test]
-    fn voice_with_note_lengths()
-    {
+    fn voice_with_note_lengths() {
         voice_test(
             "voice A { } play A { :| C4 -2 G2 }",
             vec![
@@ -428,8 +381,7 @@ mod tests
     }
 
     #[test]
-    fn voice_with_dots()
-    {
+    fn voice_with_dots() {
         voice_test(
             "voice A { } play A { :| A..B C... .8 }",
             vec![
@@ -453,8 +405,7 @@ mod tests
     }
 
     #[test]
-    fn voice_with_leading_dots()
-    {
+    fn voice_with_leading_dots() {
         voice_test(
             "voice A { } play A { :| ...C E... G... -... }",
             vec![
@@ -478,8 +429,7 @@ mod tests
     }
 
     #[test]
-    fn dots_do_not_carry_across_staves()
-    {
+    fn dots_do_not_carry_across_staves() {
         voice_test(
             "voice A { } play A { :| CEGc | ; :| ...g }",
             vec![
@@ -513,8 +463,7 @@ mod tests
     }
 
     #[test]
-    fn notes_can_be_tied_across_bars()
-    {
+    fn notes_can_be_tied_across_bars() {
         voice_test(
             "voice A {} play A { :| CEG. | ..EC }",
             vec![
@@ -548,8 +497,7 @@ mod tests
     }
 
     #[test]
-    fn repeat_bars()
-    {
+    fn repeat_bars() {
         voice_test(
             "voice A {} play A { :| A C | % | }",
             vec![
@@ -578,8 +526,7 @@ mod tests
     }
 
     #[test]
-    fn repeat_bars_twice()
-    {
+    fn repeat_bars_twice() {
         voice_test(
             "voice A {} play A { :| A C | % | % | }",
             vec![
@@ -618,8 +565,7 @@ mod tests
     }
 
     #[test]
-    fn fail_first_bar_repeat()
-    {
+    fn fail_first_bar_repeat() {
         sequence_test_fail("voice A {} play A { :| % | }");
     }
 }

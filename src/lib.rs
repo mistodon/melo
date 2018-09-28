@@ -11,12 +11,11 @@ extern crate ansi_term;
 extern crate regex;
 extern crate rimd;
 
-
-pub mod notes;
 mod abc_generation;
 mod error;
 mod lexing;
 mod midi_generation;
+pub mod notes;
 mod parsing;
 mod sequencing;
 mod trust;
@@ -24,15 +23,12 @@ mod trust;
 #[cfg(test)]
 mod test_helpers;
 
-
 pub use error::colors;
 pub use failure::Error;
 pub use midi_generation::data::MidiGenerationOptions;
 
-
 #[deprecated]
-pub fn compile_to_abc(input: &str, filename: Option<&str>) -> Result<String, Error>
-{
+pub fn compile_to_abc(input: &str, filename: Option<&str>) -> Result<String, Error> {
     let (tokens, source_map) = lexing::lex(input, filename)?;
     let parse_tree = parsing::parse(&tokens, &source_map)?;
     let pieces = sequencing::sequence_pieces(&parse_tree, &source_map)?;
@@ -41,13 +37,11 @@ pub fn compile_to_abc(input: &str, filename: Option<&str>) -> Result<String, Err
     Ok(abc)
 }
 
-
 pub fn compile_to_midi(
     input: &str,
     filename: Option<&str>,
     options: &MidiGenerationOptions,
-) -> Result<Vec<u8>, Error>
-{
+) -> Result<Vec<u8>, Error> {
     let (tokens, source_map) = lexing::lex(input, filename)?;
     let parse_tree = parsing::parse(&tokens, &source_map)?;
     let pieces = sequencing::sequence_pieces(&parse_tree, &source_map)?;

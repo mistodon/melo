@@ -2,18 +2,24 @@
 
 extern crate melo;
 
-
-macro_rules! test_piece
-{
+macro_rules! test_piece {
     ($test_name: ident) => {
         #[test]
-        fn $test_name()
-        {
-            let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/pieces/", stringify!($test_name), ".melo"));
-            let filename = concat!(env!("CARGO_MANIFEST_DIR"), "/pieces/", stringify!($test_name), ".melo");
+        fn $test_name() {
+            let source = include_str!(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/pieces/",
+                stringify!($test_name),
+                ".melo"
+            ));
+            let filename = concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/pieces/",
+                stringify!($test_name),
+                ".melo"
+            );
 
-            match melo::compile_to_abc(source, Some(filename))
-            {
+            match melo::compile_to_abc(source, Some(filename)) {
                 Ok(_) => (),
                 Err(err) => {
                     eprintln!("{}", err);
@@ -21,9 +27,8 @@ macro_rules! test_piece
                 }
             }
         }
-    }
+    };
 }
-
 
 test_piece!(minimal_melody);
 test_piece!(minimal_drums);

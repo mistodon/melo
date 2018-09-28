@@ -1,19 +1,15 @@
 pub mod data;
 
-
 use self::data::*;
-
 
 use error::SourceMap;
 use sequencing::data::*;
-
 
 pub fn generate_midi(
     piece: &Piece,
     _source_map: &SourceMap,
     options: &MidiGenerationOptions,
-) -> Option<Vec<u8>>
-{
+) -> Option<Vec<u8>> {
     use rimd::*;
 
     let smf = {
@@ -49,8 +45,7 @@ pub fn generate_midi(
 
         let mut tracks = vec![track0];
 
-        for voice in &piece.voices
-        {
+        for voice in &piece.voices {
             // Using +0.5 instead of round for wasm compatibility.
             let volume = ((voice.volume.unwrap_or(1.0) * 127.0) + 0.5) as u8;
 
@@ -68,39 +63,28 @@ pub fn generate_midi(
                 },
                 TrackEvent {
                     vtime: 0,
-                    event: Event::Midi(MidiMessage::control_change(
-                        7,
-                        volume,
-                        voice.channel - 1,
-                    )),
+                    event: Event::Midi(MidiMessage::control_change(7, volume, voice.channel - 1)),
                 },
             ];
 
             let split_notes = {
                 let mut split_notes = Vec::new();
 
-                for note in &voice.notes
-                {
+                for note in &voice.notes {
                     let midi_note = note.midi.midi() as u8;
                     let ticks_per_bar = options.ticks_per_beat as u64 * piece.beats;
-                    let ticks_per_division =
-                        ticks_per_bar / u64::from(voice.divisions_per_bar);
+                    let ticks_per_division = ticks_per_bar / u64::from(voice.divisions_per_bar);
                     let pos_ticks = ticks_per_division * u64::from(note.position);
                     let len_ticks = ticks_per_division * u64::from(note.length);
                     let vel = {
                         let divisions_per_beat = voice.divisions_per_bar / piece.beats as u32;
                         let divisions_per_beat = ::std::cmp::max(divisions_per_beat, 1);
 
-                        if note.position % voice.divisions_per_bar == 0
-                        {
+                        if note.position % voice.divisions_per_bar == 0 {
                             VEL_FIRST
-                        }
-                        else if note.position % divisions_per_beat == 0
-                        {
+                        } else if note.position % divisions_per_beat == 0 {
                             VEL_STRONG
-                        }
-                        else
-                        {
+                        } else {
                             VEL_WEAK
                         }
                     };
@@ -118,17 +102,13 @@ pub fn generate_midi(
             };
 
             let mut cursor = 0;
-            for note in split_notes
-            {
+            for note in split_notes {
                 let (on, midi_note, pos_ticks, vel) = note;
                 let vtime = pos_ticks - cursor;
                 let message = {
-                    if on
-                    {
+                    if on {
                         MidiMessage::note_on(midi_note, vel, voice.channel - 1)
-                    }
-                    else
-                    {
+                    } else {
                         MidiMessage::note_off(midi_note, vel, voice.channel - 1)
                     }
                 };

@@ -1,10 +1,8 @@
 use error::SourceLoc;
 use notes::Midi;
 
-
 #[derive(Debug, PartialEq)]
-pub struct Piece<'a>
-{
+pub struct Piece<'a> {
     pub title: Option<&'a str>,
     pub composer: Option<&'a str>,
     pub tempo: u64,
@@ -13,10 +11,8 @@ pub struct Piece<'a>
     pub voices: Vec<Voice<'a>>,
 }
 
-impl<'a> Default for Piece<'a>
-{
-    fn default() -> Self
-    {
+impl<'a> Default for Piece<'a> {
+    fn default() -> Self {
         Piece {
             title: None,
             composer: None,
@@ -28,8 +24,7 @@ impl<'a> Default for Piece<'a>
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Voice<'a>
-{
+pub struct Voice<'a> {
     pub name: &'a str,
     pub channel: u8,
     pub program: u8,
@@ -40,10 +35,8 @@ pub struct Voice<'a>
     pub debug_bar_info: Vec<DebugBarInfo>,
 }
 
-impl<'a> Default for Voice<'a>
-{
-    fn default() -> Self
-    {
+impl<'a> Default for Voice<'a> {
+    fn default() -> Self {
         Voice {
             name: "error",
             channel: 1,
@@ -58,16 +51,14 @@ impl<'a> Default for Voice<'a>
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct Note
-{
+pub struct Note {
     pub position: u32,
     pub length: u32,
     pub midi: Midi,
 }
 
 #[derive(Debug, PartialEq)]
-pub struct DebugBarInfo
-{
+pub struct DebugBarInfo {
     pub loc: SourceLoc,
     pub divisions_in_source: u32,
 }
