@@ -81,9 +81,9 @@ pub enum NoteNode
 impl NoteNode
 {
     // TODO(claire): This is an inelegant way to have a common field.
-    pub fn length(&self) -> u32
+    pub fn length(self) -> u32
     {
-        match *self
+        match self
         {
             NoteNode::Rest { length }
             | NoteNode::Extension { length }

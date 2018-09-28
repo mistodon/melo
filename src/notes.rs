@@ -58,12 +58,12 @@ pub struct Midi(i8);
 
 impl Midi
 {
-    pub fn midi(&self) -> i8
+    pub fn midi(self) -> i8
     {
         self.0
     }
 
-    pub fn transposed(&self, semitones: i8) -> Option<Midi>
+    pub fn transposed(self, semitones: i8) -> Option<Midi>
     {
         let midi = self.0.checked_add(semitones)?;
         if midi >= 0
@@ -135,17 +135,17 @@ impl Midi
         }
     }
 
-    pub fn to_abc(&self) -> &'static str
+    pub fn to_abc(self) -> &'static str
     {
         ABC_NOTES[self.0 as usize]
     }
 
-    pub fn to_sharp(&self) -> &'static str
+    pub fn to_sharp(self) -> &'static str
     {
         MELO_SHARPS[self.0 as usize]
     }
 
-    pub fn to_flat(&self) -> &'static str
+    pub fn to_flat(self) -> &'static str
     {
         MELO_FLATS[self.0 as usize]
     }
