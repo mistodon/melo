@@ -1,44 +1,29 @@
 use error::{self, SourceLoc};
 use std::fmt::{Display, Error, Formatter};
 
-
 #[derive(Debug, Fail, PartialEq, Eq)]
-pub struct SequencingError
-{
+pub struct SequencingError {
     pub loc: SourceLoc,
     pub error: ErrorType,
 }
 
-
 #[derive(Debug, PartialEq, Eq)]
-pub enum ErrorType
-{
-    InvalidNote
-    {
-        octave_offset: i8,
-    },
+pub enum ErrorType {
+    InvalidNote { octave_offset: i8 },
 
-    UndeclaredVoice
-    {
-        voice_name: String,
-    },
+    UndeclaredVoice { voice_name: String },
 
     VoicelessPlayBlock,
 
     NothingToRepeat,
 }
 
-
-impl Display for SequencingError
-{
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error>
-    {
+impl Display for SequencingError {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         use self::ErrorType::*;
 
-        let error_message = match self.error
-        {
-            InvalidNote { octave_offset } =>
-            {
+        let error_message = match self.error {
+            InvalidNote { octave_offset } => {
                 use notes::{MAX_SHARP, MIN_SHARP};
 
                 let dir = if octave_offset <= 0 { "down" } else { "up" };
@@ -52,8 +37,7 @@ impl Display for SequencingError
                         MAX_SHARP)
             }
 
-            UndeclaredVoice { ref voice_name } =>
-            {
+            UndeclaredVoice { ref voice_name } => {
                 format!("No voice named `{}` was declared.", voice_name)
             }
 

@@ -1,9 +1,7 @@
 use notes::Midi;
 use parsing::data::*;
 
-
-pub fn stave(prefix: &str, notes: Vec<Vec<NoteNode>>) -> StaveNode
-{
+pub fn stave(prefix: &str, notes: Vec<Vec<NoteNode>>) -> StaveNode {
     use std::borrow::Cow;
 
     StaveNode {
@@ -15,14 +13,11 @@ pub fn stave(prefix: &str, notes: Vec<Vec<NoteNode>>) -> StaveNode
                     notes: bar,
                     note_locs: Vec::new(),
                 })
-            })
-            .collect(),
+            }).collect(),
         bar_locs: Vec::new(),
     }
 }
 
-
-pub fn midi(num: i8) -> Midi
-{
+pub fn midi(num: i8) -> Midi {
     Midi::from_raw(num).unwrap()
 }

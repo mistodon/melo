@@ -1,7 +1,6 @@
 pub mod data;
 pub mod error;
 
-
 use self::data::*;
 use self::error::{ErrorType, LexingError};
 
@@ -9,68 +8,61 @@ use error::{SourceInfo, SourceLoc, SourceMap};
 use regex::Regex;
 use trust::Trust;
 
-
 // TODO(claire): This code assumes that a newline is a single byte
-fn line_col_at(source: &str, position: usize) -> (usize, usize)
-{
+fn line_col_at(source: &str, position: usize) -> (usize, usize) {
     let mut bytes = 0;
-    for (line_no, line) in source.lines().enumerate()
-    {
-        if position >= bytes && position < bytes + line.len() + 1
-        {
+    for (line_no, line) in source.lines().enumerate() {
+        if position >= bytes && position < bytes + line.len() + 1 {
             let col = position - bytes;
-            return (line_no + 1, col + 1)
+            return (line_no + 1, col + 1);
         }
         bytes += line.len() + 1;
     }
     (1, source.len())
 }
 
-
-lazy_static!
-{
-    static ref STRUCTURE_REGEX: Regex = Regex::new("\
-        (?P<keyword>part|piece|play|section|voice)|\
-        (?P<key>([a-zA-Z_][a-zA-Z0-9_#,'=\\-]*\\s*|:)?:)|\
-        (?P<ident>[a-zA-Z_][a-zA-Z0-9_ ]*)|\
-        (?P<string>\"((\\\\\")|[^\"])*\")|\
-        (?P<number>[+\\-]?\\d+)|\
-        (?P<delim>[{},])|\
-        (?P<staveline>\\|([^;}\n]*))|\
-        (?P<comment>//[^\n]*)|\
-        (?P<blank>\n\\s*\n)|\
-        (?P<newline>\n)|\
-        (?P<whitespace>([\t ]|;)+)|\
-        (?P<error>.)\
-        ").trust();
-
-    static ref MUSIC_REGEX: Regex = Regex::new("\
-        (?P<note>[a-gA-G][=_\\#]*[,']*)|\
-        (?P<part>\\*[a-zA-Z_][a-zA-Z0-9_]*)|\
-        (?P<symbol>[\\.\\-x\"%])|\
-        (?P<number>\\d+)|\
-        (?P<barline>\\|)|\
-        (?P<comment>//[^\n]*)|\
-        (?P<whitespace>([\t ]|;)+)|\
-        (?P<error>.)\
-        ").trust();
+lazy_static! {
+    static ref STRUCTURE_REGEX: Regex = Regex::new(
+        "\
+         (?P<keyword>part|piece|play|section|voice)|\
+         (?P<key>([a-zA-Z_][a-zA-Z0-9_#,'=\\-]*\\s*|:)?:)|\
+         (?P<ident>[a-zA-Z_][a-zA-Z0-9_ ]*)|\
+         (?P<string>\"((\\\\\")|[^\"])*\")|\
+         (?P<number>[+\\-]?\\d+)|\
+         (?P<delim>[{},])|\
+         (?P<staveline>\\|([^;}\n]*))|\
+         (?P<comment>//[^\n]*)|\
+         (?P<blank>\n\\s*\n)|\
+         (?P<newline>\n)|\
+         (?P<whitespace>([\t ]|;)+)|\
+         (?P<error>.)\
+         "
+    ).trust();
+    static ref MUSIC_REGEX: Regex = Regex::new(
+        "\
+         (?P<note>[a-gA-G][=_\\#]*[,']*)|\
+         (?P<part>\\*[a-zA-Z_][a-zA-Z0-9_]*)|\
+         (?P<symbol>[\\.\\-x\"%])|\
+         (?P<number>\\d+)|\
+         (?P<barline>\\|)|\
+         (?P<comment>//[^\n]*)|\
+         (?P<whitespace>([\t ]|;)+)|\
+         (?P<error>.)\
+         "
+    ).trust();
 }
 
-
 #[derive(Debug)]
-enum Context
-{
+enum Context {
     Normal,
     InAttribute,
     InStave,
 }
 
-
 pub fn lex<'a>(
     source: &'a str,
     filename: Option<&str>,
-) -> Result<(Vec<MetaToken<'a>>, SourceMap), LexingError>
-{
+) -> Result<(Vec<MetaToken<'a>>, SourceMap), LexingError> {
     use self::Token::*;
 
     let source_map = SourceInfo::new(source, filename);
@@ -105,14 +97,11 @@ pub fn lex<'a>(
 
     let mut context = Context::Normal;
 
-    for capture in STRUCTURE_REGEX.captures_iter(source)
-    {
+    for capture in STRUCTURE_REGEX.captures_iter(source) {
         let mut group = None;
 
-        for group_name in CAPTURE_PRIORITIES
-        {
-            if let Some(m) = capture.name(group_name)
-            {
+        for group_name in CAPTURE_PRIORITIES {
+            if let Some(m) = capture.name(group_name) {
                 group = group.or_else(|| Some((group_name, m)));
             }
         }
@@ -129,12 +118,9 @@ pub fn lex<'a>(
             width: text_len,
         };
 
-        match group_name
-        {
-            "keyword" =>
-            {
-                let token = match text
-                {
+        match group_name {
+            "keyword" => {
+                let token = match text {
                     "piece" => Piece,
                     "voice" => Voice,
                     "part" => Part,
@@ -145,8 +131,7 @@ pub fn lex<'a>(
 
                 tokens.push(MetaToken { token, span, loc });
             }
-            "key" =>
-            {
+            "key" => {
                 tokens.push(MetaToken {
                     token: Key(text[..(text_len - 1)].trim()),
                     span,
@@ -155,8 +140,7 @@ pub fn lex<'a>(
 
                 context = Context::InAttribute;
             }
-            "ident" =>
-            {
+            "ident" => {
                 tokens.push(MetaToken {
                     token: Ident(text.trim()),
                     span,
@@ -168,8 +152,7 @@ pub fn lex<'a>(
                 span,
                 loc,
             }),
-            "number" =>
-            {
+            "number" => {
                 let number = text.parse().trust();
                 tokens.push(MetaToken {
                     token: Num(number),
@@ -177,10 +160,8 @@ pub fn lex<'a>(
                     loc,
                 });
             }
-            "delim" =>
-            {
-                let token = match text
-                {
+            "delim" => {
+                let token = match text {
                     "{" => LeftBrace,
                     "}" => RightBrace,
                     "," => Comma,
@@ -190,19 +171,15 @@ pub fn lex<'a>(
 
                 context = Context::Normal;
             }
-            "staveline" =>
-            {
+            "staveline" => {
                 context = Context::InStave;
                 let start = span.0;
 
-                for capture in MUSIC_REGEX.captures_iter(text)
-                {
+                for capture in MUSIC_REGEX.captures_iter(text) {
                     let mut group = None;
 
-                    for group_name in STAVE_CAPTURE_PRIORITIES
-                    {
-                        if let Some(m) = capture.name(group_name)
-                        {
+                    for group_name in STAVE_CAPTURE_PRIORITIES {
+                        if let Some(m) = capture.name(group_name) {
                             group = group.or_else(|| Some((group_name, m)));
                         }
                     }
@@ -219,8 +196,7 @@ pub fn lex<'a>(
                         width: text.len(),
                     };
 
-                    match group_name
-                    {
+                    match group_name {
                         "note" => tokens.push(MetaToken {
                             token: Note(text),
                             span,
@@ -236,10 +212,8 @@ pub fn lex<'a>(
                             span,
                             loc,
                         }),
-                        "symbol" =>
-                        {
-                            let token = match text
-                            {
+                        "symbol" => {
+                            let token = match text {
                                 "-" => Rest,
                                 "x" => Hit,
                                 "\"" => Ditto,
@@ -249,8 +223,7 @@ pub fn lex<'a>(
                             };
                             tokens.push(MetaToken { token, span, loc });
                         }
-                        "number" =>
-                        {
+                        "number" => {
                             let number = text.parse::<i64>().trust();
                             tokens.push(MetaToken {
                                 token: Num(number),
@@ -259,8 +232,7 @@ pub fn lex<'a>(
                             });
                         }
                         "whitespace" | "comment" => (),
-                        "error" =>
-                        {
+                        "error" => {
                             return Err(LexingError {
                                 loc,
                                 error: ErrorType::UnexpectedCharacter {
@@ -273,10 +245,8 @@ pub fn lex<'a>(
                     }
                 }
             }
-            "blank" =>
-            {
-                match context
-                {
+            "blank" => {
+                match context {
                     Context::InAttribute => tokens.push(MetaToken {
                         token: Comma,
                         span,
@@ -298,10 +268,8 @@ pub fn lex<'a>(
 
                 context = Context::Normal;
             }
-            "newline" =>
-            {
-                match context
-                {
+            "newline" => {
+                match context {
                     Context::InAttribute => tokens.push(MetaToken {
                         token: Comma,
                         span,
@@ -318,8 +286,7 @@ pub fn lex<'a>(
                 context = Context::Normal;
             }
             "whitespace" | "comment" => (),
-            "error" =>
-            {
+            "error" => {
                 return Err(LexingError {
                     loc,
                     error: ErrorType::UnexpectedCharacter {
@@ -347,16 +314,12 @@ pub fn lex<'a>(
     Ok((tokens, source_map))
 }
 
-
 #[cfg(test)]
-mod tests
-{
-    use super::*;
+mod tests {
     use super::Token::*;
+    use super::*;
 
-
-    fn lextest(source: &str, mut result: Vec<Token>)
-    {
+    fn lextest(source: &str, mut result: Vec<Token>) {
         result.push(EOF);
         assert_eq!(
             lex(source, None)
@@ -370,14 +333,12 @@ mod tests
     }
 
     #[test]
-    fn empty_file()
-    {
+    fn empty_file() {
         lextest("", vec![]);
     }
 
     #[test]
-    fn invalid_tokens()
-    {
+    fn invalid_tokens() {
         assert_eq!(
             lex("@", None).unwrap_err().error,
             ErrorType::UnexpectedCharacter {
@@ -388,8 +349,7 @@ mod tests
     }
 
     #[test]
-    fn invalid_tokens_in_stave()
-    {
+    fn invalid_tokens_in_stave() {
         assert_eq!(
             lex("   :|{}|", None).unwrap_err().error,
             ErrorType::UnexpectedCharacter {
@@ -400,38 +360,32 @@ mod tests
     }
 
     #[test]
-    fn lex_piece()
-    {
+    fn lex_piece() {
         lextest("piece{}", vec![Piece, LeftBrace, RightBrace])
     }
 
     #[test]
-    fn lex_section()
-    {
+    fn lex_section() {
         lextest("section {}", vec![Section, LeftBrace, RightBrace])
     }
 
     #[test]
-    fn lex_voice()
-    {
+    fn lex_voice() {
         lextest("voice {}", vec![Voice, LeftBrace, RightBrace])
     }
 
     #[test]
-    fn lex_part()
-    {
+    fn lex_part() {
         lextest("part {}", vec![Part, LeftBrace, RightBrace])
     }
 
     #[test]
-    fn lex_play()
-    {
+    fn lex_play() {
         lextest("play {}", vec![Play, LeftBrace, RightBrace])
     }
 
     #[test]
-    fn comments_ignored()
-    {
+    fn comments_ignored() {
         lextest(
             "// This is a piece\npiece{}",
             vec![Piece, LeftBrace, RightBrace],
@@ -439,14 +393,12 @@ mod tests
     }
 
     #[test]
-    fn insignificant_whitespace_ignored()
-    {
+    fn insignificant_whitespace_ignored() {
         lextest("piece {\n}", vec![Piece, LeftBrace, RightBrace])
     }
 
     #[test]
-    fn lex_name()
-    {
+    fn lex_name() {
         lextest(
             "piece Heroine {}",
             vec![Piece, Ident("Heroine"), LeftBrace, RightBrace],
@@ -454,8 +406,7 @@ mod tests
     }
 
     #[test]
-    fn lex_quoted_name()
-    {
+    fn lex_quoted_name() {
         lextest(
             r#"piece "Lust for Life" {}"#,
             vec![Piece, Str("Lust for Life"), LeftBrace, RightBrace],
@@ -463,8 +414,7 @@ mod tests
     }
 
     #[test]
-    fn lex_name_with_spaces()
-    {
+    fn lex_name_with_spaces() {
         lextest(
             r#"piece Lust for Life {}"#,
             vec![Piece, Ident("Lust for Life"), LeftBrace, RightBrace],
@@ -472,8 +422,7 @@ mod tests
     }
 
     #[test]
-    fn lex_quoted_name_with_quotes_in_it()
-    {
+    fn lex_quoted_name_with_quotes_in_it() {
         lextest(
             r#"piece "\"Lust\" for \"Life\"" {}"#,
             vec![
@@ -486,20 +435,17 @@ mod tests
     }
 
     #[test]
-    fn lex_empty_key()
-    {
+    fn lex_empty_key() {
         lextest("{ : A }", vec![LeftBrace, Key(""), Ident("A"), RightBrace]);
     }
 
     #[test]
-    fn lex_all_staves_key()
-    {
+    fn lex_all_staves_key() {
         lextest(":: | -", vec![Key(":"), Barline, Rest]);
     }
 
     #[test]
-    fn lex_field_in_block()
-    {
+    fn lex_field_in_block() {
         lextest(
             r#"piece LFL { title: "Party Girl" }"#,
             vec![
@@ -514,8 +460,7 @@ mod tests
     }
 
     #[test]
-    fn lex_ridiculous_field_name()
-    {
+    fn lex_ridiculous_field_name() {
         lextest(
             r#"piece LFL { F#_=,,''   : "Party Girl" }"#,
             vec![
@@ -530,8 +475,7 @@ mod tests
     }
 
     #[test]
-    fn lex_multiple_fields()
-    {
+    fn lex_multiple_fields() {
         lextest(
             "{ drums, name: drum_voice }",
             vec![
@@ -546,8 +490,7 @@ mod tests
     }
 
     #[test]
-    fn lex_numbers()
-    {
+    fn lex_numbers() {
         lextest(
             "{ channel: 0, octave: -1 }",
             vec![
@@ -563,8 +506,7 @@ mod tests
     }
 
     #[test]
-    fn lex_blank_lines()
-    {
+    fn lex_blank_lines() {
         lextest(
             "{ a: 0,\n\nb: 1 }",
             vec![
@@ -581,14 +523,12 @@ mod tests
     }
 
     #[test]
-    fn lex_note()
-    {
+    fn lex_note() {
         lextest(": | A", vec![Key(""), Barline, Note("A")]);
     }
 
     #[test]
-    fn lex_complex_notes()
-    {
+    fn lex_complex_notes() {
         lextest(
             ": | B#,,c_''d=",
             vec![Key(""), Barline, Note("B#,,"), Note("c_''"), Note("d=")],
@@ -596,8 +536,7 @@ mod tests
     }
 
     #[test]
-    fn lex_note_length()
-    {
+    fn lex_note_length() {
         lextest(
             ": | A... B4 | C.",
             vec![
@@ -617,8 +556,7 @@ mod tests
     }
 
     #[test]
-    fn lex_symbols()
-    {
+    fn lex_symbols() {
         lextest(
             "C : | x - x-| % | \" |",
             vec![
@@ -638,14 +576,12 @@ mod tests
     }
 
     #[test]
-    fn lex_play_part()
-    {
+    fn lex_play_part() {
         lextest(":| *Theme", vec![Key(""), Barline, PlayPart("Theme")]);
     }
 
     #[test]
-    fn semicolon_can_break_stave_within_one_line()
-    {
+    fn semicolon_can_break_stave_within_one_line() {
         lextest(
             "A:|x;B:|x;",
             vec![Key("A"), Barline, Hit, Key("B"), Barline, Hit],
@@ -653,8 +589,7 @@ mod tests
     }
 
     #[test]
-    fn right_brace_can_break_stave_within_one_line()
-    {
+    fn right_brace_can_break_stave_within_one_line() {
         lextest(
             "{ A:|x }",
             vec![LeftBrace, Key("A"), Barline, Hit, RightBrace],

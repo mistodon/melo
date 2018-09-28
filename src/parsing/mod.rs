@@ -1,22 +1,19 @@
 pub mod data;
 pub mod error;
 
-
 use self::data::*;
 use self::error::{ErrorType, ParsingError};
 
 use error::SourceMap;
-use lexing::data::*;
 use lexing::data::Token::*;
+use lexing::data::*;
 use notes::Midi;
 use std::borrow::Cow;
 use std::iter::Peekable;
 use std::slice::Iter;
 use trust::Trust;
 
-
 type TokenStream<'a> = Peekable<Iter<'a, MetaToken<'a>>>;
-
 
 fn error_swizzle<T, E>(results: Vec<Result<T, E>>) -> Result<Vec<T>, Vec<E>>
 where
@@ -25,22 +22,17 @@ where
 {
     let any_errors = results.iter().any(Result::is_err);
 
-    if any_errors
-    {
+    if any_errors {
         Err(results.into_iter().filter_map(Result::err).collect())
-    }
-    else
-    {
+    } else {
         Ok(results.into_iter().map(Result::unwrap).collect())
     }
 }
 
-
 pub fn parse<'a>(
     tokens: &'a [MetaToken<'a>],
     _source_map: &SourceMap,
-) -> Result<ParseTree<'a>, ParsingError>
-{
+) -> Result<ParseTree<'a>, ParsingError> {
     assert_eq!(
         tokens.last().map(|meta| meta.token),
         Some(EOF),
@@ -49,14 +41,11 @@ pub fn parse<'a>(
 
     let mut stream = tokens.iter().peekable();
 
-    let pieces = match stream.peek().trust().token
-    {
-        Piece =>
-        {
+    let pieces = match stream.peek().trust().token {
+        Piece => {
             let mut piece_results = Vec::new();
 
-            while stream.peek().trust().token != EOF
-            {
+            while stream.peek().trust().token != EOF {
                 piece_results.push(parse_piece(&mut stream));
             }
 
@@ -65,8 +54,7 @@ pub fn parse<'a>(
         _ => vec![parse_piece_from_body(&mut stream)?],
     };
 
-    match stream.next().trust()
-    {
+    match stream.next().trust() {
         meta if meta.token == EOF => Ok(ParseTree { pieces }),
         meta => Err(ParsingError::unexpected(
             meta,
@@ -76,19 +64,15 @@ pub fn parse<'a>(
     }
 }
 
-
 fn expect_token(
     stream: &mut TokenStream,
     token: Token,
     context: &'static str,
-) -> Result<(), ParsingError>
-{
+) -> Result<(), ParsingError> {
     let meta = *stream.peek().trust();
 
-    let result = match meta.token
-    {
-        EOF =>
-        {
+    let result = match meta.token {
+        EOF => {
             return Err(ParsingError::eof(
                 meta,
                 context,
@@ -108,27 +92,20 @@ fn expect_token(
     result
 }
 
-fn skip_token(stream: &mut TokenStream, token: Token) -> bool
-{
-    if stream.peek().trust().token == token
-    {
+fn skip_token(stream: &mut TokenStream, token: Token) -> bool {
+    if stream.peek().trust().token == token {
         stream.next();
         true
-    }
-    else
-    {
+    } else {
         false
     }
 }
 
-fn poison_scope(stream: &mut TokenStream, open_delim: Token, close_delim: Token)
-{
+fn poison_scope(stream: &mut TokenStream, open_delim: Token, close_delim: Token) {
     let mut nest = 1;
 
-    while nest > 0
-    {
-        match stream.peek().trust().token
-        {
+    while nest > 0 {
+        match stream.peek().trust().token {
             EOF => break,
             t if t == open_delim => nest += 1,
             t if t == close_delim => nest -= 1,
@@ -139,15 +116,12 @@ fn poison_scope(stream: &mut TokenStream, open_delim: Token, close_delim: Token)
     }
 }
 
-
-fn parse_piece<'a>(stream: &mut TokenStream<'a>) -> Result<PieceNode<'a>, ParsingError>
-{
+fn parse_piece<'a>(stream: &mut TokenStream<'a>) -> Result<PieceNode<'a>, ParsingError> {
     expect_token(stream, Piece, "in top-level of file")?;
     expect_token(stream, LeftBrace, "at `piece`")?;
 
     let piece_node = parse_piece_from_body(stream);
-    if piece_node.is_err()
-    {
+    if piece_node.is_err() {
         poison_scope(stream, LeftBrace, RightBrace);
     }
     let piece_node = piece_node?;
@@ -157,10 +131,7 @@ fn parse_piece<'a>(stream: &mut TokenStream<'a>) -> Result<PieceNode<'a>, Parsin
     Ok(piece_node)
 }
 
-fn parse_piece_from_body<'a>(
-    stream: &mut TokenStream<'a>,
-) -> Result<PieceNode<'a>, ParsingError>
-{
+fn parse_piece_from_body<'a>(stream: &mut TokenStream<'a>) -> Result<PieceNode<'a>, ParsingError> {
     let mut voice_results = Vec::new();
     let mut play_results = Vec::new();
     let mut title = None;
@@ -168,54 +139,37 @@ fn parse_piece_from_body<'a>(
     let mut beats = None;
     let mut tempo = None;
 
-    loop
-    {
+    loop {
         let meta = *stream.peek().trust();
-        match meta.token
-        {
+        match meta.token {
             EOF | RightBrace => break,
-            BlankLine =>
-            {
+            BlankLine => {
                 stream.next();
             }
-            Voice =>
-            {
+            Voice => {
                 let voice = parse_voice(stream);
-                if voice.is_err()
-                {
+                if voice.is_err() {
                     poison_scope(stream, LeftBrace, RightBrace);
                 }
                 voice_results.push(voice);
             }
-            Play =>
-            {
+            Play => {
                 let play = parse_play(stream);
-                if play.is_err()
-                {
+                if play.is_err() {
                     poison_scope(stream, LeftBrace, RightBrace);
                 }
                 play_results.push(play);
             }
-            _ =>
-            {
+            _ => {
                 let attribute_key = parse_attribute_key(stream, "in `piece`")?;
-                match attribute_key
-                {
+                match attribute_key {
                     Key("title") => title = Some(try_parse_name(stream, "after `title:`")?),
-                    Key("composer") =>
-                    {
+                    Key("composer") => {
                         composer = Some(try_parse_name(stream, "after `composer:`")?)
                     }
-                    Key("tempo") =>
-                    {
-                        tempo = Some(try_parse_num(stream, "after `tempo:`")? as u64)
-                    }
-                    Key("beats") =>
-                    {
-                        beats = Some(try_parse_num(stream, "after `beats:`")? as u64)
-                    }
-                    Key(key) | Ident(key) =>
-                    {
+                    Key("tempo") => tempo = Some(try_parse_num(stream, "after `tempo:`")? as u64),
+                    Key("beats") => beats = Some(try_parse_num(stream, "after `beats:`")? as u64),
+                    Key(key) | Ident(key) => {
                         return Err(ParsingError {
                             loc: meta.loc.clone(),
                             error: ErrorType::InvalidAttribute {
@@ -228,9 +182,8 @@ fn parse_piece_from_body<'a>(
                 }
 
                 let keep_finding_attributes = skip_token(stream, Comma);
-                if !keep_finding_attributes
-                {
-                    break
+                if !keep_finding_attributes {
+                    break;
                 }
             }
         }
@@ -252,11 +205,9 @@ fn parse_piece_from_body<'a>(
 fn parse_attribute_key<'a>(
     stream: &mut TokenStream<'a>,
     context: &'static str,
-) -> Result<Token<'a>, ParsingError>
-{
+) -> Result<Token<'a>, ParsingError> {
     let meta = stream.next().trust();
-    match meta.token
-    {
+    match meta.token {
         EOF => Err(ParsingError::eof(
             meta,
             context,
@@ -274,15 +225,12 @@ fn parse_attribute_key<'a>(
 fn try_parse_name<'a>(
     stream: &mut TokenStream<'a>,
     context: &'static str,
-) -> Result<&'a str, ParsingError>
-{
+) -> Result<&'a str, ParsingError> {
     let meta = *stream.peek().trust();
 
-    match meta.token
-    {
+    match meta.token {
         EOF => Err(ParsingError::eof(meta, context, "a name".to_owned())),
-        Ident(s) | Str(s) =>
-        {
+        Ident(s) | Str(s) => {
             stream.next();
             Ok(s)
         }
@@ -290,16 +238,12 @@ fn try_parse_name<'a>(
     }
 }
 
-fn try_parse_num(stream: &mut TokenStream, context: &'static str)
-    -> Result<i64, ParsingError>
-{
+fn try_parse_num(stream: &mut TokenStream, context: &'static str) -> Result<i64, ParsingError> {
     let meta = *stream.peek().trust();
 
-    match meta.token
-    {
+    match meta.token {
         EOF => Err(ParsingError::eof(meta, context, "a number".to_owned())),
-        Num(n) =>
-        {
+        Num(n) => {
             stream.next();
             Ok(n)
         }
@@ -311,8 +255,7 @@ fn try_parse_num(stream: &mut TokenStream, context: &'static str)
     }
 }
 
-fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, ParsingError>
-{
+fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, ParsingError> {
     expect_token(stream, Voice, "in `piece`")?;
 
     let name = try_parse_name(stream, "in `voice`")?;
@@ -323,38 +266,30 @@ fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, Parsin
 
     expect_token(stream, LeftBrace, "at `voice`")?;
 
-    loop
-    {
-        if skip_token(stream, RightBrace)
-        {
-            break
+    loop {
+        if skip_token(stream, RightBrace) {
+            break;
         }
 
         let meta = *stream.peek().trust();
 
         let attribute_key = parse_attribute_key(stream, "in `voice`")?;
 
-        match attribute_key
-        {
-            Ident("drums") =>
-            {
+        match attribute_key {
+            Ident("drums") => {
                 channel = Some(10);
                 transpose = Some(-24);
             }
             Key("channel") => channel = Some(try_parse_num(stream, "after `channel:`")? as u8),
             Key("program") => program = Some(try_parse_num(stream, "after `program:`")? as u8),
-            Key("octave") =>
-            {
+            Key("octave") => {
                 let octave = try_parse_num(stream, "after `octave:`")?;
                 let semitones = octave * 12;
-                match semitones
-                {
-                    semitones if -128 <= semitones && semitones <= 127 =>
-                    {
+                match semitones {
+                    semitones if -128 <= semitones && semitones <= 127 => {
                         transpose = Some(semitones as i8)
                     }
-                    _ =>
-                    {
+                    _ => {
                         return Err(ParsingError {
                             loc: meta.loc.clone(),
                             error: ErrorType::InvalidOctave { octave },
@@ -363,8 +298,7 @@ fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, Parsin
                 }
             }
             Key("volume") => volume = Some(try_parse_num(stream, "after `volume:`")? as u8),
-            Key(key) | Ident(key) =>
-            {
+            Key(key) | Ident(key) => {
                 return Err(ParsingError {
                     loc: meta.loc.clone(),
                     error: ErrorType::InvalidAttribute {
@@ -376,10 +310,9 @@ fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, Parsin
             _ => unreachable!(),
         }
 
-        if !skip_token(stream, Comma)
-        {
+        if !skip_token(stream, Comma) {
             expect_token(stream, RightBrace, "after `voice`")?;
-            break
+            break;
         }
     }
 
@@ -392,8 +325,7 @@ fn parse_voice<'a>(stream: &mut TokenStream<'a>) -> Result<VoiceNode<'a>, Parsin
     })
 }
 
-fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingError>
-{
+fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingError> {
     expect_token(stream, Play, "in `piece`")?;
 
     let error_loc = Some(stream.peek().trust().loc.clone());
@@ -406,45 +338,36 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
 
     expect_token(stream, LeftBrace, "at `play`")?;
 
-    loop
-    {
-        if skip_token(stream, RightBrace)
-        {
-            break
+    loop {
+        if skip_token(stream, RightBrace) {
+            break;
         }
 
         let meta = stream.next().trust();
 
-        match meta.token
-        {
-            EOF =>
-            {
+        match meta.token {
+            EOF => {
                 return Err(ParsingError::eof(
                     meta,
                     "in `play`",
                     "a stave prefix".to_owned(),
                 ))
             }
-            BlankLine =>
-            {
+            BlankLine => {
                 let already_have_some_staves = !staves.is_empty();
-                if already_have_some_staves
-                {
+                if already_have_some_staves {
                     allow_new_staves = false;
                     anonymous_stave_count = 0;
                 }
             }
-            Key(raw_prefix) =>
-            {
+            Key(raw_prefix) => {
                 let mut bar_loc = &stream.peek().trust().loc;
                 let mut next_bar_loc = bar_loc;
 
                 expect_token(stream, Barline, "after stave prefix")?;
 
-                let prefix = match raw_prefix
-                {
-                    "" =>
-                    {
+                let prefix = match raw_prefix {
+                    "" => {
                         let anonymous_prefix = format!("V{}", anonymous_stave_count);
                         anonymous_stave_count += 1;
                         Cow::Owned(anonymous_prefix)
@@ -461,59 +384,49 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
 
                     let stave_index = existing_stave.unwrap_or_else(|| staves.len());
 
-                    if existing_stave.is_none()
-                    {
-                        if allow_new_staves
-                        {
+                    if existing_stave.is_none() {
+                        if allow_new_staves {
                             staves.push(StaveNode {
                                 prefix,
                                 bars: Vec::new(),
                                 bar_locs: Vec::new(),
                             });
-                        }
-                        else
-                        {
+                        } else {
                             return Err(ParsingError {
                                 loc: meta.loc.clone(),
                                 error: ErrorType::UndeclaredStave {
                                     stave_prefix: raw_prefix.to_owned(),
                                 },
-                            })
+                            });
                         }
                     }
 
                     &mut staves[stave_index]
                 };
 
-
                 let stave_note = Midi::from_note(raw_prefix);
                 let mut bar = BarNode::default();
                 let mut bar_is_repeat = false;
 
-                loop
-                {
+                loop {
                     let mut bar_full = false;
                     let mut stave_full = false;
 
                     let meta = *stream.peek().trust();
 
-                    match meta.token
-                    {
-                        EOF =>
-                        {
+                    match meta.token {
+                        EOF => {
                             return Err(ParsingError::eof(
                                 meta,
                                 "in stave",
                                 "stave contents".to_owned(),
                             ))
                         }
-                        Rest =>
-                        {
+                        Rest => {
                             bar.notes.push(NoteNode::Rest { length: 1 });
                             bar.note_locs.push(meta.loc.clone());
                         }
-                        Hit =>
-                        {
+                        Hit => {
                             let midi = stave_note.ok_or_else(|| ParsingError {
                                 loc: meta.loc.clone(),
                                 error: ErrorType::InvalidHit {
@@ -523,8 +436,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                             bar.notes.push(NoteNode::Note { midi, length: 1 });
                             bar.note_locs.push(meta.loc.clone());
                         }
-                        Note(note) =>
-                        {
+                        Note(note) => {
                             let midi = Midi::from_note(note).ok_or_else(|| ParsingError {
                                 loc: meta.loc.clone(),
                                 error: ErrorType::InvalidNote {
@@ -534,19 +446,16 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                             bar.notes.push(NoteNode::Note { midi, length: 1 });
                             bar.note_locs.push(meta.loc.clone());
                         }
-                        ExtendNote =>
-                        {
+                        ExtendNote => {
                             bar.notes.push(NoteNode::Extension { length: 1 });
                             bar.note_locs.push(meta.loc.clone());
                         }
-                        Num(num) =>
-                        {
-                            if num <= 0 || num >= 255
-                            {
+                        Num(num) => {
+                            if num <= 0 || num >= 255 {
                                 return Err(ParsingError {
                                     loc: meta.loc.clone(),
                                     error: ErrorType::InvalidLength { length: num },
-                                })
+                                });
                             }
 
                             let previous_note = bar.notes.last_mut().ok_or(ParsingError {
@@ -554,34 +463,29 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                                 error: ErrorType::UnexpectedLength { length: num },
                             })?;
 
-                            match *previous_note
-                            {
+                            match *previous_note {
                                 NoteNode::Rest { ref mut length }
                                 | NoteNode::Extension { ref mut length }
                                 | NoteNode::Note { ref mut length, .. } => *length = num as u8,
                             }
                         }
-                        RepeatBar =>
-                        {
-                            if !bar.notes.is_empty()
-                            {
+                        RepeatBar => {
+                            if !bar.notes.is_empty() {
                                 return Err(ParsingError {
                                     loc: bar_loc.clone(),
                                     error: ErrorType::ExcessNotesInRepeatBar {
                                         placement: "before",
                                     },
-                                })
+                                });
                             }
                             bar_is_repeat = true;
                         }
-                        Barline =>
-                        {
+                        Barline => {
                             next_bar_loc = &meta.loc;
                             bar_full = true;
                         }
                         Key(_) | BlankLine | RightBrace => stave_full = true,
-                        _ =>
-                        {
+                        _ => {
                             return Err(ParsingError::unexpected(
                                 meta,
                                 "in stave",
@@ -590,27 +494,21 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                         }
                     }
 
-                    if bar_full || stave_full
-                    {
+                    if bar_full || stave_full {
                         let bar_is_nonempty = !bar.notes.is_empty();
 
-                        if bar_is_repeat || bar_is_nonempty
-                        {
-                            if bar_is_repeat
-                            {
-                                if bar_is_nonempty
-                                {
+                        if bar_is_repeat || bar_is_nonempty {
+                            if bar_is_repeat {
+                                if bar_is_nonempty {
                                     return Err(ParsingError {
                                         loc: bar_loc.clone(),
                                         error: ErrorType::ExcessNotesInRepeatBar {
                                             placement: "after",
                                         },
-                                    })
+                                    });
                                 }
                                 stave.bars.push(BarTypeNode::RepeatBar);
-                            }
-                            else
-                            {
+                            } else {
                                 let complete_bar =
                                     ::std::mem::replace(&mut bar, BarNode::default());
                                 stave.bars.push(BarTypeNode::Bar(complete_bar));
@@ -621,17 +519,15 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
                         }
                     }
 
-                    if stave_full
-                    {
-                        break
+                    if stave_full {
+                        break;
                     }
 
                     bar_loc = next_bar_loc;
                     stream.next();
                 }
             }
-            _ =>
-            {
+            _ => {
                 return Err(ParsingError::unexpected(
                     meta,
                     "in `play`",
@@ -648,29 +544,20 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
     })
 }
 
-
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use super::*;
     use test_helpers::{midi, stave};
 
-
     // TODO(claire): Clearly need a better way of carriaging errors
-    fn doctor(parse_tree: &mut ParseTree)
-    {
-        for piece in &mut parse_tree.pieces
-        {
-            for play in &mut piece.plays
-            {
+    fn doctor(parse_tree: &mut ParseTree) {
+        for piece in &mut parse_tree.pieces {
+            for play in &mut piece.plays {
                 play.error_loc = None;
 
-                for stave in &mut play.staves
-                {
-                    for bar in &mut stave.bars
-                    {
-                        if let &mut BarTypeNode::Bar(ref mut bar) = bar
-                        {
+                for stave in &mut play.staves {
+                    for bar in &mut stave.bars {
+                        if let &mut BarTypeNode::Bar(ref mut bar) = bar {
                             bar.note_locs.clear();
                         }
                     }
@@ -681,8 +568,7 @@ mod tests
         }
     }
 
-    fn parsetest(source: &str, expected: PieceNode)
-    {
+    fn parsetest(source: &str, expected: PieceNode) {
         use lexing;
 
         let (tokens, source_map) = lexing::lex(source, None).unwrap();
@@ -694,16 +580,14 @@ mod tests
         assert_eq!(result.pieces[0], expected);
     }
 
-    fn parsefailtest(source: &str)
-    {
+    fn parsefailtest(source: &str) {
         use lexing;
 
         let (tokens, source_map) = lexing::lex(source, None).unwrap();
         assert!(parse(&tokens, &source_map).is_err());
     }
 
-    fn multiparsetest(source: &str, expected: Vec<PieceNode>)
-    {
+    fn multiparsetest(source: &str, expected: Vec<PieceNode>) {
         use lexing;
 
         let (tokens, source_map) = lexing::lex(source, None).unwrap();
@@ -714,29 +598,24 @@ mod tests
         assert_eq!(result.pieces, expected);
     }
 
-
     #[test]
-    fn parse_empty_file()
-    {
+    fn parse_empty_file() {
         parsetest("", PieceNode::default());
     }
 
     #[test]
-    fn parse_empty_piece()
-    {
+    fn parse_empty_piece() {
         parsetest("piece {}", PieceNode::default());
     }
 
     #[test]
     #[should_panic]
-    fn parse_empty_piece_with_trailing_tokens_fails()
-    {
+    fn parse_empty_piece_with_trailing_tokens_fails() {
         parsetest("piece {}}", PieceNode::default());
     }
 
     #[test]
-    fn parse_multiple_empty_pieces()
-    {
+    fn parse_multiple_empty_pieces() {
         multiparsetest(
             "piece {} piece {}",
             vec![PieceNode::default(), PieceNode::default()],
@@ -744,8 +623,7 @@ mod tests
     }
 
     #[test]
-    fn parse_attributes_in_piece()
-    {
+    fn parse_attributes_in_piece() {
         parsetest(
             "title: \"The Title of the Piece\", composer: Claire, beats: 5, tempo: 123",
             PieceNode {
@@ -759,8 +637,7 @@ mod tests
     }
 
     #[test]
-    fn parse_attributes_with_trailing_comma()
-    {
+    fn parse_attributes_with_trailing_comma() {
         parsetest(
             "title: Title,",
             PieceNode {
@@ -771,8 +648,7 @@ mod tests
     }
 
     #[test]
-    fn parse_attributes_without_commas()
-    {
+    fn parse_attributes_without_commas() {
         parsetest(
             "title: Title\ncomposer: Composer\nbeats: 4",
             PieceNode {
@@ -785,463 +661,365 @@ mod tests
     }
 
     #[test]
-    fn fail_to_parse_invalid_attributes()
-    {
+    fn fail_to_parse_invalid_attributes() {
         parsefailtest("titel: Title,");
     }
 
     #[test]
-    fn parse_empty_voice()
-    {
+    fn parse_empty_voice() {
         parsetest(
             "voice Drums {}",
             PieceNode {
-                voices: vec![
-                    VoiceNode {
-                        name: "Drums",
-                        ..Default::default()
-                    },
-                ],
+                voices: vec![VoiceNode {
+                    name: "Drums",
+                    ..Default::default()
+                }],
                 ..Default::default()
             },
         )
     }
 
     #[test]
-    fn parse_voice_attributes()
-    {
+    fn parse_voice_attributes() {
         parsetest(
             "voice Lead { channel: 1, program: 0, octave: -2, volume: 99, }",
             PieceNode {
-                voices: vec![
-                    VoiceNode {
-                        name: "Lead",
-                        channel: Some(1),
-                        program: Some(0),
-                        transpose: Some(-24),
-                        volume: Some(99),
-                    },
-                ],
+                voices: vec![VoiceNode {
+                    name: "Lead",
+                    channel: Some(1),
+                    program: Some(0),
+                    transpose: Some(-24),
+                    volume: Some(99),
+                }],
                 ..Default::default()
             },
         )
     }
 
     #[test]
-    fn parse_valueless_attribute()
-    {
+    fn parse_valueless_attribute() {
         parsetest(
             "voice Drums { drums }",
             PieceNode {
-                voices: vec![
-                    VoiceNode {
-                        name: "Drums",
-                        channel: Some(10),
-                        transpose: Some(-24),
-                        ..Default::default()
-                    },
-                ],
+                voices: vec![VoiceNode {
+                    name: "Drums",
+                    channel: Some(10),
+                    transpose: Some(-24),
+                    ..Default::default()
+                }],
                 ..Default::default()
             },
         );
     }
 
     #[test]
-    fn parse_empty_play_node()
-    {
+    fn parse_empty_play_node() {
         parsetest(
             "play Drums {}",
             PieceNode {
-                plays: vec![
-                    PlayNode {
-                        voice: Some("Drums"),
-                        ..Default::default()
-                    },
-                ],
+                plays: vec![PlayNode {
+                    voice: Some("Drums"),
+                    ..Default::default()
+                }],
                 ..Default::default()
             },
         );
     }
 
     #[test]
-    fn parse_empty_voiceless_play_node()
-    {
+    fn parse_empty_voiceless_play_node() {
         parsetest(
             "play {}",
             PieceNode {
-                plays: vec![
-                    PlayNode {
-                        voice: None,
-                        ..Default::default()
-                    },
-                ],
+                plays: vec![PlayNode {
+                    voice: None,
+                    ..Default::default()
+                }],
                 ..Default::default()
             },
         );
     }
 
     #[test]
-    fn parse_play_node_with_stave()
-    {
+    fn parse_play_node_with_stave() {
         parsetest(
             "play { :| - }",
             PieceNode {
-                plays: vec![
-                    PlayNode {
-                        staves: vec![stave("V0", vec![vec![NoteNode::Rest { length: 1 }]])],
-                        ..Default::default()
-                    },
-                ],
+                plays: vec![PlayNode {
+                    staves: vec![stave("V0", vec![vec![NoteNode::Rest { length: 1 }]])],
+                    ..Default::default()
+                }],
                 ..Default::default()
             },
         );
     }
 
     #[test]
-    fn parse_play_node_with_extra_barlines()
-    {
+    fn parse_play_node_with_extra_barlines() {
         parsetest(
             "play { :|| - || }",
             PieceNode {
-                plays: vec![
-                    PlayNode {
-                        staves: vec![stave("V0", vec![vec![NoteNode::Rest { length: 1 }]])],
-                        ..Default::default()
-                    },
-                ],
+                plays: vec![PlayNode {
+                    staves: vec![stave("V0", vec![vec![NoteNode::Rest { length: 1 }]])],
+                    ..Default::default()
+                }],
                 ..Default::default()
             },
         );
     }
 
     #[test]
-    fn parse_play_node_with_two_staves()
-    {
+    fn parse_play_node_with_two_staves() {
         parsetest(
             "play { C:| - ; D:| - }",
             PieceNode {
-                plays: vec![
-                    PlayNode {
-                        staves: vec![
-                            stave("C", vec![vec![NoteNode::Rest { length: 1 }]]),
-                            stave("D", vec![vec![NoteNode::Rest { length: 1 }]]),
-                        ],
-                        ..Default::default()
-                    },
-                ],
+                plays: vec![PlayNode {
+                    staves: vec![
+                        stave("C", vec![vec![NoteNode::Rest { length: 1 }]]),
+                        stave("D", vec![vec![NoteNode::Rest { length: 1 }]]),
+                    ],
+                    ..Default::default()
+                }],
                 ..Default::default()
             },
         );
     }
 
     #[test]
-    fn parse_play_node_with_percussive_notes()
-    {
+    fn parse_play_node_with_percussive_notes() {
         parsetest(
             "play { C:| x }",
             PieceNode {
-                plays: vec![
-                    PlayNode {
-                        staves: vec![
-                            stave(
-                                "C",
-                                vec![
-                                    vec![
-                                        NoteNode::Note {
-                                            midi: midi(60),
-                                            length: 1,
-                                        },
-                                    ],
-                                ],
-                            ),
-                        ],
-                        ..Default::default()
-                    },
-                ],
+                plays: vec![PlayNode {
+                    staves: vec![stave(
+                        "C",
+                        vec![vec![NoteNode::Note {
+                            midi: midi(60),
+                            length: 1,
+                        }]],
+                    )],
+                    ..Default::default()
+                }],
                 ..Default::default()
             },
         );
     }
 
     #[test]
-    fn parse_play_node_with_melody_notes()
-    {
+    fn parse_play_node_with_melody_notes() {
         parsetest(
             "play { :| C D }",
             PieceNode {
-                plays: vec![
-                    PlayNode {
-                        staves: vec![
-                            stave(
-                                "V0",
-                                vec![
-                                    vec![
-                                        NoteNode::Note {
-                                            midi: midi(60),
-                                            length: 1,
-                                        },
-                                        NoteNode::Note {
-                                            midi: midi(62),
-                                            length: 1,
-                                        },
-                                    ],
-                                ],
-                            ),
-                        ],
-                        ..Default::default()
-                    },
-                ],
+                plays: vec![PlayNode {
+                    staves: vec![stave(
+                        "V0",
+                        vec![vec![
+                            NoteNode::Note {
+                                midi: midi(60),
+                                length: 1,
+                            },
+                            NoteNode::Note {
+                                midi: midi(62),
+                                length: 1,
+                            },
+                        ]],
+                    )],
+                    ..Default::default()
+                }],
                 ..Default::default()
             },
         );
     }
 
     #[test]
-    fn parse_stave_split_over_multiple_lines()
-    {
+    fn parse_stave_split_over_multiple_lines() {
         parsetest(
             "play { C:| x ; C:| x }",
             PieceNode {
-                plays: vec![
-                    PlayNode {
-                        staves: vec![
-                            stave(
-                                "C",
-                                vec![
-                                    vec![
-                                        NoteNode::Note {
-                                            midi: midi(60),
-                                            length: 1,
-                                        },
-                                    ],
-                                    vec![
-                                        NoteNode::Note {
-                                            midi: midi(60),
-                                            length: 1,
-                                        },
-                                    ],
-                                ],
-                            ),
+                plays: vec![PlayNode {
+                    staves: vec![stave(
+                        "C",
+                        vec![
+                            vec![NoteNode::Note {
+                                midi: midi(60),
+                                length: 1,
+                            }],
+                            vec![NoteNode::Note {
+                                midi: midi(60),
+                                length: 1,
+                            }],
                         ],
-                        ..Default::default()
-                    },
-                ],
+                    )],
+                    ..Default::default()
+                }],
                 ..Default::default()
             },
         );
     }
 
     #[test]
-    fn parse_multiple_concurrent_melody_lines()
-    {
+    fn parse_multiple_concurrent_melody_lines() {
         parsetest(
             "play { :| C ; :| G }",
             PieceNode {
-                plays: vec![
-                    PlayNode {
-                        staves: vec![
-                            stave(
-                                "V0",
-                                vec![
-                                    vec![
-                                        NoteNode::Note {
-                                            midi: midi(60),
-                                            length: 1,
-                                        },
-                                    ],
-                                ],
-                            ),
-                            stave(
-                                "V1",
-                                vec![
-                                    vec![
-                                        NoteNode::Note {
-                                            midi: midi(67),
-                                            length: 1,
-                                        },
-                                    ],
-                                ],
-                            ),
-                        ],
-                        ..Default::default()
-                    },
-                ],
+                plays: vec![PlayNode {
+                    staves: vec![
+                        stave(
+                            "V0",
+                            vec![vec![NoteNode::Note {
+                                midi: midi(60),
+                                length: 1,
+                            }]],
+                        ),
+                        stave(
+                            "V1",
+                            vec![vec![NoteNode::Note {
+                                midi: midi(67),
+                                length: 1,
+                            }]],
+                        ),
+                    ],
+                    ..Default::default()
+                }],
                 ..Default::default()
             },
         );
     }
 
     #[test]
-    fn parse_multiple_concurrent_melody_lines_broken_up_by_blank_line()
-    {
+    fn parse_multiple_concurrent_melody_lines_broken_up_by_blank_line() {
         parsetest(
             "play { :| C ; :| G\n\n:| G ; :| d }",
             PieceNode {
-                plays: vec![
-                    PlayNode {
-                        staves: vec![
-                            stave(
-                                "V0",
-                                vec![
-                                    vec![
-                                        NoteNode::Note {
-                                            midi: midi(60),
-                                            length: 1,
-                                        },
-                                    ],
-                                    vec![
-                                        NoteNode::Note {
-                                            midi: midi(67),
-                                            length: 1,
-                                        },
-                                    ],
-                                ],
-                            ),
-                            stave(
-                                "V1",
-                                vec![
-                                    vec![
-                                        NoteNode::Note {
-                                            midi: midi(67),
-                                            length: 1,
-                                        },
-                                    ],
-                                    vec![
-                                        NoteNode::Note {
-                                            midi: midi(74),
-                                            length: 1,
-                                        },
-                                    ],
-                                ],
-                            ),
-                        ],
-                        ..Default::default()
-                    },
-                ],
+                plays: vec![PlayNode {
+                    staves: vec![
+                        stave(
+                            "V0",
+                            vec![
+                                vec![NoteNode::Note {
+                                    midi: midi(60),
+                                    length: 1,
+                                }],
+                                vec![NoteNode::Note {
+                                    midi: midi(67),
+                                    length: 1,
+                                }],
+                            ],
+                        ),
+                        stave(
+                            "V1",
+                            vec![
+                                vec![NoteNode::Note {
+                                    midi: midi(67),
+                                    length: 1,
+                                }],
+                                vec![NoteNode::Note {
+                                    midi: midi(74),
+                                    length: 1,
+                                }],
+                            ],
+                        ),
+                    ],
+                    ..Default::default()
+                }],
                 ..Default::default()
             },
         );
     }
 
     #[test]
-    fn fail_parsing_too_many_staves_after_blank_line()
-    {
+    fn fail_parsing_too_many_staves_after_blank_line() {
         parsefailtest("play { :| C\n\n:| G ; :| d }");
     }
 
     #[test]
-    fn fail_when_hit_notes_are_encountered_in_incompatible_staves()
-    {
+    fn fail_when_hit_notes_are_encountered_in_incompatible_staves() {
         parsefailtest("play { :| x }");
     }
 
     #[test]
-    fn parse_note_with_length()
-    {
+    fn parse_note_with_length() {
         parsetest(
             "play { :| C4 }",
             PieceNode {
-                plays: vec![
-                    PlayNode {
-                        staves: vec![
-                            stave(
-                                "V0",
-                                vec![
-                                    vec![
-                                        NoteNode::Note {
-                                            midi: midi(60),
-                                            length: 4,
-                                        },
-                                    ],
-                                ],
-                            ),
-                        ],
-                        ..Default::default()
-                    },
-                ],
+                plays: vec![PlayNode {
+                    staves: vec![stave(
+                        "V0",
+                        vec![vec![NoteNode::Note {
+                            midi: midi(60),
+                            length: 4,
+                        }]],
+                    )],
+                    ..Default::default()
+                }],
                 ..Default::default()
             },
         )
     }
 
     #[test]
-    fn parse_rest_with_length()
-    {
+    fn parse_rest_with_length() {
         parsetest(
             "play { :| -4 }",
             PieceNode {
-                plays: vec![
-                    PlayNode {
-                        staves: vec![stave("V0", vec![vec![NoteNode::Rest { length: 4 }]])],
-                        ..Default::default()
-                    },
-                ],
+                plays: vec![PlayNode {
+                    staves: vec![stave("V0", vec![vec![NoteNode::Rest { length: 4 }]])],
+                    ..Default::default()
+                }],
                 ..Default::default()
             },
         )
     }
 
     #[test]
-    fn fail_on_unexpected_length()
-    {
+    fn fail_on_unexpected_length() {
         parsefailtest("play { :| 4 }");
     }
 
     #[test]
-    fn fail_on_overflowed_length()
-    {
+    fn fail_on_overflowed_length() {
         parsefailtest("play { :| -300 }");
     }
 
     #[test]
-    fn fail_on_underflowed_length()
-    {
+    fn fail_on_underflowed_length() {
         parsefailtest("play { :| -0 }");
     }
 
     #[test]
-    fn parse_repeat()
-    {
+    fn parse_repeat() {
         parsetest(
             "play { :| A | % | }",
             PieceNode {
-                plays: vec![
-                    PlayNode {
-                        staves: vec![
-                            StaveNode {
-                                prefix: "V0".into(),
-                                bars: vec![
-                                    BarTypeNode::Bar(BarNode {
-                                        notes: vec![
-                                            NoteNode::Note {
-                                                length: 1,
-                                                midi: Midi::from_raw(57).trust(),
-                                            },
-                                        ],
-                                        note_locs: Vec::new(),
-                                    }),
-                                    BarTypeNode::RepeatBar,
-                                ],
-                                ..Default::default()
-                            },
+                plays: vec![PlayNode {
+                    staves: vec![StaveNode {
+                        prefix: "V0".into(),
+                        bars: vec![
+                            BarTypeNode::Bar(BarNode {
+                                notes: vec![NoteNode::Note {
+                                    length: 1,
+                                    midi: Midi::from_raw(57).trust(),
+                                }],
+                                note_locs: Vec::new(),
+                            }),
+                            BarTypeNode::RepeatBar,
                         ],
                         ..Default::default()
-                    },
-                ],
+                    }],
+                    ..Default::default()
+                }],
                 ..Default::default()
             },
         )
     }
 
     #[test]
-    fn fail_when_notes_before_repeat_sign()
-    {
+    fn fail_when_notes_before_repeat_sign() {
         parsefailtest("play { :| A | A % }");
     }
 
     #[test]
-    fn fail_when_notes_after_repeat_sign()
-    {
+    fn fail_when_notes_after_repeat_sign() {
         parsefailtest("play { :| A | % A }");
     }
 }

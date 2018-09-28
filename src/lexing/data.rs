@@ -1,9 +1,7 @@
 use error::SourceLoc;
 
-
 #[derive(Debug, PartialEq, Eq)]
-pub struct MetaToken<'a>
-{
+pub struct MetaToken<'a> {
     pub token: Token<'a>,
     pub span: Span<'a>,
     pub loc: SourceLoc,
@@ -13,8 +11,7 @@ pub struct MetaToken<'a>
 pub struct Span<'a>(pub usize, pub &'a str);
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Token<'a>
-{
+pub enum Token<'a> {
     Piece,
     Voice,
     Section,
@@ -41,14 +38,11 @@ pub enum Token<'a>
     EOF,
 }
 
-impl<'a> Token<'a>
-{
-    pub fn readable_type(&self) -> &'static str
-    {
+impl<'a> Token<'a> {
+    pub fn readable_type(&self) -> &'static str {
         use self::Token::*;
 
-        match *self
-        {
+        match *self {
             Piece => "'piece'",
             Voice => "'voice'",
             Section => "'section'",

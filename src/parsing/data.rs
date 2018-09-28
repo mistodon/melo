@@ -2,16 +2,13 @@ use error::SourceLoc;
 use notes::Midi;
 use std::borrow::Cow;
 
-
 #[derive(Debug, PartialEq, Eq)]
-pub struct ParseTree<'a>
-{
+pub struct ParseTree<'a> {
     pub pieces: Vec<PieceNode<'a>>,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
-pub struct PieceNode<'a>
-{
+pub struct PieceNode<'a> {
     pub title: Option<&'a str>,
     pub composer: Option<&'a str>,
     pub tempo: Option<u64>,
@@ -22,8 +19,7 @@ pub struct PieceNode<'a>
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
-pub struct VoiceNode<'a>
-{
+pub struct VoiceNode<'a> {
     pub name: &'a str,
     pub program: Option<u8>,
     pub channel: Option<u8>,
@@ -32,59 +28,42 @@ pub struct VoiceNode<'a>
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
-pub struct PlayNode<'a>
-{
+pub struct PlayNode<'a> {
     pub voice: Option<&'a str>,
     pub staves: Vec<StaveNode<'a>>,
     pub error_loc: Option<SourceLoc>,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
-pub struct StaveNode<'a>
-{
+pub struct StaveNode<'a> {
     pub prefix: Cow<'a, str>,
     pub bars: Vec<BarTypeNode>,
     pub bar_locs: Vec<SourceLoc>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum BarTypeNode
-{
+pub enum BarTypeNode {
     Bar(BarNode),
     RepeatBar,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
-pub struct BarNode
-{
+pub struct BarNode {
     pub notes: Vec<NoteNode>,
     pub note_locs: Vec<SourceLoc>,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum NoteNode
-{
-    Rest
-    {
-        length: u8
-    },
-    Extension
-    {
-        length: u8
-    },
-    Note
-    {
-        length: u8, midi: Midi
-    },
+pub enum NoteNode {
+    Rest { length: u8 },
+    Extension { length: u8 },
+    Note { length: u8, midi: Midi },
 }
 
-impl NoteNode
-{
+impl NoteNode {
     // TODO(claire): This is an inelegant way to have a common field.
-    pub fn length(self) -> u32
-    {
-        match self
-        {
+    pub fn length(self) -> u32 {
+        match self {
             NoteNode::Rest { length }
             | NoteNode::Extension { length }
             | NoteNode::Note { length, .. } => u32::from(length),

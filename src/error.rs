@@ -1,9 +1,7 @@
 use std::fmt::{Error, Formatter};
 use std::sync::Arc;
 
-
-pub mod colors
-{
+pub mod colors {
     pub use self::inner::*;
     use ansi_term::Style;
 
@@ -21,8 +19,7 @@ pub mod colors
     };
 
     #[cfg(feature = "color")]
-    mod inner
-    {
+    mod inner {
         use super::*;
         use ansi_term::Colour;
 
@@ -58,8 +55,7 @@ pub mod colors
     }
 
     #[cfg(not(feature = "color"))]
-    mod inner
-    {
+    mod inner {
         use super::*;
 
         pub const RED: Style = DEFAULTSTYLE;
@@ -70,22 +66,17 @@ pub mod colors
     }
 }
 
-
 pub type SourceMap = Arc<SourceInfo>;
 
-
 #[derive(Debug)]
-pub struct SourceInfo
-{
+pub struct SourceInfo {
     pub filename: Option<String>,
     pub source: String,
     pub lines: Vec<String>,
 }
 
-impl SourceInfo
-{
-    pub fn new(source: &str, filename: Option<&str>) -> SourceMap
-    {
+impl SourceInfo {
+    pub fn new(source: &str, filename: Option<&str>) -> SourceMap {
         let filename = filename.map(str::to_owned);
         let source = source.to_owned();
         let lines = source.lines().map(str::to_owned).collect();
@@ -97,8 +88,7 @@ impl SourceInfo
         })
     }
 
-    pub fn filename(&self) -> &str
-    {
+    pub fn filename(&self) -> &str {
         self.filename
             .as_ref()
             .map(AsRef::as_ref)
@@ -106,40 +96,31 @@ impl SourceInfo
     }
 }
 
-
 #[derive(Debug, Clone)]
-pub struct SourceLoc
-{
+pub struct SourceLoc {
     pub line: usize,
     pub col: usize,
     pub info: SourceMap,
     pub width: usize,
 }
 
-impl SourceLoc
-{
-    pub fn cause_line(&self) -> &str
-    {
+impl SourceLoc {
+    pub fn cause_line(&self) -> &str {
         &self.info.lines[self.line - 1]
     }
 
-    pub fn text(&self) -> &str
-    {
+    pub fn text(&self) -> &str {
         &self.info.lines[self.line - 1][(self.col - 1)..(self.col + self.width - 1)]
     }
 }
 
-impl PartialEq for SourceLoc
-{
-    fn eq(&self, other: &Self) -> bool
-    {
-        self.line == other.line && self.col == other.col
-            && Arc::ptr_eq(&self.info, &other.info)
+impl PartialEq for SourceLoc {
+    fn eq(&self, other: &Self) -> bool {
+        self.line == other.line && self.col == other.col && Arc::ptr_eq(&self.info, &other.info)
     }
 }
 
 impl Eq for SourceLoc {}
-
 
 pub fn fmt_error(
     f: &mut Formatter,
@@ -149,8 +130,7 @@ pub fn fmt_error(
     line: usize,
     col: usize,
     width: usize,
-) -> Result<(), Error>
-{
+) -> Result<(), Error> {
     use self::colors::{BLUE, RED, WHITE};
 
     let line_prefix = format!("{} |    ", line);
@@ -176,9 +156,7 @@ pub fn fmt_error(
     )
 }
 
-pub fn fmt_simple_error(f: &mut Formatter, message: &str, filename: &str)
-    -> Result<(), Error>
-{
+pub fn fmt_simple_error(f: &mut Formatter, message: &str, filename: &str) -> Result<(), Error> {
     use self::colors::{BLUE, RED, WHITE};
 
     writeln!(

@@ -5,22 +5,18 @@ extern crate melo;
 #[macro_use]
 extern crate pretty_assertions;
 
-
-macro_rules! test_abc
-{
+macro_rules! test_abc {
     ($test_name: ident) => {
         #[test]
-        fn $test_name()
-        {
+        fn $test_name() {
             let source = include_str!(concat!("abc_tests/", stringify!($test_name), ".melo"));
             let expected = include_str!(concat!("abc_tests/", stringify!($test_name), ".abc"));
 
             let result = melo::compile_to_abc(source, None).unwrap();
             assert_eq!(result, expected);
         }
-    }
+    };
 }
-
 
 test_abc!(simple_drums);
 test_abc!(variable_drum_bars);

@@ -1,98 +1,80 @@
 pub const MELO_SHARPS: [&str; 128] = [
-    "C,,,,,", "C#,,,,,", "D,,,,,", "D#,,,,,", "E,,,,,", "F,,,,,", "F#,,,,,", "G,,,,,",
-    "G#,,,,,", "A,,,,", "A#,,,,", "B,,,,", "C,,,,", "C#,,,,", "D,,,,", "D#,,,,", "E,,,,",
-    "F,,,,", "F#,,,,", "G,,,,", "G#,,,,", "A,,,", "A#,,,", "B,,,", "C,,,", "C#,,,", "D,,,",
-    "D#,,,", "E,,,", "F,,,", "F#,,,", "G,,,", "G#,,,", "A,,", "A#,,", "B,,", "C,,", "C#,,",
-    "D,,", "D#,,", "E,,", "F,,", "F#,,", "G,,", "G#,,", "A,", "A#,", "B,", "C,", "C#,", "D,",
-    "D#,", "E,", "F,", "F#,", "G,", "G#,", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F",
-    "F#", "G", "G#", "a", "a#", "b", "c", "c#", "d", "d#", "e", "f", "f#", "g", "g#", "a'",
-    "a#'", "b'", "c'", "c#'", "d'", "d#'", "e'", "f'", "f#'", "g'", "g#'", "a''", "a#''",
-    "b''", "c''", "c#''", "d''", "d#''", "e''", "f''", "f#''", "g''", "g#''", "a'''", "a#'''",
-    "b'''", "c'''", "c#'''", "d'''", "d#'''", "e'''", "f'''", "f#'''", "g'''", "g#'''",
-    "a''''", "a#''''", "b''''", "c''''", "c#''''", "d''''", "d#''''", "e''''", "f''''",
-    "f#''''", "g''''",
+    "C,,,,,", "C#,,,,,", "D,,,,,", "D#,,,,,", "E,,,,,", "F,,,,,", "F#,,,,,", "G,,,,,", "G#,,,,,",
+    "A,,,,", "A#,,,,", "B,,,,", "C,,,,", "C#,,,,", "D,,,,", "D#,,,,", "E,,,,", "F,,,,", "F#,,,,",
+    "G,,,,", "G#,,,,", "A,,,", "A#,,,", "B,,,", "C,,,", "C#,,,", "D,,,", "D#,,,", "E,,,", "F,,,",
+    "F#,,,", "G,,,", "G#,,,", "A,,", "A#,,", "B,,", "C,,", "C#,,", "D,,", "D#,,", "E,,", "F,,",
+    "F#,,", "G,,", "G#,,", "A,", "A#,", "B,", "C,", "C#,", "D,", "D#,", "E,", "F,", "F#,", "G,",
+    "G#,", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "a", "a#", "b", "c",
+    "c#", "d", "d#", "e", "f", "f#", "g", "g#", "a'", "a#'", "b'", "c'", "c#'", "d'", "d#'", "e'",
+    "f'", "f#'", "g'", "g#'", "a''", "a#''", "b''", "c''", "c#''", "d''", "d#''", "e''", "f''",
+    "f#''", "g''", "g#''", "a'''", "a#'''", "b'''", "c'''", "c#'''", "d'''", "d#'''", "e'''",
+    "f'''", "f#'''", "g'''", "g#'''", "a''''", "a#''''", "b''''", "c''''", "c#''''", "d''''",
+    "d#''''", "e''''", "f''''", "f#''''", "g''''",
 ];
 
 pub const MIN_SHARP: &str = MELO_SHARPS[0];
 pub const MAX_SHARP: &str = MELO_SHARPS[127];
 
-
 pub const MELO_FLATS: [&str; 128] = [
-    "C,,,,,", "D_,,,,,", "D,,,,,", "E_,,,,,", "E,,,,,", "F,,,,,", "G_,,,,,", "G,,,,,",
-    "A_,,,,", "A,,,,", "B_,,,,", "B,,,,", "C,,,,", "D_,,,,", "D,,,,", "E_,,,,", "E,,,,",
-    "F,,,,", "G_,,,,", "G,,,,", "A_,,,", "A,,,", "B_,,,", "B,,,", "C,,,", "D_,,,", "D,,,",
-    "E_,,,", "E,,,", "F,,,", "G_,,,", "G,,,", "A_,,", "A,,", "B_,,", "B,,", "C,,", "D_,,",
-    "D,,", "E_,,", "E,,", "F,,", "G_,,", "G,,", "A_,", "A,", "B_,", "B,", "C,", "D_,", "D,",
-    "E_,", "E,", "F,", "G_,", "G,", "A_", "A", "B_", "B", "C", "D_", "D", "E_", "E", "F",
-    "G_", "G", "a_", "a", "b_", "b", "c", "d_", "d", "e_", "e", "f", "g_", "g", "a_'", "a'",
-    "b_'", "b'", "c'", "d_'", "d'", "e_'", "e'", "f'", "g_'", "g'", "a_''", "a''", "b_''",
-    "b''", "c''", "d_''", "d''", "e_''", "e''", "f''", "g_''", "g''", "a_'''", "a'''",
-    "b_'''", "b'''", "c'''", "d_'''", "d'''", "e_'''", "e'''", "f'''", "g_'''", "g'''",
-    "a_''''", "a''''", "b_''''", "b''''", "c''''", "d_''''", "d''''", "e_''''", "e''''",
-    "f''''", "g_''''", "g''''",
+    "C,,,,,", "D_,,,,,", "D,,,,,", "E_,,,,,", "E,,,,,", "F,,,,,", "G_,,,,,", "G,,,,,", "A_,,,,",
+    "A,,,,", "B_,,,,", "B,,,,", "C,,,,", "D_,,,,", "D,,,,", "E_,,,,", "E,,,,", "F,,,,", "G_,,,,",
+    "G,,,,", "A_,,,", "A,,,", "B_,,,", "B,,,", "C,,,", "D_,,,", "D,,,", "E_,,,", "E,,,", "F,,,",
+    "G_,,,", "G,,,", "A_,,", "A,,", "B_,,", "B,,", "C,,", "D_,,", "D,,", "E_,,", "E,,", "F,,",
+    "G_,,", "G,,", "A_,", "A,", "B_,", "B,", "C,", "D_,", "D,", "E_,", "E,", "F,", "G_,", "G,",
+    "A_", "A", "B_", "B", "C", "D_", "D", "E_", "E", "F", "G_", "G", "a_", "a", "b_", "b", "c",
+    "d_", "d", "e_", "e", "f", "g_", "g", "a_'", "a'", "b_'", "b'", "c'", "d_'", "d'", "e_'", "e'",
+    "f'", "g_'", "g'", "a_''", "a''", "b_''", "b''", "c''", "d_''", "d''", "e_''", "e''", "f''",
+    "g_''", "g''", "a_'''", "a'''", "b_'''", "b'''", "c'''", "d_'''", "d'''", "e_'''", "e'''",
+    "f'''", "g_'''", "g'''", "a_''''", "a''''", "b_''''", "b''''", "c''''", "d_''''", "d''''",
+    "e_''''", "e''''", "f''''", "g_''''", "g''''",
 ];
 
 pub const MIN_FLAT: &str = MELO_FLATS[0];
 pub const MAX_FLAT: &str = MELO_FLATS[127];
 
-
 pub const ABC_NOTES: [&str; 128] = [
     "=C,,,,,", "^C,,,,,", "=D,,,,,", "^D,,,,,", "=E,,,,,", "=F,,,,,", "^F,,,,,", "=G,,,,,",
-    "^G,,,,,", "=A,,,,,", "^A,,,,,", "=B,,,,,", "=C,,,,", "^C,,,,", "=D,,,,", "^D,,,,",
-    "=E,,,,", "=F,,,,", "^F,,,,", "=G,,,,", "^G,,,,", "=A,,,,", "^A,,,,", "=B,,,,", "=C,,,",
-    "^C,,,", "=D,,,", "^D,,,", "=E,,,", "=F,,,", "^F,,,", "=G,,,", "^G,,,", "=A,,,", "^A,,,",
-    "=B,,,", "=C,,", "^C,,", "=D,,", "^D,,", "=E,,", "=F,,", "^F,,", "=G,,", "^G,,", "=A,,",
-    "^A,,", "=B,,", "=C,", "^C,", "=D,", "^D,", "=E,", "=F,", "^F,", "=G,", "^G,", "=A,",
-    "^A,", "=B,", "=C", "^C", "=D", "^D", "=E", "=F", "^F", "=G", "^G", "=A", "^A", "=B",
-    "=c", "^c", "=d", "^d", "=e", "=f", "^f", "=g", "^g", "=a", "^a", "=b", "=c'", "^c'",
-    "=d'", "^d'", "=e'", "=f'", "^f'", "=g'", "^g'", "=a'", "^a'", "=b'", "=c''", "^c''",
-    "=d''", "^d''", "=e''", "=f''", "^f''", "=g''", "^g''", "=a''", "^a''", "=b''", "=c'''",
-    "^c'''", "=d'''", "^d'''", "=e'''", "=f'''", "^f'''", "=g'''", "^g'''", "=a'''", "^a'''",
-    "=b'''", "=c''''", "^c''''", "=d''''", "^d''''", "=e''''", "=f''''", "^f''''", "=g''''",
+    "^G,,,,,", "=A,,,,,", "^A,,,,,", "=B,,,,,", "=C,,,,", "^C,,,,", "=D,,,,", "^D,,,,", "=E,,,,",
+    "=F,,,,", "^F,,,,", "=G,,,,", "^G,,,,", "=A,,,,", "^A,,,,", "=B,,,,", "=C,,,", "^C,,,",
+    "=D,,,", "^D,,,", "=E,,,", "=F,,,", "^F,,,", "=G,,,", "^G,,,", "=A,,,", "^A,,,", "=B,,,",
+    "=C,,", "^C,,", "=D,,", "^D,,", "=E,,", "=F,,", "^F,,", "=G,,", "^G,,", "=A,,", "^A,,", "=B,,",
+    "=C,", "^C,", "=D,", "^D,", "=E,", "=F,", "^F,", "=G,", "^G,", "=A,", "^A,", "=B,", "=C", "^C",
+    "=D", "^D", "=E", "=F", "^F", "=G", "^G", "=A", "^A", "=B", "=c", "^c", "=d", "^d", "=e", "=f",
+    "^f", "=g", "^g", "=a", "^a", "=b", "=c'", "^c'", "=d'", "^d'", "=e'", "=f'", "^f'", "=g'",
+    "^g'", "=a'", "^a'", "=b'", "=c''", "^c''", "=d''", "^d''", "=e''", "=f''", "^f''", "=g''",
+    "^g''", "=a''", "^a''", "=b''", "=c'''", "^c'''", "=d'''", "^d'''", "=e'''", "=f'''", "^f'''",
+    "=g'''", "^g'''", "=a'''", "^a'''", "=b'''", "=c''''", "^c''''", "=d''''", "^d''''", "=e''''",
+    "=f''''", "^f''''", "=g''''",
 ];
-
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Midi(i8);
 
-
-impl Midi
-{
-    pub fn midi(self) -> i8
-    {
+impl Midi {
+    pub fn midi(self) -> i8 {
         self.0
     }
 
-    pub fn transposed(self, semitones: i8) -> Option<Midi>
-    {
+    pub fn transposed(self, semitones: i8) -> Option<Midi> {
         let midi = self.0.checked_add(semitones)?;
-        if midi >= 0
-        {
+        if midi >= 0 {
             Some(Midi(midi))
-        }
-        else
-        {
+        } else {
             None
         }
     }
 
-    pub fn from_raw(midi: i8) -> Option<Midi>
-    {
-        if midi >= 0
-        {
+    pub fn from_raw(midi: i8) -> Option<Midi> {
+        if midi >= 0 {
             Some(Midi(midi))
-        }
-        else
-        {
+        } else {
             None
         }
     }
 
-    pub fn from_note(note: &str) -> Option<Midi>
-    {
+    pub fn from_note(note: &str) -> Option<Midi> {
         let mut chars = note.chars();
-        let mut midi: i64 = match chars.next().unwrap_or_default()
-        {
+        let mut midi: i64 = match chars.next().unwrap_or_default() {
             'A' => 57,
             'B' => 59,
             'C' => 60,
@@ -110,10 +92,8 @@ impl Midi
             _ => return None,
         };
 
-        for ch in chars
-        {
-            let delta = match ch
-            {
+        for ch in chars {
+            let delta = match ch {
                 '#' => 1,
                 '_' => -1,
                 '\'' => 12,
@@ -125,43 +105,33 @@ impl Midi
             midi += delta;
         }
 
-        if midi >= 0 && midi < 128
-        {
+        if midi >= 0 && midi < 128 {
             Some(Midi(midi as i8))
-        }
-        else
-        {
+        } else {
             None
         }
     }
 
-    pub fn to_abc(self) -> &'static str
-    {
+    pub fn to_abc(self) -> &'static str {
         ABC_NOTES[self.0 as usize]
     }
 
-    pub fn to_sharp(self) -> &'static str
-    {
+    pub fn to_sharp(self) -> &'static str {
         MELO_SHARPS[self.0 as usize]
     }
 
-    pub fn to_flat(self) -> &'static str
-    {
+    pub fn to_flat(self) -> &'static str {
         MELO_FLATS[self.0 as usize]
     }
 }
 
-
-pub fn lcm(a: u32, b: u32) -> u32
-{
-    if a == 0 || b == 0
-    {
-        return 0
+pub fn lcm(a: u32, b: u32) -> u32 {
+    if a == 0 || b == 0 {
+        return 0;
     }
     let mut ra = a;
     let mut rb = b;
-    while rb != 0
-    {
+    while rb != 0 {
         let t = rb;
         rb = ra % rb;
         ra = t;
@@ -169,17 +139,13 @@ pub fn lcm(a: u32, b: u32) -> u32
     (a / ra) * b
 }
 
-
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use super::*;
 
     #[test]
-    fn test_note_to_midi()
-    {
-        fn test(note: &str, midi: i8)
-        {
+    fn test_note_to_midi() {
+        fn test(note: &str, midi: i8) {
             assert_eq!(Midi::from_note(note), Midi::from_raw(midi));
         }
 
@@ -203,10 +169,8 @@ mod tests
     }
 
     #[test]
-    fn test_note_to_abc()
-    {
-        fn test(note: &str, abc: &str)
-        {
+    fn test_note_to_abc() {
+        fn test(note: &str, abc: &str) {
             assert_eq!(Midi::from_note(note).unwrap().to_abc(), abc);
         }
 
@@ -228,10 +192,8 @@ mod tests
     }
 
     #[test]
-    fn round_trip_sharp_conversions()
-    {
-        for i in 0..128
-        {
+    fn round_trip_sharp_conversions() {
+        for i in 0..128 {
             let i = i as i8;
             assert_eq!(
                 Midi::from_note(Midi::from_raw(i).unwrap().to_sharp())
@@ -243,10 +205,8 @@ mod tests
     }
 
     #[test]
-    fn round_trip_flat_conversions()
-    {
-        for i in 0..128
-        {
+    fn round_trip_flat_conversions() {
+        for i in 0..128 {
             let i = i as i8;
             assert_eq!(
                 Midi::from_note(Midi::from_raw(i).unwrap().to_flat())
@@ -258,10 +218,8 @@ mod tests
     }
 
     #[test]
-    fn test_lcm()
-    {
-        fn test(a: u32, b: u32, expected: u32)
-        {
+    fn test_lcm() {
+        fn test(a: u32, b: u32, expected: u32) {
             assert_eq!(lcm(a, b), expected);
         }
 
