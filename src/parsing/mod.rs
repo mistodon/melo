@@ -260,7 +260,7 @@ fn parse_attribute_key<'a>(
         EOF => Err(ParsingError::eof(
             meta,
             context,
-            format!("{}", "an attribute key".to_owned()),
+            "an attribute key".to_owned(),
         )),
         Key(_) | Ident(_) => Ok(meta.token),
         _ => Err(ParsingError::unexpected(
