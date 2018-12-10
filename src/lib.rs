@@ -16,6 +16,7 @@ mod error;
 mod lexing;
 mod midi_generation;
 pub mod notes;
+mod parse;
 mod parsing;
 mod sequencing;
 mod trust;
@@ -44,6 +45,10 @@ pub fn compile_to_midi(
 ) -> Result<Vec<u8>, Error> {
     let (tokens, source_map) = lexing::lex(input, filename)?;
     let parse_tree = parsing::parse(&tokens, &source_map)?;
+
+    let test_parse_tree = parse::parse(input, filename)?;
+    println!("Parse tree:\n{:#?}", test_parse_tree);
+
     let pieces = sequencing::sequence_pieces(&parse_tree, &source_map)?;
     let midi = midi_generation::generate_midi(
         pieces
