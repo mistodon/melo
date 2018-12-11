@@ -1,7 +1,5 @@
 #![allow(deprecated)]
 
-extern crate melo;
-
 macro_rules! test_piece {
     ($test_name: ident) => {
         #[test]

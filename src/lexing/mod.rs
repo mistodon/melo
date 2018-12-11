@@ -4,9 +4,9 @@ pub mod error;
 use self::data::*;
 use self::error::{ErrorType, LexingError};
 
-use error::{SourceInfo, SourceLoc, SourceMap};
+use crate::error::{SourceInfo, SourceLoc, SourceMap};
 use regex::Regex;
-use trust::Trust;
+use crate::trust::Trust;
 
 // TODO(claire): This code assumes that a newline is a single byte
 fn line_col_at(source: &str, position: usize) -> (usize, usize) {

@@ -2,8 +2,8 @@ pub mod data;
 
 use self::data::*;
 
-use error::SourceMap;
-use sequencing::data::*;
+use crate::error::SourceMap;
+use crate::sequencing::data::*;
 
 pub fn generate_midi(
     piece: &Piece,

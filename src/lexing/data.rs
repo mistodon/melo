@@ -1,4 +1,4 @@
-use error::SourceLoc;
+use crate::error::SourceLoc;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct MetaToken<'a> {

@@ -3,6 +3,7 @@ name = "melo"
 version = "0.1.0"
 authors = ["Claire Harris <claire.harris.000@gmail.com>"]
 description = "A music notation language and compiler to MIDI."
+edition = "2018"
 repository = "https://github.com/Pirh/melo"
 readme = "README.md"
 keywords = ["music", "notation", "language", "midi"]

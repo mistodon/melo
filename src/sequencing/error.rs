@@ -1,5 +1,7 @@
-use error::{self, SourceLoc};
+use crate::error::{self, SourceLoc};
 use std::fmt::{Display, Error, Formatter};
+
+use failure::Fail;
 
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub struct SequencingError {
@@ -24,7 +26,7 @@ impl Display for SequencingError {
 
         let error_message = match self.error {
             InvalidNote { octave_offset } => {
-                use notes::{MAX_SHARP, MIN_SHARP};
+                use crate::notes::{MAX_SHARP, MIN_SHARP};
 
                 let dir = if octave_offset <= 0 { "down" } else { "up" };
                 let oct = octave_offset.abs();

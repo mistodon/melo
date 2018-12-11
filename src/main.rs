@@ -1,16 +1,9 @@
-extern crate ansi_term;
-extern crate failure;
-extern crate melo;
-extern crate mktemp;
-extern crate structopt;
-
-#[macro_use]
-extern crate structopt_derive;
 
 use std::path::Path;
 
 use ansi_term::Style;
 use failure::Error;
+use structopt_derive::StructOpt;
 
 use melo::colors::{CYAN, RED, WHITE, YELLOW};
 use melo::MidiGenerationOptions;

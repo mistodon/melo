@@ -1,9 +1,9 @@
 pub mod error;
 
 use self::error::{AbcGenerationError, ErrorType};
-use error::SourceMap;
-use sequencing::data::*;
-use trust::Trust;
+use crate::error::SourceMap;
+use crate::sequencing::data::*;
+use crate::trust::Trust;
 
 fn div_tuplet(notes_per_beat: u32) -> (u32, u32) {
     let mut tuplet = notes_per_beat;
@@ -93,7 +93,7 @@ fn write_bars(
     debug_bar_info: Option<&[DebugBarInfo]>,
 ) -> Result<String, AbcGenerationError> {
     use self::error::fmt_err;
-    use notes::lcm;
+    use crate::notes::lcm;
     use std::fmt::Write;
 
     let mut buffer = String::new();
@@ -307,9 +307,9 @@ mod tests {
     use super::*;
 
     fn write_bars_test(source: &str, expected: &str, notes_per_bar: u32) {
-        use lexing;
-        use parsing;
-        use sequencing;
+        use crate::lexing;
+        use crate::parsing;
+        use crate::sequencing;
 
         let (tokens, source_map) = lexing::lex(source, None).expect("ERROR IN LEXER");
         let parse_tree = parsing::parse(&tokens, &source_map).expect("ERROR IN PARSER");
@@ -330,9 +330,9 @@ mod tests {
     }
 
     fn write_bars_fail(source: &str, notes_per_bar: u32) {
-        use lexing;
-        use parsing;
-        use sequencing;
+        use crate::lexing;
+        use crate::parsing;
+        use crate::sequencing;
 
         let (tokens, source_map) = lexing::lex(source, None).expect("ERROR IN LEXER");
         let parse_tree = parsing::parse(&tokens, &source_map).expect("ERROR IN PARSER");

@@ -3,15 +3,15 @@ pub mod error;
 
 use self::data::*;
 use self::error::{ErrorType, SequencingError};
-use error::SourceMap;
-use parsing::data::*;
-use trust::Trust;
+use crate::error::SourceMap;
+use crate::parsing::data::*;
+use crate::trust::Trust;
 
 pub fn sequence_pieces<'a>(
     parse_tree: &ParseTree<'a>,
     _source_map: &SourceMap,
 ) -> Result<Vec<Piece<'a>>, SequencingError> {
-    use notes::lcm;
+    use crate::notes::lcm;
 
     let mut pieces = Vec::new();
 
@@ -210,9 +210,9 @@ pub fn sequence_pieces<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lexing;
-    use parsing;
-    use test_helpers::midi;
+    use crate::lexing;
+    use crate::parsing;
+    use crate::test_helpers::midi;
 
     fn sequence_test(source: &str, expected: Piece) {
         let (tokens, source_map) = lexing::lex(source, None).expect("ERROR IN LEXER");

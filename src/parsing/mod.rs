@@ -4,14 +4,14 @@ pub mod error;
 use self::data::*;
 use self::error::{ErrorType, ParsingError};
 
-use error::SourceMap;
-use lexing::data::Token::*;
-use lexing::data::*;
-use notes::Midi;
+use crate::error::SourceMap;
+use crate::lexing::data::Token::*;
+use crate::lexing::data::*;
+use crate::notes::Midi;
 use std::borrow::Cow;
 use std::iter::Peekable;
 use std::slice::Iter;
-use trust::Trust;
+use crate::trust::Trust;
 
 type TokenStream<'a> = Peekable<Iter<'a, MetaToken<'a>>>;
 
@@ -547,7 +547,7 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_helpers::{midi, stave};
+    use crate::test_helpers::{midi, stave};
 
     // TODO(claire): Clearly need a better way of carriaging errors
     fn doctor(parse_tree: &mut ParseTree) {
@@ -569,7 +569,7 @@ mod tests {
     }
 
     fn parsetest(source: &str, expected: PieceNode) {
-        use lexing;
+        use crate::lexing;
 
         let (tokens, source_map) = lexing::lex(source, None).unwrap();
         let mut result = parse(&tokens, &source_map).unwrap();
@@ -581,14 +581,14 @@ mod tests {
     }
 
     fn parsefailtest(source: &str) {
-        use lexing;
+        use crate::lexing;
 
         let (tokens, source_map) = lexing::lex(source, None).unwrap();
         assert!(parse(&tokens, &source_map).is_err());
     }
 
     fn multiparsetest(source: &str, expected: Vec<PieceNode>) {
-        use lexing;
+        use crate::lexing;
 
         let (tokens, source_map) = lexing::lex(source, None).unwrap();
         let mut result = parse(&tokens, &source_map).unwrap();

@@ -1,7 +1,5 @@
 #![allow(deprecated)]
 
-extern crate melo;
-
 #[macro_use]
 extern crate pretty_assertions;
 

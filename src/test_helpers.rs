@@ -1,5 +1,5 @@
-use notes::Midi;
-use parsing::data::*;
+use crate::notes::Midi;
+use crate::parsing::data::*;
 
 pub fn stave(prefix: &str, notes: Vec<Vec<NoteNode>>) -> StaveNode {
     use std::borrow::Cow;

@@ -1,5 +1,7 @@
-use error::{self, SourceLoc, SourceMap};
+use crate::error::{self, SourceLoc, SourceMap};
 use std::fmt::{Display, Error, Formatter};
+
+use failure::Fail;
 
 #[derive(Debug, Fail)]
 pub struct AbcGenerationError {

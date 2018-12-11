@@ -1,5 +1,5 @@
-use error::SourceLoc;
-use notes::Midi;
+use crate::error::SourceLoc;
+use crate::notes::Midi;
 
 #[derive(Debug, PartialEq)]
 pub struct Piece<'a> {

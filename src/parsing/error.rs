@@ -1,6 +1,8 @@
-use error::{self, SourceLoc};
-use lexing::data::MetaToken;
+use crate::error::{self, SourceLoc};
+use crate::lexing::data::MetaToken;
 use std::fmt::{Display, Error, Formatter};
+
+use failure::Fail;
 
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub struct ParsingError {
@@ -78,7 +80,7 @@ impl Display for ParsingError {
 
             Ok(())
         } else {
-            use notes::{MAX_SHARP, MIN_SHARP};
+            use crate::notes::{MAX_SHARP, MIN_SHARP};
 
             let error_message = match self.error
             {

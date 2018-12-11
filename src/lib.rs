@@ -1,15 +1,8 @@
 #[cfg(test)]
-#[macro_use]
 extern crate pretty_assertions;
 
 #[macro_use]
-extern crate failure;
-#[macro_use]
 extern crate lazy_static;
-
-extern crate ansi_term;
-extern crate regex;
-extern crate rimd;
 
 mod abc_generation;
 mod error;
@@ -24,9 +17,9 @@ mod trust;
 #[cfg(test)]
 mod test_helpers;
 
-pub use error::colors;
-pub use failure::Error;
-pub use midi_generation::data::MidiGenerationOptions;
+pub use crate::error::colors;
+pub use failure::{Error};
+pub use crate::midi_generation::data::MidiGenerationOptions;
 
 #[deprecated]
 pub fn compile_to_abc(input: &str, filename: Option<&str>) -> Result<String, Error> {
