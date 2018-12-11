@@ -272,29 +272,33 @@ fn write_bars(
     let mut written_notes = 0;
 
     match tuplet {
-        1 => for (note, length) in abc_notes {
-            if written_notes >= notes_per_bar {
-                written_notes -= notes_per_bar;
-                assert!(written_notes < notes_per_bar);
-                writeln!(buffer, "|").map_err(|e| fmt_err(e, source_map.cloned()))?;
-            }
+        1 => {
+            for (note, length) in abc_notes {
+                if written_notes >= notes_per_bar {
+                    written_notes -= notes_per_bar;
+                    assert!(written_notes < notes_per_bar);
+                    writeln!(buffer, "|").map_err(|e| fmt_err(e, source_map.cloned()))?;
+                }
 
-            write!(buffer, "{}", note).map_err(|e| fmt_err(e, source_map.cloned()))?;
-            written_notes += length;
-        },
-        n => for chunk in abc_notes.chunks(n as usize) {
-            if written_notes >= notes_per_bar {
-                written_notes -= notes_per_bar;
-                assert!(written_notes < notes_per_bar);
-                writeln!(buffer, "|").map_err(|e| fmt_err(e, source_map.cloned()))?;
-            }
-
-            write!(buffer, "({}", n).map_err(|e| fmt_err(e, source_map.cloned()))?;
-            for &(ref note, length) in chunk {
                 write!(buffer, "{}", note).map_err(|e| fmt_err(e, source_map.cloned()))?;
                 written_notes += length;
             }
-        },
+        }
+        n => {
+            for chunk in abc_notes.chunks(n as usize) {
+                if written_notes >= notes_per_bar {
+                    written_notes -= notes_per_bar;
+                    assert!(written_notes < notes_per_bar);
+                    writeln!(buffer, "|").map_err(|e| fmt_err(e, source_map.cloned()))?;
+                }
+
+                write!(buffer, "({}", n).map_err(|e| fmt_err(e, source_map.cloned()))?;
+                for &(ref note, length) in chunk {
+                    write!(buffer, "{}", note).map_err(|e| fmt_err(e, source_map.cloned()))?;
+                    written_notes += length;
+                }
+            }
+        }
     }
 
     writeln!(buffer, "|").map_err(|e| fmt_err(e, source_map.cloned()))?;
@@ -324,7 +328,8 @@ mod tests {
                 voice.divisions_per_bar,
                 None,
                 None
-            ).unwrap(),
+            )
+            .unwrap(),
             expected
         );
     }
@@ -340,15 +345,14 @@ mod tests {
             sequencing::sequence_pieces(&parse_tree, &source_map).expect("ERROR IN SEQUENCER");
         let voice = &pieces[0].voices[0];
 
-        assert!(
-            write_bars(
-                &voice.notes,
-                notes_per_bar,
-                voice.divisions_per_bar,
-                None,
-                None
-            ).is_err()
-        );
+        assert!(write_bars(
+            &voice.notes,
+            notes_per_bar,
+            voice.divisions_per_bar,
+            None,
+            None
+        )
+        .is_err());
     }
 
     #[test]

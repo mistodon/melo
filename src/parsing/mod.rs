@@ -8,10 +8,10 @@ use crate::error::SourceMap;
 use crate::lexing::data::Token::*;
 use crate::lexing::data::*;
 use crate::notes::Midi;
+use crate::trust::Trust;
 use std::borrow::Cow;
 use std::iter::Peekable;
 use std::slice::Iter;
-use crate::trust::Trust;
 
 type TokenStream<'a> = Peekable<Iter<'a, MetaToken<'a>>>;
 

@@ -1,4 +1,3 @@
-
 use std::path::Path;
 
 use ansi_term::Style;
@@ -81,10 +80,7 @@ enum MeloCommand {
         abcmidi: bool,
     },
 
-    #[structopt(
-        name = "ref",
-        about = "View useful information for composing in melo."
-    )]
+    #[structopt(name = "ref", about = "View useful information for composing in melo.")]
     Ref {
         #[structopt(subcommand)]
         subcommand: RefCommand,
@@ -93,10 +89,7 @@ enum MeloCommand {
 
 #[derive(Debug, StructOpt)]
 enum RefCommand {
-    #[structopt(
-        name = "notes",
-        about = "View information about valid notes."
-    )]
+    #[structopt(name = "notes", about = "View information about valid notes.")]
     Notes,
 
     #[structopt(

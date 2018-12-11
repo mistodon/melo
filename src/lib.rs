@@ -18,8 +18,8 @@ mod trust;
 mod test_helpers;
 
 pub use crate::error::colors;
-pub use failure::{Error};
 pub use crate::midi_generation::data::MidiGenerationOptions;
+pub use failure::Error;
 
 #[deprecated]
 pub fn compile_to_abc(input: &str, filename: Option<&str>) -> Result<String, Error> {
@@ -49,7 +49,8 @@ pub fn compile_to_midi(
             .ok_or_else(|| failure::err_msg("No pieces found"))?,
         &source_map,
         options,
-    ).ok_or_else(|| failure::err_msg("Compilation to MIDI failed!"))?;
+    )
+    .ok_or_else(|| failure::err_msg("Compilation to MIDI failed!"))?;
 
     Ok(midi)
 }

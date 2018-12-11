@@ -5,8 +5,8 @@ use self::data::*;
 use self::error::{ErrorType, LexingError};
 
 use crate::error::{SourceInfo, SourceLoc, SourceMap};
-use regex::Regex;
 use crate::trust::Trust;
+use regex::Regex;
 
 // TODO(claire): This code assumes that a newline is a single byte
 fn line_col_at(source: &str, position: usize) -> (usize, usize) {
@@ -37,7 +37,8 @@ lazy_static! {
          (?P<whitespace>([\t ]|;)+)|\
          (?P<error>.)\
          "
-    ).trust();
+    )
+    .trust();
     static ref MUSIC_REGEX: Regex = Regex::new(
         "\
          (?P<note>[a-gA-G][=_\\#]*[,']*)|\
@@ -49,7 +50,8 @@ lazy_static! {
          (?P<whitespace>([\t ]|;)+)|\
          (?P<error>.)\
          "
-    ).trust();
+    )
+    .trust();
 }
 
 #[derive(Debug)]

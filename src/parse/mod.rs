@@ -167,12 +167,15 @@ impl<'a> Parser<'a> {
         while !self.finished() && is_whitespace(self.source[self.cursor]) {
             self.cursor += 1;
         }
-
     }
 
     pub fn check_attr(&mut self) -> Option<&'a [u8]> {
         fn is_attr_char(ch: u8) -> bool {
-            ch == b'_' || ch == b',' || ch == b'\'' || ch == b'_' || ch == b'#'
+            ch == b'_'
+                || ch == b','
+                || ch == b'\''
+                || ch == b'_'
+                || ch == b'#'
                 || (b'a' <= ch && ch <= b'z')
                 || (b'A' <= ch && ch <= b'Z')
                 || (b'0' <= ch && ch <= b'9')
@@ -183,7 +186,7 @@ impl<'a> Parser<'a> {
             if is_attr_char(self.source[end]) {
                 end += 1;
             } else {
-                break
+                break;
             }
         }
 
@@ -213,13 +216,14 @@ impl<'a> Parser<'a> {
             if is_digit(self.source[end]) || (end == self.cursor && self.source[end] == b'-') {
                 end += 1;
             } else {
-                break
+                break;
             }
         }
 
         let result: &str = std::str::from_utf8(&self.source[self.cursor..end])
             .map_err(|_| failure::err_msg("Invalid attribute value - must be utf8"))?;
-        let result: T = result.parse()
+        let result: T = result
+            .parse()
             .map_err(|_| failure::err_msg("Could not parse number"))?;
 
         self.cursor = end;
@@ -273,7 +277,7 @@ fn parse_piece_contents<'a>(parser: &mut Parser) -> Result<Piece<'a>, Error> {
                 BlockType::Voice
             } else {
                 parser.skip_whitespace();
-                break
+                break;
             }
         };
 
@@ -301,7 +305,7 @@ fn parse_play_contents<'a>(parser: &mut Parser) -> Result<Play<'a>, Error> {
 
         if parser.skip(b"|") {
             // Parse a stave
-//             play.staves.push(Stave { prefix: attr_name });
+            //             play.staves.push(Stave { prefix: attr_name });
         } else {
             // Parse an attribute
         }
@@ -321,12 +325,12 @@ fn parse_voice_contents<'a>(parser: &mut Parser) -> Result<Voice<'a>, Error> {
             b"channel" => voice.channel = Some(parser.parse_number_only()?),
             b"octave" => voice.transpose = Some(parser.parse_number_only::<i8>()? * 12),
             b"volume" => voice.volume = Some(parser.parse_number_only()?),
-            _ => return Err(failure::err_msg("Invalid attribute name"))
+            _ => return Err(failure::err_msg("Invalid attribute name")),
         }
 
         parser.skip_whitespace_in_line();
         if !(parser.skip(b",") || parser.skip(b"\n")) {
-            break
+            break;
         }
     }
 
@@ -354,11 +358,8 @@ mod tests {
 
     #[test]
     fn parse_empty_piece() {
-        parse_equivalent(&[
-                "",
-                "piece {}",
-                "piece {\t   \n}",
-            ],
+        parse_equivalent(
+            &["", "piece {}", "piece {\t   \n}"],
             ParseTree {
                 pieces: vec![Piece::default()],
             },
@@ -367,10 +368,8 @@ mod tests {
 
     #[test]
     fn parse_empty_pieces() {
-        parse_equivalent(&[
-                "piece{}piece{}",
-                "piece {\n}piece\t{ }",
-            ],
+        parse_equivalent(
+            &["piece{}piece{}", "piece {\n}piece\t{ }"],
             ParseTree {
                 pieces: vec![Piece::default(), Piece::default()],
             },
@@ -420,7 +419,8 @@ mod tests {
 
     #[test]
     fn parse_piece_with_anon_empty_voice_and_play() {
-        parse_equivalent(&[
+        parse_equivalent(
+            &[
                 "piece { play { } voice { } }",
                 "piece { voice { } play { } }",
             ],
@@ -462,10 +462,8 @@ mod tests {
 
     #[test]
     fn parse_solo_anon_empty_voice_and_play() {
-        parse_equivalent(&[
-                "play { } voice { }",
-                "voice { } play { }",
-            ],
+        parse_equivalent(
+            &["play { } voice { }", "voice { } play { }"],
             ParseTree {
                 pieces: vec![Piece {
                     plays: vec![Play::default()],
@@ -478,7 +476,8 @@ mod tests {
 
     #[test]
     fn parse_voice_with_single_attribute() {
-        parse_equivalent(&[
+        parse_equivalent(
+            &[
                 "voice { program:10 }",
                 "voice { program: 10 }",
                 "voice { program: 10, }",
@@ -503,7 +502,8 @@ mod tests {
 
     #[test]
     fn parse_voice_with_multiple_attributes() {
-        parse_equivalent(&[
+        parse_equivalent(
+            &[
                 "voice { program: 30, channel: 2 }",
                 "voice { program: 30, channel: 2, }",
                 "voice { program: 30
@@ -532,7 +532,8 @@ mod tests {
 
     #[test]
     fn parse_voice_with_all_attributes() {
-        parse_succeeds("voice {
+        parse_succeeds(
+            "voice {
                 octave: -2,
                 channel: 3,
                 program: 5,
@@ -548,8 +549,8 @@ mod tests {
                         name: None,
                     }],
                     ..Piece::default()
-                }]
-            }
+                }],
+            },
         )
     }
 }

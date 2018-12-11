@@ -81,7 +81,8 @@ pub fn sequence_pieces<'a>(
                             BarTypeNode::RepeatBar => 1,
                         })
                     })
-                }).fold(1, lcm);
+                })
+                .fold(1, lcm);
 
             let mut notes: Vec<Note> = Vec::new();
             let mut debug_bar_info: Vec<DebugBarInfo> = Vec::new();
