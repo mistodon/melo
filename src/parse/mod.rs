@@ -30,12 +30,17 @@ pub struct Voice<'a> {
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Play<'a> {
     pub voice: Option<&'a str>,
+    pub grand_staves: Vec<GrandStave<'a>>,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct GrandStave<'a> {
     pub staves: Vec<Stave<'a>>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Stave<'a> {
-    pub prefix: &'a [u8],
+    pub prefix: Option<&'a [u8]>,
     //     pub bars: Vec<BarTypeNode>,
 }
 
@@ -50,6 +55,16 @@ impl<'a> Parser<'a> {
             source: source.as_bytes(),
             cursor: 0,
         }
+    }
+
+    fn debug_position(&self) {
+        let before = self.cursor - std::cmp::min(self.cursor, 20);
+        let end = std::cmp::min(self.cursor + 100, self.source.len());
+        eprintln!(
+            "{}   [{}]",
+            std::str::from_utf8(&self.source[before..self.cursor]).unwrap(),
+            std::str::from_utf8(&self.source[self.cursor..end]).unwrap()
+        );
     }
 
     #[inline(always)]
@@ -229,6 +244,10 @@ impl<'a> Parser<'a> {
         self.cursor = end;
         Ok(result)
     }
+
+    pub fn at_end_of_stave(&mut self) -> bool {
+        self.finished() || self.skip_only(b"\n") || self.skip_only(b";") || self.check(b"}")
+    }
 }
 
 pub fn parse<'a>(input: &'a str, filename: Option<&'a str>) -> Result<ParseTree<'a>, Error> {
@@ -239,6 +258,8 @@ pub fn parse<'a>(input: &'a str, filename: Option<&'a str>) -> Result<ParseTree<
     parser.skip_whitespace();
 
     loop {
+        eprintln!("parse loop");
+
         pieces.push(parse_piece(parser)?);
 
         if parser.finished() {
@@ -249,7 +270,7 @@ pub fn parse<'a>(input: &'a str, filename: Option<&'a str>) -> Result<ParseTree<
     Ok(ParseTree { pieces })
 }
 
-fn parse_piece<'a>(parser: &mut Parser) -> Result<Piece<'a>, Error> {
+fn parse_piece<'a>(parser: &mut Parser<'a>) -> Result<Piece<'a>, Error> {
     if parser.skip_keyword(b"piece") {
         parser.expect(b"{")?;
         let piece = parse_piece_contents(parser)?;
@@ -261,7 +282,7 @@ fn parse_piece<'a>(parser: &mut Parser) -> Result<Piece<'a>, Error> {
     }
 }
 
-fn parse_piece_contents<'a>(parser: &mut Parser) -> Result<Piece<'a>, Error> {
+fn parse_piece_contents<'a>(parser: &mut Parser<'a>) -> Result<Piece<'a>, Error> {
     enum BlockType {
         Play,
         Voice,
@@ -270,6 +291,8 @@ fn parse_piece_contents<'a>(parser: &mut Parser) -> Result<Piece<'a>, Error> {
     let mut piece = Piece::default();
 
     loop {
+        eprintln!("parse_piece_contents loop");
+
         let block_type = {
             if parser.skip_keyword(b"play") {
                 BlockType::Play
@@ -277,6 +300,14 @@ fn parse_piece_contents<'a>(parser: &mut Parser) -> Result<Piece<'a>, Error> {
                 BlockType::Voice
             } else {
                 parser.skip_whitespace();
+
+                let done = parser.finished() || parser.check(b"}");
+                if !done {
+                    // Top-level contents are considered a play block
+                    piece.plays.push(parse_play_contents(parser)?);
+                    parser.skip_whitespace();
+                }
+
                 break;
             }
         };
@@ -296,25 +327,7 @@ fn parse_piece_contents<'a>(parser: &mut Parser) -> Result<Piece<'a>, Error> {
     Ok(piece)
 }
 
-fn parse_play_contents<'a>(parser: &mut Parser) -> Result<Play<'a>, Error> {
-    let mut play = Play::default();
-
-    while let Some(attr_name) = parser.parse_attr() {
-        parser.expect_only(b":")?;
-        parser.skip_whitespace_in_line();
-
-        if parser.skip(b"|") {
-            // Parse a stave
-            //             play.staves.push(Stave { prefix: attr_name });
-        } else {
-            // Parse an attribute
-        }
-    }
-
-    Ok(play)
-}
-
-fn parse_voice_contents<'a>(parser: &mut Parser) -> Result<Voice<'a>, Error> {
+fn parse_voice_contents<'a>(parser: &mut Parser<'a>) -> Result<Voice<'a>, Error> {
     let mut voice = Voice::default();
 
     while let Some(attr_name) = parser.parse_attr() {
@@ -335,6 +348,110 @@ fn parse_voice_contents<'a>(parser: &mut Parser) -> Result<Voice<'a>, Error> {
     }
 
     Ok(voice)
+}
+
+fn parse_play_contents<'a>(parser: &mut Parser<'a>) -> Result<Play<'a>, Error> {
+    let mut play = Play::default();
+
+    loop {
+        eprintln!("parse_play_contents loop");
+
+        let attr_name = parser.parse_attr();
+
+        if parser.skip(b":") {
+            if parser.skip_only(b"|") {
+                // Parse a stave
+                play.grand_staves
+                    .push(parse_grand_stave(parser, attr_name)?);
+            } else {
+                // Parse an attribute value
+                return Err(failure::err_msg(
+                    "Attributes in play blocks not currently supported. Use `|` to start a stave.",
+                ));
+            }
+        } else {
+            if let Some(attr_name) = attr_name {
+                return Err(failure::err_msg(format!(
+                    "Attribute `{}` is missing a value.",
+                    std::str::from_utf8(attr_name).unwrap()
+                )));
+            }
+
+            parser.skip_whitespace();
+            break;
+        }
+    }
+    Ok(play)
+}
+
+fn parse_grand_stave<'a>(
+    parser: &mut Parser<'a>,
+    first_stave_prefix: Option<&'a [u8]>,
+) -> Result<GrandStave<'a>, Error> {
+    let mut grand_stave = GrandStave::default();
+
+    parser.skip_whitespace_in_line();
+    grand_stave
+        .staves
+        .push(parse_stave_contents(parser, first_stave_prefix)?);
+
+    // More staves - TODO: kinda ugly duplication
+    loop {
+        eprintln!("parse_grand_stave loop");
+        if parser.at_end_of_stave() {
+            parser.skip_whitespace();
+            break;
+        }
+
+        let attr_name = parser.parse_attr();
+
+        if parser.skip(b":") {
+            if parser.skip_only(b"|") {
+                // Parse a stave
+                parser.skip_whitespace_in_line();
+                grand_stave
+                    .staves
+                    .push(parse_stave_contents(parser, attr_name)?);
+            } else {
+                // Parse an attribute value
+                return Err(failure::err_msg("This is an issue huh, we can't set attributes from within this function. Kind of a pickle, oops."));
+            }
+        } else {
+            if let Some(attr_name) = attr_name {
+                return Err(failure::err_msg(format!(
+                    "Attribute `{}` is missing a value.",
+                    std::str::from_utf8(attr_name).unwrap()
+                )));
+            }
+            break;
+        }
+    }
+
+    Ok(grand_stave)
+}
+
+fn parse_stave_contents<'a>(
+    parser: &mut Parser<'a>,
+    stave_prefix: Option<&'a [u8]>,
+) -> Result<Stave<'a>, Error> {
+    loop {
+        eprintln!("parse_stave_contents loop");
+
+        // TODO: Parse stave contents on the current line
+        if parser.at_end_of_stave() {
+            parser.skip_whitespace_in_line();
+            if parser.skip_only(b"|") {
+                // Continue the same stave
+            } else {
+                break;
+            }
+        }
+    }
+
+    Ok(Stave {
+        prefix: stave_prefix,
+        ..Default::default()
+    })
 }
 
 #[cfg(test)]
@@ -359,7 +476,7 @@ mod tests {
     #[test]
     fn parse_empty_piece() {
         parse_equivalent(
-            &["", "piece {}", "piece {\t   \n}"],
+            &["", "  piece {}", "piece {}", "piece {\t   \n}"],
             ParseTree {
                 pieces: vec![Piece::default()],
             },
@@ -401,7 +518,7 @@ mod tests {
                     ..Piece::default()
                 }],
             },
-        )
+        );
     }
 
     #[test]
@@ -414,7 +531,7 @@ mod tests {
                     ..Piece::default()
                 }],
             },
-        )
+        );
     }
 
     #[test]
@@ -431,7 +548,7 @@ mod tests {
                     ..Piece::default()
                 }],
             },
-        )
+        );
     }
 
     #[test]
@@ -444,7 +561,7 @@ mod tests {
                     ..Piece::default()
                 }],
             },
-        )
+        );
     }
 
     #[test]
@@ -457,7 +574,7 @@ mod tests {
                     ..Piece::default()
                 }],
             },
-        )
+        );
     }
 
     #[test]
@@ -471,7 +588,7 @@ mod tests {
                     ..Piece::default()
                 }],
             },
-        )
+        );
     }
 
     #[test]
@@ -497,7 +614,7 @@ mod tests {
                     ..Piece::default()
                 }],
             },
-        )
+        );
     }
 
     #[test]
@@ -527,7 +644,7 @@ mod tests {
                     ..Piece::default()
                 }],
             },
-        )
+        );
     }
 
     #[test]
@@ -551,6 +668,146 @@ mod tests {
                     ..Piece::default()
                 }],
             },
-        )
+        );
+    }
+
+    #[test]
+    fn parse_play_with_one_grand_stave_and_one_basic_stave() {
+        parse_equivalent(
+            &[
+                "play { :| }",
+                "play { : | }",
+                "play { :
+                    |
+                }",
+                "play {
+                    :|
+                }",
+            ],
+            ParseTree {
+                pieces: vec![Piece {
+                    plays: vec![Play {
+                        grand_staves: vec![GrandStave {
+                            staves: vec![Stave { prefix: None }],
+                        }],
+                        ..Play::default()
+                    }],
+                    ..Piece::default()
+                }],
+            },
+        );
+    }
+
+    #[test]
+    fn parse_play_with_one_grand_stave_and_two_basic_staves() {
+        parse_equivalent(
+            &[
+                "play {
+                    :| ; :|
+                }",
+                "play {
+                    :|
+                    :|
+                }",
+            ],
+            ParseTree {
+                pieces: vec![Piece {
+                    plays: vec![Play {
+                        grand_staves: vec![GrandStave {
+                            staves: vec![Stave { prefix: None }, Stave { prefix: None }],
+                        }],
+                        ..Play::default()
+                    }],
+                    ..Piece::default()
+                }],
+            },
+        );
+    }
+
+    #[test]
+    fn parse_play_with_two_grand_staves() {
+        parse_equivalent(
+            &[
+                "play { :| ;; :| }",
+                "play { :| ; ; :| }",
+                //                 "play { :| ;;; :| }", // TODO: This fails because a line starts with `; How should that be handled?
+                "play {
+                    :| ;
+                    :|
+                }",
+                "play {
+                    :|
+
+                    :|
+                }",
+                "play {
+                    :|
+
+
+
+
+                    :|
+                }",
+            ],
+            ParseTree {
+                pieces: vec![Piece {
+                    plays: vec![Play {
+                        grand_staves: vec![
+                            GrandStave {
+                                staves: vec![Stave { prefix: None }],
+                            },
+                            GrandStave {
+                                staves: vec![Stave { prefix: None }],
+                            },
+                        ],
+                        ..Play::default()
+                    }],
+                    ..Piece::default()
+                }],
+            },
+        );
+    }
+
+    #[test]
+    fn parse_solo_stave_as_play_block() {
+        parse_succeeds(
+            ":|",
+            ParseTree {
+                pieces: vec![Piece {
+                    plays: vec![Play {
+                        grand_staves: vec![GrandStave {
+                            staves: vec![Stave { prefix: None }],
+                        }],
+                        ..Play::default()
+                    }],
+                    ..Piece::default()
+                }],
+            },
+        );
+    }
+
+    #[test]
+    fn parse_solo_two_staves() {
+        parse_equivalent(
+            &[
+                ":|
+                 :|",
+                ":| ; :|",
+                ":|
+                  |
+                 :|",
+            ],
+            ParseTree {
+                pieces: vec![Piece {
+                    plays: vec![Play {
+                        grand_staves: vec![GrandStave {
+                            staves: vec![Stave { prefix: None }, Stave { prefix: None }],
+                        }],
+                        ..Play::default()
+                    }],
+                    ..Piece::default()
+                }],
+            },
+        );
     }
 }
