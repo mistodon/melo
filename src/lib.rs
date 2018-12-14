@@ -9,7 +9,7 @@ mod error;
 mod lexing;
 mod midi_generation;
 pub mod notes;
-mod parse;
+pub mod parse;
 mod parsing;
 mod sequencing;
 mod trust;

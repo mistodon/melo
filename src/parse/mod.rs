@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use failure::{self, Error};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,7 +18,7 @@ pub struct Piece<'a> {
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Voice<'a> {
-    pub name: Option<&'a str>,
+    pub name: Option<&'a [u8]>,
     pub program: Option<u8>,
     pub channel: Option<u8>,
     pub transpose: Option<i8>,
@@ -29,7 +27,7 @@ pub struct Voice<'a> {
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Play<'a> {
-    pub voice: Option<&'a str>,
+    pub name: Option<&'a [u8]>,
     pub grand_staves: Vec<GrandStave<'a>>,
 }
 
@@ -57,6 +55,7 @@ impl<'a> Parser<'a> {
         }
     }
 
+    #[allow(dead_code)]
     fn debug_position(&self) {
         let before = self.cursor - std::cmp::min(self.cursor, 20);
         let end = std::cmp::min(self.cursor + 100, self.source.len());
@@ -106,27 +105,6 @@ impl<'a> Parser<'a> {
         let next_byte = self.source[self.cursor];
 
         if !self.skip(next) {
-            Err(failure::err_msg(format!(
-                "Expected `{}` but saw `{}`",
-                ::std::str::from_utf8(next).unwrap(),
-                ::std::str::from_utf8(&[next_byte]).unwrap(),
-            )))
-        } else {
-            Ok(())
-        }
-    }
-
-    pub fn expect_only(&mut self, next: &[u8]) -> Result<(), Error> {
-        if self.finished() {
-            return Err(failure::err_msg(format!(
-                "Expected `{}` but reached the end of the file.",
-                ::std::str::from_utf8(next).unwrap()
-            )));
-        }
-
-        let next_byte = self.source[self.cursor];
-
-        if !self.skip_only(next) {
             Err(failure::err_msg(format!(
                 "Expected `{}` but saw `{}`",
                 ::std::str::from_utf8(next).unwrap(),
@@ -189,7 +167,6 @@ impl<'a> Parser<'a> {
             ch == b'_'
                 || ch == b','
                 || ch == b'\''
-                || ch == b'_'
                 || ch == b'#'
                 || (b'a' <= ch && ch <= b'z')
                 || (b'A' <= ch && ch <= b'Z')
@@ -250,7 +227,7 @@ impl<'a> Parser<'a> {
     }
 }
 
-pub fn parse<'a>(input: &'a str, filename: Option<&'a str>) -> Result<ParseTree<'a>, Error> {
+pub fn parse<'a>(input: &'a str, _filename: Option<&'a str>) -> Result<ParseTree<'a>, Error> {
     let parser = &mut Parser::new(input);
 
     let mut pieces = Vec::new();
@@ -283,9 +260,9 @@ fn parse_piece<'a>(parser: &mut Parser<'a>) -> Result<Piece<'a>, Error> {
 }
 
 fn parse_piece_contents<'a>(parser: &mut Parser<'a>) -> Result<Piece<'a>, Error> {
-    enum BlockType {
-        Play,
-        Voice,
+    enum BlockType<'a> {
+        Play(Option<&'a [u8]>),
+        Voice(Option<&'a [u8]>),
     }
 
     let mut piece = Piece::default();
@@ -295,16 +272,18 @@ fn parse_piece_contents<'a>(parser: &mut Parser<'a>) -> Result<Piece<'a>, Error>
 
         let block_type = {
             if parser.skip_keyword(b"play") {
-                BlockType::Play
+                BlockType::Play(parser.parse_attr())
             } else if parser.skip_keyword(b"voice") {
-                BlockType::Voice
+                BlockType::Voice(parser.parse_attr())
+            } else if let Some(_attr_name) = parser.parse_attr() {
+                unimplemented!()
             } else {
                 parser.skip_whitespace();
 
                 let done = parser.finished() || parser.check(b"}");
                 if !done {
                     // Top-level contents are considered a play block
-                    piece.plays.push(parse_play_contents(parser)?);
+                    piece.plays.push(parse_play_contents(parser, None)?);
                     parser.skip_whitespace();
                 }
 
@@ -314,11 +293,11 @@ fn parse_piece_contents<'a>(parser: &mut Parser<'a>) -> Result<Piece<'a>, Error>
 
         parser.expect(b"{")?;
         match block_type {
-            BlockType::Play => {
-                piece.plays.push(parse_play_contents(parser)?);
+            BlockType::Play(name) => {
+                piece.plays.push(parse_play_contents(parser, name)?);
             }
-            BlockType::Voice => {
-                piece.voices.push(parse_voice_contents(parser)?);
+            BlockType::Voice(name) => {
+                piece.voices.push(parse_voice_contents(parser, name)?);
             }
         }
         parser.expect(b"}")?;
@@ -327,8 +306,11 @@ fn parse_piece_contents<'a>(parser: &mut Parser<'a>) -> Result<Piece<'a>, Error>
     Ok(piece)
 }
 
-fn parse_voice_contents<'a>(parser: &mut Parser<'a>) -> Result<Voice<'a>, Error> {
-    let mut voice = Voice::default();
+fn parse_voice_contents<'a>(parser: &mut Parser<'a>, name: Option<&'a [u8]>) -> Result<Voice<'a>, Error> {
+    let mut voice = Voice {
+        name,
+        ..Voice::default()
+    };
 
     while let Some(attr_name) = parser.parse_attr() {
         parser.expect(b":")?;
@@ -350,8 +332,11 @@ fn parse_voice_contents<'a>(parser: &mut Parser<'a>) -> Result<Voice<'a>, Error>
     Ok(voice)
 }
 
-fn parse_play_contents<'a>(parser: &mut Parser<'a>) -> Result<Play<'a>, Error> {
-    let mut play = Play::default();
+fn parse_play_contents<'a>(parser: &mut Parser<'a>, name: Option<&'a [u8]>) -> Result<Play<'a>, Error> {
+    let mut play = Play {
+        name,
+        ..Play::default()
+    };
 
     loop {
         eprintln!("parse_play_contents loop");
@@ -473,6 +458,15 @@ mod tests {
         assert!(parse(source, None).is_err());
     }
 
+    fn plays_tree(plays: &[Play<'static>]) -> ParseTree<'static> {
+        ParseTree {
+            pieces: vec![Piece {
+                plays: plays.to_owned(),
+                ..Piece::default()
+            }]
+        }
+    }
+
     #[test]
     fn parse_empty_piece() {
         parse_equivalent(
@@ -525,12 +519,7 @@ mod tests {
     fn parse_piece_with_anon_empty_play() {
         parse_succeeds(
             "piece { play { } }",
-            ParseTree {
-                pieces: vec![Piece {
-                    plays: vec![Play::default()],
-                    ..Piece::default()
-                }],
-            },
+            plays_tree(&[Play::default()]),
         );
     }
 
@@ -568,12 +557,23 @@ mod tests {
     fn parse_solo_anon_empty_play() {
         parse_succeeds(
             "play { }",
-            ParseTree {
-                pieces: vec![Piece {
-                    plays: vec![Play::default()],
-                    ..Piece::default()
-                }],
-            },
+            plays_tree(&[Play::default()]),
+        );
+    }
+
+    #[test]
+    fn parse_solo_named_play() {
+        parse_equivalent(&[
+                "play Named {}",
+                "play Named{}",
+                "play Named
+                 {
+                 }",
+            ],
+            plays_tree(&[Play {
+                name: Some(b"Named"),
+                ..Play::default()
+            }])
         );
     }
 
@@ -684,17 +684,12 @@ mod tests {
                     :|
                 }",
             ],
-            ParseTree {
-                pieces: vec![Piece {
-                    plays: vec![Play {
-                        grand_staves: vec![GrandStave {
-                            staves: vec![Stave { prefix: None }],
-                        }],
-                        ..Play::default()
-                    }],
-                    ..Piece::default()
+            plays_tree(&[Play {
+                grand_staves: vec![GrandStave {
+                    staves: vec![Stave { prefix: None }],
                 }],
-            },
+                ..Play::default()
+            }])
         );
     }
 
@@ -710,17 +705,12 @@ mod tests {
                     :|
                 }",
             ],
-            ParseTree {
-                pieces: vec![Piece {
-                    plays: vec![Play {
-                        grand_staves: vec![GrandStave {
-                            staves: vec![Stave { prefix: None }, Stave { prefix: None }],
-                        }],
-                        ..Play::default()
-                    }],
-                    ..Piece::default()
+            plays_tree(&[Play {
+                grand_staves: vec![GrandStave {
+                    staves: vec![Stave { prefix: None }, Stave { prefix: None }],
                 }],
-            },
+                ..Play::default()
+            }])
         );
     }
 
@@ -749,22 +739,17 @@ mod tests {
                     :|
                 }",
             ],
-            ParseTree {
-                pieces: vec![Piece {
-                    plays: vec![Play {
-                        grand_staves: vec![
-                            GrandStave {
-                                staves: vec![Stave { prefix: None }],
-                            },
-                            GrandStave {
-                                staves: vec![Stave { prefix: None }],
-                            },
-                        ],
-                        ..Play::default()
-                    }],
-                    ..Piece::default()
-                }],
-            },
+            plays_tree(&[Play {
+                grand_staves: vec![
+                    GrandStave {
+                        staves: vec![Stave { prefix: None }],
+                    },
+                    GrandStave {
+                        staves: vec![Stave { prefix: None }],
+                    },
+                ],
+                ..Play::default()
+            }])
         );
     }
 
@@ -772,17 +757,12 @@ mod tests {
     fn parse_solo_stave_as_play_block() {
         parse_succeeds(
             ":|",
-            ParseTree {
-                pieces: vec![Piece {
-                    plays: vec![Play {
-                        grand_staves: vec![GrandStave {
-                            staves: vec![Stave { prefix: None }],
-                        }],
-                        ..Play::default()
-                    }],
-                    ..Piece::default()
+            plays_tree(&[Play {
+                grand_staves: vec![GrandStave {
+                    staves: vec![Stave { prefix: None }],
                 }],
-            },
+                ..Play::default()
+            }])
         );
     }
 
@@ -797,17 +777,12 @@ mod tests {
                   |
                  :|",
             ],
-            ParseTree {
-                pieces: vec![Piece {
-                    plays: vec![Play {
-                        grand_staves: vec![GrandStave {
-                            staves: vec![Stave { prefix: None }, Stave { prefix: None }],
-                        }],
-                        ..Play::default()
-                    }],
-                    ..Piece::default()
+            plays_tree(&[Play {
+                grand_staves: vec![GrandStave {
+                    staves: vec![Stave { prefix: None }, Stave { prefix: None }],
                 }],
-            },
+                ..Play::default()
+            }])
         );
     }
 }

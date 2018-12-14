@@ -1,8 +1,6 @@
 use std::fmt::{Error, Formatter};
 use std::sync::Arc;
 
-use failure::Fail;
-
 pub mod colors {
     pub use self::inner::*;
     use ansi_term::Style;
