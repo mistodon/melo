@@ -50,6 +50,7 @@ fn is_whitespace(ch: u8) -> bool {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Parser<'a> {
     pub source: &'a [u8],
     pub cursor: usize,
@@ -440,16 +441,30 @@ fn parse_play_contents<'a>(
         ..Play::default()
     };
 
+    let mut working_grand_stave = GrandStave::default();
+
     loop {
         parser.log("parse_play_contents loop");
 
         let attr_name = parser.parse_attr();
 
         if parser.skip(b":") {
+            parser.log("Starting a play attribute");
             if parser.skip_only(b"|") {
                 // Parse a stave
-                play.grand_staves
-                    .push(parse_grand_stave(parser, attr_name)?);
+                parser.skip_whitespace_in_line();
+                working_grand_stave
+                    .staves
+                    .push(parse_stave_contents(parser, attr_name)?);
+
+                if parser.skip_end_of_stave() {
+                    parser.skip_whitespace();
+
+                    play.grand_staves.push(std::mem::replace(
+                        &mut working_grand_stave,
+                        GrandStave::default(),
+                    ));
+                }
             } else {
                 // Parse an attribute value
                 return Err(failure::err_msg(
@@ -468,56 +483,8 @@ fn parse_play_contents<'a>(
             break;
         }
     }
+
     Ok(play)
-}
-
-fn parse_grand_stave<'a>(
-    parser: &mut Parser<'a>,
-    first_stave_prefix: Option<&'a [u8]>,
-) -> Result<GrandStave<'a>, Error> {
-    let mut grand_stave = GrandStave::default();
-
-    parser.log("Before the crime?");
-    parser.skip_whitespace_in_line();
-    parser.log("After the crime?");
-
-    grand_stave
-        .staves
-        .push(parse_stave_contents(parser, first_stave_prefix)?);
-
-    // More staves - TODO: kinda ugly duplication
-    loop {
-        parser.log("parse_grand_stave loop");
-        if parser.skip_end_of_stave() {
-            parser.skip_whitespace();
-            break;
-        }
-
-        let attr_name = parser.parse_attr();
-
-        if parser.skip(b":") {
-            if parser.skip_only(b"|") {
-                // Parse a stave
-                parser.skip_whitespace_in_line();
-                grand_stave
-                    .staves
-                    .push(parse_stave_contents(parser, attr_name)?);
-            } else {
-                // Parse an attribute value
-                return Err(failure::err_msg("This is an issue huh, we can't set attributes from within this function. Kind of a pickle, oops."));
-            }
-        } else {
-            if let Some(attr_name) = attr_name {
-                return Err(failure::err_msg(format!(
-                    "Attribute `{}` is missing a value.",
-                    std::str::from_utf8(attr_name).unwrap()
-                )));
-            }
-            break;
-        }
-    }
-
-    Ok(grand_stave)
 }
 
 fn parse_stave_contents<'a>(
