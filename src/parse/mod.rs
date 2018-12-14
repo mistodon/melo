@@ -43,6 +43,13 @@ pub struct Stave<'a> {
     //     pub bars: Vec<BarTypeNode>,
 }
 
+fn is_whitespace(ch: u8) -> bool {
+    match ch {
+        b' ' | b'\t' | b'\r' => true,
+        _ => false,
+    }
+}
+
 struct Parser<'a> {
     pub source: &'a [u8],
     pub cursor: usize,
@@ -149,14 +156,6 @@ impl<'a> Parser<'a> {
     }
 
     pub fn skip_whitespace(&mut self) {
-        // TODO: The two is_whitespace fns are now identical
-        fn is_whitespace(ch: u8) -> bool {
-            match ch {
-                b' ' | b'\t' | b'\r' => true,
-                _ => false,
-            }
-        }
-
         let mut in_comment = false;
         loop {
             if self.skip_only(b"//") {
@@ -165,7 +164,7 @@ impl<'a> Parser<'a> {
                 in_comment = false;
             } else {
                 if self.finished() || !(in_comment || is_whitespace(self.source[self.cursor])) {
-                    break
+                    break;
                 }
 
                 self.cursor += 1;
@@ -174,20 +173,16 @@ impl<'a> Parser<'a> {
     }
 
     pub fn skip_whitespace_in_line(&mut self) {
-        fn is_whitespace(ch: u8) -> bool {
-            match ch {
-                b' ' | b'\t' | b'\r' => true,
-                _ => false,
-            }
-        }
-
         let mut in_comment = false;
         loop {
             if self.skip_only(b"//") {
                 in_comment = true;
             } else {
-                if self.finished() || self.check(b"\n") || !(in_comment || is_whitespace(self.source[self.cursor])) {
-                    break
+                if self.finished()
+                    || self.check(b"\n")
+                    || !(in_comment || is_whitespace(self.source[self.cursor]))
+                {
+                    break;
                 }
 
                 self.cursor += 1;
@@ -268,8 +263,8 @@ impl<'a> Parser<'a> {
                     '"' if !escaping => {
                         self.cursor += i + 1;
                         return Ok(&source_str[1..i].as_bytes());
-                    },
-                    _ => escaping = false
+                    }
+                    _ => escaping = false,
                 }
             } else {
                 if ch != '"' {
@@ -364,10 +359,16 @@ fn parse_piece_contents<'a>(parser: &mut Parser<'a>) -> Result<Piece<'a>, Error>
                 }
 
                 parser.skip_whitespace_in_line();
-                let attribute_ended = parser.finished() || parser.skip(b",") || parser.skip(b"\n") || parser.skip(b";") || parser.check(b"}");
+                let attribute_ended = parser.finished()
+                    || parser.skip(b",")
+                    || parser.skip(b"\n")
+                    || parser.skip(b";")
+                    || parser.check(b"}");
 
                 if !attribute_ended {
-                    return Err(failure::err_msg("Attributes must end with a newline, comma, or semi-colon."));
+                    return Err(failure::err_msg(
+                        "Attributes must end with a newline, comma, or semi-colon.",
+                    ));
                 }
 
                 continue;
@@ -594,7 +595,8 @@ mod tests {
 
     #[test]
     fn parse_piece_with_attributes() {
-        parse_equivalent(&[
+        parse_equivalent(
+            &[
                 "piece { tempo: 120, beats: 4 }",
                 "piece {
                     tempo: 120,
@@ -602,14 +604,28 @@ mod tests {
                  }",
                 "tempo: 120
                  beats: 4
-                "
+                ",
             ],
             ParseTree {
                 pieces: vec![Piece {
                     tempo: Some(120),
                     beats: Some(4),
                     ..Piece::default()
-                }]
+                }],
+            },
+        );
+    }
+
+    #[test]
+    fn parse_toplevel_piece_attributes() {
+        parse_succeeds(
+            r#"title: "Title", composer: "Composer""#,
+            ParseTree {
+                pieces: vec![Piece {
+                    title: Some(b"Title"),
+                    composer: Some(b"Composer"),
+                    ..Piece::default()
+                }],
             },
         );
     }
@@ -631,7 +647,7 @@ mod tests {
                     beats: Some(3),
                     plays: vec![],
                     voices: vec![],
-                }]
+                }],
             },
         );
     }
@@ -956,8 +972,33 @@ mod tests {
     }
 
     #[test]
+    fn parse_toplevel_piece_attributes_and_toplevel_staves() {
+        parse_succeeds(
+            r#"tempo: 160
+               beats: 6
+
+               :|
+            "#,
+            ParseTree {
+                pieces: vec![Piece {
+                    tempo: Some(160),
+                    beats: Some(6),
+                    plays: vec![Play {
+                        grand_staves: vec![GrandStave {
+                            staves: vec![Stave { prefix: None }],
+                        }],
+                        ..Play::default()
+                    }],
+                    ..Piece::default()
+                }],
+            },
+        );
+    }
+
+    #[test]
     fn comments_are_whitespace() {
-        parse_equivalent(&[
+        parse_equivalent(
+            &[
                 "play PlayName { :| ;; :| ; :| } // Comment at end",
                 "play PlayName { // Comments
                     :|           // in
@@ -972,7 +1013,7 @@ mod tests {
                     :|
                     :|
                  } // lines
-                "
+                ",
             ],
             plays_tree(&[Play {
                 name: Some(b"PlayName"),
@@ -981,10 +1022,7 @@ mod tests {
                         staves: vec![Stave { prefix: None }],
                     },
                     GrandStave {
-                        staves: vec![
-                            Stave { prefix: None },
-                            Stave { prefix: None },
-                        ],
+                        staves: vec![Stave { prefix: None }, Stave { prefix: None }],
                     },
                 ],
                 ..Play::default()
