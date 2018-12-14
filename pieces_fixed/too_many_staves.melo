@@ -1,0 +1,17 @@
+tempo: 120
+
+voice Organ { program: 19 }
+
+play Organ
+{
+    // You can use single barlines to separate groups of staves
+    // but still play them simultaneously
+
+    :   | A     | A     | B     | G,
+    :   | E,    | F,    | G,    | E,
+    :   | C,    | D,    | D,    | C,
+        |
+    :   | A,    | A,    | G,,   | G,,
+    :   | E,,   | D,,   | D,,   | C,,
+    :   | A,,   | A,,   | B,,   | G,,,
+}

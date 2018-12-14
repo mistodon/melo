@@ -1,0 +1,15 @@
+// The `drums` attribute sets some sensible defaults for drums.
+voice Drums { drums: true }
+
+play Drums
+{
+    // Staves beginning with a note allow using `x` to represent that note.
+
+    F#: | xx xx xx xx | xx xx xx xx |
+    D:  | -- x- -- x- | -- x- -- x- |
+    C:  | x- -- x- -- | x- -- x- -- |
+
+    // F#: Hi-hat, D: Snare drum, C: Bass drum
+    // See `cargo run ref notes` for more details.
+}
+

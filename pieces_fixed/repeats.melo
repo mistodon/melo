@@ -1,0 +1,13 @@
+tempo: 160
+
+voice Drums { drums: true }
+
+play Drums
+{
+    // The `%` sign repeats the previous bar on that stave.
+
+    F#: | x-x x-x --x x-x | % | % | % |
+    D:  | --- --- x-- --- | --- --- x-- --- | --- --- x-- --- | --- --- x-- --- |
+    C:  | x-- --- --- --x | x-- x-- --- --- | x-- --- --- --x | x-- x-- --- --- |
+}
+

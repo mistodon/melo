@@ -1,0 +1,31 @@
+// See `cargo run ref instruments` to find the values of `program` that correspond to each instrument.
+
+voice Trumpet
+{
+    program: 56,
+    channel: 1,
+    volume: 35,     // Between 0 and 127
+}
+
+voice Bass
+{
+    program: 32,
+    channel: 2,
+    octave: -2,     // This lets us avoid writing so many commas to lower the notes.
+}
+
+
+// Multiple `play` blocks play simultaneously.
+
+play Trumpet
+{
+    // Each note is stretched to fill the bar and so are made whole notes.
+    :| D | G | C | . |
+}
+
+play Bass
+{
+    // Each bar here has four notes and so are made quarter notes.
+    :| D F a F | G D G D | C G F E | C |
+}
+

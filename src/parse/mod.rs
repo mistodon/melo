@@ -7,8 +7,8 @@ pub struct ParseTree<'a> {
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Piece<'a> {
-    pub title: Option<&'a str>,
-    pub composer: Option<&'a str>,
+    pub title: Option<&'a [u8]>,
+    pub composer: Option<&'a [u8]>,
     pub tempo: Option<u64>,
     pub beats: Option<u64>,
 
@@ -23,6 +23,7 @@ pub struct Voice<'a> {
     pub channel: Option<u8>,
     pub transpose: Option<i8>,
     pub volume: Option<u8>,
+    pub drums: Option<bool>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -60,10 +61,21 @@ impl<'a> Parser<'a> {
         let before = self.cursor - std::cmp::min(self.cursor, 20);
         let end = std::cmp::min(self.cursor + 100, self.source.len());
         eprintln!(
-            "{}   [{}]",
+            "{}«{}»",
             std::str::from_utf8(&self.source[before..self.cursor]).unwrap(),
             std::str::from_utf8(&self.source[self.cursor..end]).unwrap()
         );
+    }
+
+    #[allow(dead_code)]
+    #[allow(unused_variables)]
+    #[inline(always)]
+    fn log(&self, message: &str) {
+        #[cfg(feature = "verbose")]
+        {
+            eprint!("{}: ", message);
+            self.debug_position();
+        }
     }
 
     #[inline(always)]
@@ -137,15 +149,27 @@ impl<'a> Parser<'a> {
     }
 
     pub fn skip_whitespace(&mut self) {
+        // TODO: The two is_whitespace fns are now identical
         fn is_whitespace(ch: u8) -> bool {
             match ch {
-                b' ' | b'\t' | b'\r' | b'\n' => true,
+                b' ' | b'\t' | b'\r' => true,
                 _ => false,
             }
         }
 
-        while !self.finished() && is_whitespace(self.source[self.cursor]) {
-            self.cursor += 1;
+        let mut in_comment = false;
+        loop {
+            if self.skip_only(b"//") {
+                in_comment = true;
+            } else if self.skip_only(b"\n") {
+                in_comment = false;
+            } else {
+                if self.finished() || !(in_comment || is_whitespace(self.source[self.cursor])) {
+                    break
+                }
+
+                self.cursor += 1;
+            }
         }
     }
 
@@ -157,8 +181,17 @@ impl<'a> Parser<'a> {
             }
         }
 
-        while !self.finished() && is_whitespace(self.source[self.cursor]) {
-            self.cursor += 1;
+        let mut in_comment = false;
+        loop {
+            if self.skip_only(b"//") {
+                in_comment = true;
+            } else {
+                if self.finished() || self.check(b"\n") || !(in_comment || is_whitespace(self.source[self.cursor])) {
+                    break
+                }
+
+                self.cursor += 1;
+            }
         }
     }
 
@@ -222,8 +255,51 @@ impl<'a> Parser<'a> {
         Ok(result)
     }
 
-    pub fn at_end_of_stave(&mut self) -> bool {
+    pub fn parse_string_only(&mut self) -> Result<&'a [u8], Error> {
+        // We only accept UTF-8 so this should be safe.
+        let source_str = unsafe { std::str::from_utf8_unchecked(&self.source[self.cursor..]) };
+
+        let mut started = false;
+        let mut escaping = false;
+        for (i, ch) in source_str.char_indices() {
+            if started {
+                match ch {
+                    '\\' if !escaping => escaping = true,
+                    '"' if !escaping => {
+                        self.cursor += i + 1;
+                        return Ok(&source_str[1..i].as_bytes());
+                    },
+                    _ => escaping = false
+                }
+            } else {
+                if ch != '"' {
+                    return Err(failure::err_msg("String must open with `\"`"));
+                }
+                started = true;
+            }
+        }
+
+        Err(failure::err_msg("Unclosed string!"))
+    }
+
+    pub fn parse_bool_only(&mut self) -> Result<bool, Error> {
+        if self.skip_keyword(b"true") {
+            Ok(true)
+        } else if self.skip_keyword(b"false") {
+            Ok(false)
+        } else {
+            Err(failure::err_msg("Failed to parse bool."))
+        }
+    }
+
+    pub fn skip_end_of_stave(&mut self) -> bool {
         self.finished() || self.skip_only(b"\n") || self.skip_only(b";") || self.check(b"}")
+    }
+
+    pub fn skip_stave_contents(&mut self) {
+        while !self.skip_end_of_stave() {
+            self.cursor += 1;
+        }
     }
 }
 
@@ -235,7 +311,7 @@ pub fn parse<'a>(input: &'a str, _filename: Option<&'a str>) -> Result<ParseTree
     parser.skip_whitespace();
 
     loop {
-        eprintln!("parse loop");
+        parser.log("parse loop");
 
         pieces.push(parse_piece(parser)?);
 
@@ -268,15 +344,33 @@ fn parse_piece_contents<'a>(parser: &mut Parser<'a>) -> Result<Piece<'a>, Error>
     let mut piece = Piece::default();
 
     loop {
-        eprintln!("parse_piece_contents loop");
+        parser.log("parse_piece_contents loop");
 
         let block_type = {
             if parser.skip_keyword(b"play") {
                 BlockType::Play(parser.parse_attr())
             } else if parser.skip_keyword(b"voice") {
                 BlockType::Voice(parser.parse_attr())
-            } else if let Some(_attr_name) = parser.parse_attr() {
-                unimplemented!()
+            } else if let Some(attr_name) = parser.parse_attr() {
+                parser.expect(b":")?;
+
+                // TODO: more ugly duplication...
+                match attr_name {
+                    b"tempo" => piece.tempo = Some(parser.parse_number_only()?),
+                    b"beats" => piece.beats = Some(parser.parse_number_only()?),
+                    b"title" => piece.title = Some(parser.parse_string_only()?),
+                    b"composer" => piece.composer = Some(parser.parse_string_only()?),
+                    _ => return Err(failure::err_msg("Invalid attribute name")),
+                }
+
+                parser.skip_whitespace_in_line();
+                let attribute_ended = parser.finished() || parser.skip(b",") || parser.skip(b"\n") || parser.skip(b";") || parser.check(b"}");
+
+                if !attribute_ended {
+                    return Err(failure::err_msg("Attributes must end with a newline, comma, or semi-colon."));
+                }
+
+                continue;
             } else {
                 parser.skip_whitespace();
 
@@ -306,7 +400,10 @@ fn parse_piece_contents<'a>(parser: &mut Parser<'a>) -> Result<Piece<'a>, Error>
     Ok(piece)
 }
 
-fn parse_voice_contents<'a>(parser: &mut Parser<'a>, name: Option<&'a [u8]>) -> Result<Voice<'a>, Error> {
+fn parse_voice_contents<'a>(
+    parser: &mut Parser<'a>,
+    name: Option<&'a [u8]>,
+) -> Result<Voice<'a>, Error> {
     let mut voice = Voice {
         name,
         ..Voice::default()
@@ -320,11 +417,12 @@ fn parse_voice_contents<'a>(parser: &mut Parser<'a>, name: Option<&'a [u8]>) -> 
             b"channel" => voice.channel = Some(parser.parse_number_only()?),
             b"octave" => voice.transpose = Some(parser.parse_number_only::<i8>()? * 12),
             b"volume" => voice.volume = Some(parser.parse_number_only()?),
+            b"drums" => voice.drums = Some(parser.parse_bool_only()?),
             _ => return Err(failure::err_msg("Invalid attribute name")),
         }
 
         parser.skip_whitespace_in_line();
-        if !(parser.skip(b",") || parser.skip(b"\n")) {
+        if !(parser.skip(b",") || parser.skip(b"\n") || parser.skip(b";")) {
             break;
         }
     }
@@ -332,14 +430,17 @@ fn parse_voice_contents<'a>(parser: &mut Parser<'a>, name: Option<&'a [u8]>) -> 
     Ok(voice)
 }
 
-fn parse_play_contents<'a>(parser: &mut Parser<'a>, name: Option<&'a [u8]>) -> Result<Play<'a>, Error> {
+fn parse_play_contents<'a>(
+    parser: &mut Parser<'a>,
+    name: Option<&'a [u8]>,
+) -> Result<Play<'a>, Error> {
     let mut play = Play {
         name,
         ..Play::default()
     };
 
     loop {
-        eprintln!("parse_play_contents loop");
+        parser.log("parse_play_contents loop");
 
         let attr_name = parser.parse_attr();
 
@@ -375,15 +476,18 @@ fn parse_grand_stave<'a>(
 ) -> Result<GrandStave<'a>, Error> {
     let mut grand_stave = GrandStave::default();
 
+    parser.log("Before the crime?");
     parser.skip_whitespace_in_line();
+    parser.log("After the crime?");
+
     grand_stave
         .staves
         .push(parse_stave_contents(parser, first_stave_prefix)?);
 
     // More staves - TODO: kinda ugly duplication
     loop {
-        eprintln!("parse_grand_stave loop");
-        if parser.at_end_of_stave() {
+        parser.log("parse_grand_stave loop");
+        if parser.skip_end_of_stave() {
             parser.skip_whitespace();
             break;
         }
@@ -420,16 +524,16 @@ fn parse_stave_contents<'a>(
     stave_prefix: Option<&'a [u8]>,
 ) -> Result<Stave<'a>, Error> {
     loop {
-        eprintln!("parse_stave_contents loop");
+        parser.log("parse_stave_contents loop");
 
         // TODO: Parse stave contents on the current line
-        if parser.at_end_of_stave() {
-            parser.skip_whitespace_in_line();
-            if parser.skip_only(b"|") {
-                // Continue the same stave
-            } else {
-                break;
-            }
+        parser.skip_stave_contents();
+
+        parser.skip_whitespace_in_line();
+        if parser.skip_only(b"|") {
+            // Continue the same stave
+        } else {
+            break;
         }
     }
 
@@ -441,6 +545,7 @@ fn parse_stave_contents<'a>(
 
 #[cfg(test)]
 mod tests {
+    // TODO: more tests covering parse failure
 
     use super::*;
 
@@ -463,7 +568,7 @@ mod tests {
             pieces: vec![Piece {
                 plays: plays.to_owned(),
                 ..Piece::default()
-            }]
+            }],
         }
     }
 
@@ -483,6 +588,50 @@ mod tests {
             &["piece{}piece{}", "piece {\n}piece\t{ }"],
             ParseTree {
                 pieces: vec![Piece::default(), Piece::default()],
+            },
+        );
+    }
+
+    #[test]
+    fn parse_piece_with_attributes() {
+        parse_equivalent(&[
+                "piece { tempo: 120, beats: 4 }",
+                "piece {
+                    tempo: 120,
+                    beats: 4,
+                 }",
+                "tempo: 120
+                 beats: 4
+                "
+            ],
+            ParseTree {
+                pieces: vec![Piece {
+                    tempo: Some(120),
+                    beats: Some(4),
+                    ..Piece::default()
+                }]
+            },
+        );
+    }
+
+    #[test]
+    fn parse_piece_with_all_attributes() {
+        parse_succeeds(
+            r#"piece {
+                title: "Title",
+                composer: "Composer",
+                tempo: 100,
+                beats: 3,
+             }"#,
+            ParseTree {
+                pieces: vec![Piece {
+                    title: Some(b"Title"),
+                    composer: Some(b"Composer"),
+                    tempo: Some(100),
+                    beats: Some(3),
+                    plays: vec![],
+                    voices: vec![],
+                }]
             },
         );
     }
@@ -517,10 +666,7 @@ mod tests {
 
     #[test]
     fn parse_piece_with_anon_empty_play() {
-        parse_succeeds(
-            "piece { play { } }",
-            plays_tree(&[Play::default()]),
-        );
+        parse_succeeds("piece { play { } }", plays_tree(&[Play::default()]));
     }
 
     #[test]
@@ -555,15 +701,13 @@ mod tests {
 
     #[test]
     fn parse_solo_anon_empty_play() {
-        parse_succeeds(
-            "play { }",
-            plays_tree(&[Play::default()]),
-        );
+        parse_succeeds("play { }", plays_tree(&[Play::default()]));
     }
 
     #[test]
     fn parse_solo_named_play() {
-        parse_equivalent(&[
+        parse_equivalent(
+            &[
                 "play Named {}",
                 "play Named{}",
                 "play Named
@@ -573,7 +717,29 @@ mod tests {
             plays_tree(&[Play {
                 name: Some(b"Named"),
                 ..Play::default()
-            }])
+            }]),
+        );
+    }
+
+    #[test]
+    fn parse_solo_named_voice() {
+        parse_equivalent(
+            &[
+                "voice Named {}",
+                "voice Named{}",
+                "voice Named
+                 {
+                 }",
+            ],
+            ParseTree {
+                pieces: vec![Piece {
+                    voices: vec![Voice {
+                        name: Some(b"Named"),
+                        ..Voice::default()
+                    }],
+                    ..Piece::default()
+                }],
+            },
         );
     }
 
@@ -623,6 +789,7 @@ mod tests {
             &[
                 "voice { program: 30, channel: 2 }",
                 "voice { program: 30, channel: 2, }",
+                "voice { program: 30; channel: 2; }",
                 "voice { program: 30
                     channel: 2, }",
                 "voice {
@@ -654,7 +821,8 @@ mod tests {
                 octave: -2,
                 channel: 3,
                 program: 5,
-                volume: 8
+                volume: 8,
+                drums: true,
             }",
             ParseTree {
                 pieces: vec![Piece {
@@ -663,6 +831,7 @@ mod tests {
                         channel: Some(3),
                         program: Some(5),
                         volume: Some(8),
+                        drums: Some(true),
                         name: None,
                     }],
                     ..Piece::default()
@@ -689,7 +858,7 @@ mod tests {
                     staves: vec![Stave { prefix: None }],
                 }],
                 ..Play::default()
-            }])
+            }]),
         );
     }
 
@@ -710,7 +879,7 @@ mod tests {
                     staves: vec![Stave { prefix: None }, Stave { prefix: None }],
                 }],
                 ..Play::default()
-            }])
+            }]),
         );
     }
 
@@ -749,7 +918,7 @@ mod tests {
                     },
                 ],
                 ..Play::default()
-            }])
+            }]),
         );
     }
 
@@ -762,7 +931,7 @@ mod tests {
                     staves: vec![Stave { prefix: None }],
                 }],
                 ..Play::default()
-            }])
+            }]),
         );
     }
 
@@ -782,7 +951,44 @@ mod tests {
                     staves: vec![Stave { prefix: None }, Stave { prefix: None }],
                 }],
                 ..Play::default()
-            }])
+            }]),
+        );
+    }
+
+    #[test]
+    fn comments_are_whitespace() {
+        parse_equivalent(&[
+                "play PlayName { :| ;; :| ; :| } // Comment at end",
+                "play PlayName { // Comments
+                    :|           // in
+                                 // every
+                    :| ; :|      // line
+                }",
+                "play // Comments on
+                 PlayName // some of the
+                 {
+                    :|
+
+                    :|
+                    :|
+                 } // lines
+                "
+            ],
+            plays_tree(&[Play {
+                name: Some(b"PlayName"),
+                grand_staves: vec![
+                    GrandStave {
+                        staves: vec![Stave { prefix: None }],
+                    },
+                    GrandStave {
+                        staves: vec![
+                            Stave { prefix: None },
+                            Stave { prefix: None },
+                        ],
+                    },
+                ],
+                ..Play::default()
+            }]),
         );
     }
 }

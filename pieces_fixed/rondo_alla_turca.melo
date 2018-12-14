@@ -1,0 +1,54 @@
+title: "Rondo alla Turca"
+composer: "Wolfgang Amadeus Mozart"
+beats: 2
+tempo: 132
+
+
+voice Right { channel: 2 }
+voice Left { channel: 1, octave: -1 }
+
+
+play Right
+{
+    :   | ---- B A G#, A |
+        | C4 D C B C | E4 F E D# E | b a G# a b a G# a | c8 a.-- c-G#a |
+        | b--- a--- G--- a-G#a | % | b--- a--- G--- F#--- | E4 B A G#, A |
+
+    :   | C4 D C B C | E4 F E D# E | b a G# a b a G# a | c8 a--- c-G#a |
+        | b--- a--- G--- a-G#a | % | b--- a--- G--- F#--- | E4 E- F- |
+
+    :   | G- G- aGFE | D4 E- F- | G- G- aGFE | D4 C- D- |
+        | E- E- FEDC | B4 C- D- | E- E- FEDC | B4 B A G#, A |
+
+    :   | C4 D C B C | E4 F E D# E | b a G# a b a G# a | c8  a.-- b-ab |
+        | c- b- a- G#- | a- E- F- D- | C8 CBCBCBCB | A |
+}
+
+
+play Left
+{
+    :   | - | -- E- E- E- | - E E E | - E - E | - E E E |
+    :   | - | A. C- C- C- | A C C C | A C A C | A C C C |
+
+    :   | -  E E E | % | -  E -  B | -  |
+    :   | E, B B B | % | E, B B, - | E, |
+
+    :   | -- E- E- E- | - E E E | - E - E | - E E E |
+    :   | A. C- C- C- | A C C C | A C A C | A C C C |
+
+    :   | -  E E E | % | -  E -  B | -  |
+    :   | E, B B B | % | E, B B, - | E, |
+
+    :   | -  C -  E | -  | -  C -  E | -  |
+    :   | C, - E, - | G, | C, - E, - | G, |
+
+    :   | -  A -  C | -  | -  A -  C | -  |
+    :   | A, - C, - | E, | A, - C, - | E, |
+
+    :   | -- E- E- E- | - E E E | - E - E | - D# D# D# |
+    :   | A. C- C- C- | A C C C | A C A C | F A  A  A  |
+
+    :   | - E  -  F | - E  -  F | A  A  G# G# | A  |
+    :   | E, A D, B | C, A D, B | E, E, E, E, | A, |
+}
+

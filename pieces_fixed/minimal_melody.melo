@@ -1,0 +1,10 @@
+// The default voice is a piano, so no other attributes are required here.
+voice Piano {}
+
+play Piano
+{
+    // Staves beginning with `:` are melody staves.
+    :| C D E F G a b c | b a G F E D C . |
+    // The dot at the end extends the previous note.
+}
+
