@@ -40,7 +40,62 @@ pub struct GrandStave<'a> {
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Stave<'a> {
     pub prefix: Option<&'a [u8]>,
-    //     pub bars: Vec<BarTypeNode>,
+    pub bars: Vec<Bar<'a>>,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct Bar<'a> {
+    pub contents: Vec<StaveEvent<'a>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StaveEvent<'a> {
+    pub event: StaveEventType<'a>,
+    pub duration: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StaveEventType<'a> {
+    Rest,
+    Hit,
+    Prolong,
+    Note(Note),
+    RepeatBars(usize),
+    PlayPart(&'a [u8]),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Note {
+    pub note: NoteSymbol,
+    pub acc: Accidental,
+    pub octave: i8,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum NoteSymbol {
+    LowA,
+    LowB,
+    LowC,
+    LowD,
+    LowE,
+    LowF,
+    LowG,
+    HighA,
+    HighB,
+    HighC,
+    HighD,
+    HighE,
+    HighF,
+    HighG,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum Accidental {
+    Flat,
+    Natural,
+    Sharp,
 }
 
 fn is_whitespace(ch: u8) -> bool {
@@ -132,6 +187,70 @@ impl<'a> Parser<'a> {
             )))
         } else {
             Ok(())
+        }
+    }
+
+    // TODO: Lots of unpleasant duplication
+    pub fn expect_only(&mut self, next: &[u8]) -> Result<(), Error> {
+        if self.finished() {
+            return Err(failure::err_msg(format!(
+                "Expected `{}` but reached the end of the file.",
+                ::std::str::from_utf8(next).unwrap()
+            )));
+        }
+
+        let next_byte = self.source[self.cursor];
+
+        if !self.skip_only(next) {
+            Err(failure::err_msg(format!(
+                "Expected `{}` but saw `{}`",
+                ::std::str::from_utf8(next).unwrap(),
+                ::std::str::from_utf8(&[next_byte]).unwrap(),
+            )))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn check_range_only(&mut self, min: u8, max: u8) -> Option<u8> {
+        if self.cursor >= self.source.len() {
+            return None
+        }
+
+        let ch = self.source[self.cursor];
+        if ch >= min && ch <= max {
+            Some(ch)
+        } else {
+            None
+        }
+    }
+
+    pub fn skip_range_only(&mut self, min: u8, max: u8) -> Option<u8> {
+        match self.check_range_only(min, max) {
+            result @ Some(_) => {
+                self.cursor += 1;
+                result
+            },
+            None => None
+        }
+    }
+
+    pub fn check_set_only(&mut self, options: &[u8]) -> Option<u8> {
+        if self.cursor >= self.source.len() {
+            return None
+        }
+
+        let ch = self.source[self.cursor];
+        options.iter().find(|&&opt| ch == opt).cloned()
+    }
+
+    pub fn skip_set_only(&mut self, options: &[u8]) -> Option<u8> {
+        match self.check_set_only(options) {
+            result @ Some(_) => {
+                self.cursor += 1;
+                result
+            },
+            None => None
         }
     }
 
@@ -290,12 +409,6 @@ impl<'a> Parser<'a> {
 
     pub fn skip_end_of_stave(&mut self) -> bool {
         self.finished() || self.skip_only(b"\n") || self.skip_only(b";") || self.check(b"}")
-    }
-
-    pub fn skip_stave_contents(&mut self) {
-        while !self.skip_end_of_stave() {
-            self.cursor += 1;
-        }
     }
 }
 
@@ -491,23 +604,119 @@ fn parse_stave_contents<'a>(
     parser: &mut Parser<'a>,
     stave_prefix: Option<&'a [u8]>,
 ) -> Result<Stave<'a>, Error> {
-    loop {
+    let mut done = false;
+    let mut working_event = None;
+    let mut working_bar = vec![];
+    let mut bars = vec![];
+
+    while !done {
         parser.log("parse_stave_contents loop");
 
-        // TODO: Parse stave contents on the current line
-        parser.skip_stave_contents();
+        let mut bar_ended = false;
+
+        // TODO: [chords] (tuplets)3
+        if parser.skip_only(b"x") {
+            working_event = Some(StaveEventType::Hit);
+        } else if parser.skip_only(b"-") {
+            working_event = Some(StaveEventType::Rest);
+        } else if parser.skip_only(b".") {
+            working_event = Some(StaveEventType::Prolong);
+        } else if let Some(note) = parse_note(parser) {
+            working_event = Some(StaveEventType::Note(note));
+        } else if parser.skip_only(b"%") {
+
+            // TODO: Hmm...
+            if parser.skip_only(b"(") {
+                parser.skip_whitespace_in_line();
+                if let Some(bar_count) = parser.parse_number_only::<usize>().ok() {
+                    working_event = Some(StaveEventType::RepeatBars(bar_count));
+                    parser.skip_whitespace_in_line();
+                } else if let Some(part_name) = parser.parse_attr() {
+                    working_event = Some(StaveEventType::PlayPart(part_name));
+                } else {
+                    return Err(failure::err_msg("Expected bar count or part name"));
+                }
+                parser.expect_only(b")")?;
+            } else {
+                working_event = Some(StaveEventType::RepeatBars(1));
+            }
+
+        } else if parser.skip_only(b"|") {
+            bar_ended = true;
+        } else if parser.skip_end_of_stave() {
+            bar_ended = true;
+            parser.skip_whitespace_in_line();
+            if !parser.skip_only(b"|") {
+                done = true;
+            }
+        } else {
+            parser.log("Unexpected character in stave!");
+            return Err(failure::err_msg("Unexpected character in stave!"));
+        }
+
+        if let Some(event_type) = working_event.take() {
+            // TODO: try parse a duration
+            parser.skip_whitespace_in_line();
+            let duration = parser.parse_number_only::<usize>().unwrap_or(1);
+
+            working_bar.push(StaveEvent { event: event_type, duration });
+        }
+
+        if bar_ended && !working_bar.is_empty() {
+            let bar = Bar { contents: std::mem::replace(&mut working_bar, vec![]) };
+            bars.push(bar);
+        }
 
         parser.skip_whitespace_in_line();
-        if parser.skip_only(b"|") {
-            // Continue the same stave
-        } else {
-            break;
-        }
     }
 
     Ok(Stave {
         prefix: stave_prefix,
+        bars,
         ..Default::default()
+    })
+}
+
+fn parse_note(parser: &mut Parser) -> Option<Note> {
+    let note_symbol = parser.skip_range_only(b'a', b'g').or_else(|| parser.skip_range_only(b'A', b'G'))?;
+    let note_symbol = match note_symbol {
+        b'A' => NoteSymbol::LowA,
+        b'B' => NoteSymbol::LowB,
+        b'C' => NoteSymbol::LowC,
+        b'D' => NoteSymbol::LowD,
+        b'E' => NoteSymbol::LowE,
+        b'F' => NoteSymbol::LowF,
+        b'G' => NoteSymbol::LowG,
+        b'a' => NoteSymbol::HighA,
+        b'b' => NoteSymbol::HighB,
+        b'c' => NoteSymbol::HighC,
+        b'd' => NoteSymbol::HighD,
+        b'e' => NoteSymbol::HighE,
+        b'f' => NoteSymbol::HighF,
+        b'g' => NoteSymbol::HighG,
+        _ => return None
+    };
+
+    let acc = parser.skip_set_only(b"_=#").map(|acc| match acc {
+        b'_' => Accidental::Flat,
+        b'=' => Accidental::Natural,
+        b'#' => Accidental::Sharp,
+        _ => unreachable!()
+    }).unwrap_or(Accidental::Natural);
+
+    let mut octave = 0_i8;
+    while let Some(octave_mod) = parser.skip_set_only(b",'") {
+        match octave_mod {
+            b',' => octave -= 1,
+            b'\'' => octave += 1,
+            _ => unreachable!()
+        }
+    }
+
+    Some(Note {
+        note: note_symbol,
+        acc,
+        octave,
     })
 }
 
@@ -539,6 +748,19 @@ mod tests {
             }],
         }
     }
+
+    fn grand_stave(events: &[&[&[StaveEvent<'static>]]]) -> GrandStave<'static> {
+        GrandStave {
+            staves: events.iter().map(|bars| Stave {
+                prefix: None,
+                bars: bars.iter().map(|&events| Bar {
+                    contents: events.to_owned(),
+                }).collect(),
+            }).collect()
+        }
+    }
+
+    const EMPTY_STAVE: &[&[StaveEvent<'static>]] = &[];
 
     #[test]
     fn parse_empty_piece() {
@@ -837,9 +1059,7 @@ mod tests {
                 }",
             ],
             plays_tree(&[Play {
-                grand_staves: vec![GrandStave {
-                    staves: vec![Stave { prefix: None }],
-                }],
+                grand_staves: vec![grand_stave(&[EMPTY_STAVE])],
                 ..Play::default()
             }]),
         );
@@ -858,9 +1078,7 @@ mod tests {
                 }",
             ],
             plays_tree(&[Play {
-                grand_staves: vec![GrandStave {
-                    staves: vec![Stave { prefix: None }, Stave { prefix: None }],
-                }],
+                grand_staves: vec![grand_stave(&[EMPTY_STAVE, EMPTY_STAVE])],
                 ..Play::default()
             }]),
         );
@@ -893,12 +1111,8 @@ mod tests {
             ],
             plays_tree(&[Play {
                 grand_staves: vec![
-                    GrandStave {
-                        staves: vec![Stave { prefix: None }],
-                    },
-                    GrandStave {
-                        staves: vec![Stave { prefix: None }],
-                    },
+                    grand_stave(&[EMPTY_STAVE]),
+                    grand_stave(&[EMPTY_STAVE]),
                 ],
                 ..Play::default()
             }]),
@@ -910,9 +1124,7 @@ mod tests {
         parse_succeeds(
             ":|",
             plays_tree(&[Play {
-                grand_staves: vec![GrandStave {
-                    staves: vec![Stave { prefix: None }],
-                }],
+                grand_staves: vec![grand_stave(&[EMPTY_STAVE])],
                 ..Play::default()
             }]),
         );
@@ -930,9 +1142,7 @@ mod tests {
                  :|",
             ],
             plays_tree(&[Play {
-                grand_staves: vec![GrandStave {
-                    staves: vec![Stave { prefix: None }, Stave { prefix: None }],
-                }],
+                grand_staves: vec![grand_stave(&[EMPTY_STAVE, EMPTY_STAVE])],
                 ..Play::default()
             }]),
         );
@@ -951,9 +1161,7 @@ mod tests {
                     tempo: Some(160),
                     beats: Some(6),
                     plays: vec![Play {
-                        grand_staves: vec![GrandStave {
-                            staves: vec![Stave { prefix: None }],
-                        }],
+                        grand_staves: vec![grand_stave(&[EMPTY_STAVE])],
                         ..Play::default()
                     }],
                     ..Piece::default()
@@ -985,15 +1193,213 @@ mod tests {
             plays_tree(&[Play {
                 name: Some(b"PlayName"),
                 grand_staves: vec![
-                    GrandStave {
-                        staves: vec![Stave { prefix: None }],
-                    },
-                    GrandStave {
-                        staves: vec![Stave { prefix: None }, Stave { prefix: None }],
-                    },
+                    grand_stave(&[EMPTY_STAVE]),
+                    grand_stave(&[EMPTY_STAVE, EMPTY_STAVE]),
                 ],
                 ..Play::default()
             }]),
         );
+    }
+
+    fn hit(duration: usize) -> StaveEvent<'static> {
+        StaveEvent { event: StaveEventType::Hit, duration }
+    }
+
+    fn prolong(duration: usize) -> StaveEvent<'static> {
+        StaveEvent { event: StaveEventType::Prolong, duration }
+    }
+
+    fn rest(duration: usize) -> StaveEvent<'static> {
+        StaveEvent { event: StaveEventType::Rest, duration }
+    }
+
+    fn note(note: NoteSymbol, duration: usize) -> StaveEvent<'static> {
+        StaveEvent { event: StaveEventType::Note(Note { note, acc: Accidental::Natural, octave: 0 }), duration }
+    }
+
+    #[test]
+    fn parse_hits() {
+        parse_equivalent(
+            &[
+                ":|x|xx|xxx|",
+                ":| x | x x | xx x |",
+            ],
+            plays_tree(&[Play {
+                grand_staves: vec![grand_stave(&[&[
+                    &[hit(1)],
+                    &[hit(1), hit(1)],
+                    &[hit(1), hit(1), hit(1)],
+                ]])],
+                ..Play::default()
+            }]),
+        );
+    }
+
+    #[test]
+    fn parse_prolong() {
+        parse_equivalent(
+            &[
+                ":|..|x.|",
+                ":| . . | x . |",
+            ],
+            plays_tree(&[Play {
+                grand_staves: vec![grand_stave(&[&[
+                    &[prolong(1), prolong(1)],
+                    &[hit(1), prolong(1)],
+                ]])],
+                ..Play::default()
+            }]),
+        );
+    }
+
+    #[test]
+    fn parse_rests() {
+        parse_equivalent(
+            &[
+                ":|-|-.|x--|",
+                ":| - | - . | x - - |",
+            ],
+            plays_tree(&[Play {
+                grand_staves: vec![grand_stave(&[&[
+                    &[rest(1)],
+                    &[rest(1), prolong(1)],
+                    &[hit(1), rest(1), rest(1)],
+                ]])],
+                ..Play::default()
+            }]),
+        );
+    }
+
+    #[test]
+    fn parse_single_repeat() {
+        parse_equivalent(
+            &[
+                ":|%",
+                ":| % |",
+            ],
+            plays_tree(&[Play {
+                grand_staves: vec![grand_stave(&[&[
+                    &[StaveEvent { event: StaveEventType::RepeatBars(1), duration: 1 }],
+                ]])],
+                ..Play::default()
+            }]),
+        );
+    }
+
+    #[test]
+    fn parse_double_repeat() {
+        parse_equivalent(
+            &[
+                ":|%%",
+                ":| % % |",
+            ],
+            plays_tree(&[Play {
+                grand_staves: vec![grand_stave(&[&[
+                    &[
+                        StaveEvent { event: StaveEventType::RepeatBars(1), duration: 1 },
+                        StaveEvent { event: StaveEventType::RepeatBars(1), duration: 1 },
+                    ],
+                ]])],
+                ..Play::default()
+            }]),
+        );
+    }
+
+    #[test]
+    fn parse_multi_bar_repeat() {
+        parse_equivalent(
+            &[
+                ":|%(3)",
+                ":| %(3) |",
+                ":| %( 3 ) |",
+            ],
+            plays_tree(&[Play {
+                grand_staves: vec![grand_stave(&[&[
+                    &[StaveEvent { event: StaveEventType::RepeatBars(3), duration: 1 }],
+                ]])],
+                ..Play::default()
+            }]),
+        );
+    }
+
+    #[test]
+    fn parse_play_part() {
+        parse_equivalent(
+            &[
+                ":|%(part_name_2)",
+                ":| %(part_name_2 ) |",
+                ":| %( part_name_2 ) |",
+            ],
+            plays_tree(&[Play {
+                grand_staves: vec![grand_stave(&[&[
+                    &[StaveEvent { event: StaveEventType::PlayPart(b"part_name_2"), duration: 1 }],
+                ]])],
+                ..Play::default()
+            }]),
+        );
+    }
+
+    #[test]
+    fn parse_play_notes() {
+        parse_equivalent(
+            &[
+                ":|c|cd|cde|",
+                ":| c | c d | cd e |",
+            ],
+            plays_tree(&[Play {
+                grand_staves: vec![grand_stave(&[&[
+                    &[note(NoteSymbol::HighC, 1)],
+                    &[note(NoteSymbol::HighC, 1), note(NoteSymbol::HighD, 1)],
+                    &[note(NoteSymbol::HighC, 1), note(NoteSymbol::HighD, 1), note(NoteSymbol::HighE, 1)],
+                ]])],
+                ..Play::default()
+            }]),
+        );
+    }
+
+    #[test]
+    fn parse_durations() {
+        parse_equivalent(
+            &[
+                ":|-|-1|-3",
+            ],
+            plays_tree(&[Play {
+                grand_staves: vec![grand_stave(&[&[
+                    &[rest(1)],
+                    &[rest(1)],
+                    &[rest(3)],
+                ]])],
+                ..Play::default()
+            }]),
+        );
+    }
+
+    // TODO: More sophisticated testing for this
+    #[test]
+    fn parse_notes() {
+        fn single_note_tree(note: Note) -> ParseTree<'static> {
+            plays_tree(&[Play {
+                grand_staves: vec![grand_stave(&[&[&[
+                    StaveEvent { event: StaveEventType::Note(note), duration: 1 },
+                ]]])],
+                ..Play::default()
+            }])
+        }
+
+        parse_succeeds(":| A", single_note_tree(Note { note: NoteSymbol::LowA, acc: Accidental::Natural, octave: 0 }));
+        parse_succeeds(":| G", single_note_tree(Note { note: NoteSymbol::LowG, acc: Accidental::Natural, octave: 0 }));
+        parse_succeeds(":| a", single_note_tree(Note { note: NoteSymbol::HighA, acc: Accidental::Natural, octave: 0 }));
+        parse_succeeds(":| g", single_note_tree(Note { note: NoteSymbol::HighG, acc: Accidental::Natural, octave: 0 }));
+        parse_succeeds(":| c#", single_note_tree(Note { note: NoteSymbol::HighC, acc: Accidental::Sharp, octave: 0 }));
+        parse_succeeds(":| c_", single_note_tree(Note { note: NoteSymbol::HighC, acc: Accidental::Flat, octave: 0 }));
+        parse_succeeds(":| c", single_note_tree(Note { note: NoteSymbol::HighC, acc: Accidental::Natural, octave: 0 }));
+        parse_succeeds(":| c#,", single_note_tree(Note { note: NoteSymbol::HighC, acc: Accidental::Sharp, octave: -1 }));
+        parse_succeeds(":| c_,", single_note_tree(Note { note: NoteSymbol::HighC, acc: Accidental::Flat, octave: -1 }));
+        parse_succeeds(":| c,", single_note_tree(Note { note: NoteSymbol::HighC, acc: Accidental::Natural, octave: -1 }));
+        parse_succeeds(":| c#'", single_note_tree(Note { note: NoteSymbol::HighC, acc: Accidental::Sharp, octave: 1 }));
+        parse_succeeds(":| c_'", single_note_tree(Note { note: NoteSymbol::HighC, acc: Accidental::Flat, octave: 1 }));
+        parse_succeeds(":| c'", single_note_tree(Note { note: NoteSymbol::HighC, acc: Accidental::Natural, octave: 1 }));
+        parse_succeeds(":| c'''", single_note_tree(Note { note: NoteSymbol::HighC, acc: Accidental::Natural, octave: 3 }));
+        parse_succeeds(":| c,,,", single_note_tree(Note { note: NoteSymbol::HighC, acc: Accidental::Natural, octave: -3 }));
     }
 }
