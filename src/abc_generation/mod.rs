@@ -312,13 +312,14 @@ mod tests {
 
     fn write_bars_test(source: &str, expected: &str, notes_per_bar: u32) {
         use crate::lexing;
+        use crate::parse;
         use crate::parsing;
         use crate::sequencing;
 
-        let (tokens, source_map) = lexing::lex(source, None).expect("ERROR IN LEXER");
-        let parse_tree = parsing::parse(&tokens, &source_map).expect("ERROR IN PARSER");
-        let pieces =
-            sequencing::sequence_pieces(&parse_tree, &source_map).expect("ERROR IN SEQUENCER");
+        //         let (tokens, source_map) = lexing::lex(source, None).expect("ERROR IN LEXER");
+        //         let parse_tree = parsing::parse(&tokens, &source_map).expect("ERROR IN PARSER");
+        let parse_tree = parse::parse(source, None).expect("ERROR IN PARSER");
+        let pieces = sequencing::sequence_pieces(&parse_tree).expect("ERROR IN SEQUENCER");
         let voice = &pieces[0].voices[0];
 
         assert_eq!(
@@ -336,13 +337,14 @@ mod tests {
 
     fn write_bars_fail(source: &str, notes_per_bar: u32) {
         use crate::lexing;
+        use crate::parse;
         use crate::parsing;
         use crate::sequencing;
 
-        let (tokens, source_map) = lexing::lex(source, None).expect("ERROR IN LEXER");
-        let parse_tree = parsing::parse(&tokens, &source_map).expect("ERROR IN PARSER");
-        let pieces =
-            sequencing::sequence_pieces(&parse_tree, &source_map).expect("ERROR IN SEQUENCER");
+        //         let (tokens, source_map) = lexing::lex(source, None).expect("ERROR IN LEXER");
+        //         let parse_tree = parsing::parse(&tokens, &source_map).expect("ERROR IN PARSER");
+        let parse_tree = parse::parse(source, None).expect("ERROR IN PARSER");
+        let pieces = sequencing::sequence_pieces(&parse_tree).expect("ERROR IN SEQUENCER");
         let voice = &pieces[0].voices[0];
 
         assert!(write_bars(

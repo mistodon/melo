@@ -1,3 +1,5 @@
+use crate::parse::Note;
+
 pub const MELO_SHARPS: [&str; 128] = [
     "C,,,,,", "C#,,,,,", "D,,,,,", "D#,,,,,", "E,,,,,", "F,,,,,", "F#,,,,,", "G,,,,,", "G#,,,,,",
     "A,,,,", "A#,,,,", "B,,,,", "C,,,,", "C#,,,,", "D,,,,", "D#,,,,", "E,,,,", "F,,,,", "F#,,,,",
@@ -67,6 +69,42 @@ impl Midi {
     pub fn from_raw(midi: i8) -> Option<Midi> {
         if midi >= 0 {
             Some(Midi(midi))
+        } else {
+            None
+        }
+    }
+
+    // TODO: test or move
+    pub fn from_note_node(note: &Note) -> Option<Midi> {
+        use crate::parse::Accidental::*;
+        use crate::parse::NoteSymbol::*;
+
+        let mut midi = match note.note {
+            LowA => 57,
+            LowB => 59,
+            LowC => 60,
+            LowD => 62,
+            LowE => 64,
+            LowF => 65,
+            LowG => 67,
+            HighA => 69,
+            HighB => 71,
+            HighC => 72,
+            HighD => 74,
+            HighE => 76,
+            HighF => 77,
+            HighG => 79,
+        };
+
+        match note.acc {
+            Flat => midi -= 1,
+            Sharp => midi += 1,
+            Natural => (),
+        }
+        midi += note.octave as i64 * 12;
+
+        if midi >= 0 && midi < 128 {
+            Some(Midi(midi as i8))
         } else {
             None
         }

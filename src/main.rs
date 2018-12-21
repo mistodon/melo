@@ -121,8 +121,9 @@ fn run_command(command: MeloCommand) -> Result<(), Error> {
 
     match command {
         MeloCommand::Abc { input, output } => {
-            let abc = compile_to_abc(&input)?;
-            write_output(&abc, output)
+            unimplemented!()
+            //             let abc = compile_to_abc(&input)?;
+            //             write_output(&abc, output)
         }
 
         MeloCommand::Mid {
@@ -290,20 +291,21 @@ fn compile_to_abc<P>(input: &Option<P>) -> Result<String, Error>
 where
     P: AsRef<Path>,
 {
-    log(CYAN, "Compiling", "to abc ...");
-    log(
-        YELLOW,
-        "warning:",
-        "Compilation to abc is deprecated and will be removed soon.\n",
-    );
-
-    let source = read_input(input.as_ref())?;
-    let filename = input.as_ref().map(|s| s.as_ref());
-
-    #[allow(deprecated)]
-    let result = melo::compile_to_abc(&source, filename.and_then(Path::to_str))?;
-
-    Ok(result)
+    unimplemented!()
+    //     log(CYAN, "Compiling", "to abc ...");
+    //     log(
+    //         YELLOW,
+    //         "warning:",
+    //         "Compilation to abc is deprecated and will be removed soon.\n",
+    //     );
+    //
+    //     let source = read_input(input.as_ref())?;
+    //     let filename = input.as_ref().map(|s| s.as_ref());
+    //
+    //     #[allow(deprecated)]
+    //     let result = melo::compile_to_abc(&source, filename.and_then(Path::to_str))?;
+    //
+    //     Ok(result)
 }
 
 fn compile_to_midi<P>(input: &Option<P>, options: &MidiGenerationOptions) -> Result<Vec<u8>, Error>

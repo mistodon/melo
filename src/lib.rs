@@ -22,28 +22,15 @@ pub use crate::error::colors;
 pub use crate::midi_generation::data::MidiGenerationOptions;
 pub use failure::Error;
 
-#[deprecated]
-pub fn compile_to_abc(input: &str, filename: Option<&str>) -> Result<String, Error> {
-    let (tokens, source_map) = lexing::lex(input, filename)?;
-    let parse_tree = parsing::parse(&tokens, &source_map)?;
-    let pieces = sequencing::sequence_pieces(&parse_tree, &source_map)?;
-    let abc = abc_generation::generate_abc(&pieces, &source_map)?;
-
-    Ok(abc)
-}
-
 pub fn compile_to_midi(
     input: &str,
     filename: Option<&str>,
     options: &MidiGenerationOptions,
 ) -> Result<Vec<u8>, Error> {
-    let (tokens, source_map) = lexing::lex(input, filename)?;
-    let parse_tree = parsing::parse(&tokens, &source_map)?;
+    let (_, source_map) = lexing::lex(input, filename)?;
+    let parse_tree = parse::parse(input, filename)?;
 
-    let test_parse_tree = parse::parse(input, filename)?;
-    println!("Parse tree:\n{:#?}", test_parse_tree);
-
-    let pieces = sequencing::sequence_pieces(&parse_tree, &source_map)?;
+    let pieces = sequencing::sequence_pieces(&parse_tree)?;
     let midi = midi_generation::generate_midi(
         pieces
             .get(0)
