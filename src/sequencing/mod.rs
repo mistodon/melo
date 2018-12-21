@@ -110,36 +110,44 @@ pub fn sequence_pieces<'a>(
                 let mut bar_count = 0;
 
                 for grand_stave in &play_node.grand_staves {
+                    let mut grand_stave_length = 0;
+
                     for stave in &grand_stave.staves {
+                        let mut stave_length = 0;
                         let mut previous_note_exists = false;
 
-                        for (index, bar_node) in stave.bars.iter().enumerate() {
-                            let mut cursor = (bar_count + index) as u32 * divisions_per_bar;
+                        let mut bar_index = 0;
+                        let mut queued_repeats = vec![];
+
+                        while bar_index < stave.bars.len() || !queued_repeats.is_empty() {
+                            let mut cursor = (bar_count + stave_length) as u32 * divisions_per_bar;
+                            let is_repeating = !queued_repeats.is_empty();
+                            let bar_node = if is_repeating { queued_repeats.remove(0) } else { &stave.bars[bar_index] };
                             // TODO: handle repeats!
-                            //                             let bar_node = match *bar_node {
-                            //                                 BarTypeNode::Bar(ref bar) => bar,
-                            //                                 BarTypeNode::RepeatBar => {
-                            //                                     previous_note_exists = false;
-                            //
-                            //                                     let mut previous_bar = None;
-                            //                                     let mut previous_index = index;
-                            //                                     while previous_index > 0 {
-                            //                                         previous_index -= 1;
-                            //                                         match stave_node.bars[previous_index] {
-                            //                                             BarTypeNode::Bar(ref bar) => {
-                            //                                                 previous_bar = Some(bar);
-                            //                                                 break;
-                            //                                             }
-                            //                                             BarTypeNode::RepeatBar => (),
-                            //                                         }
-                            //                                     }
-                            //
-                            //                                     previous_bar.ok_or_else(|| SequencingError {
-                            //                                         loc: stave_node.bar_locs[index].clone(),
-                            //                                         error: ErrorType::NothingToRepeat,
-                            //                                     })?
-                            //                                 }
-                            //                             };
+//                             let bar_node = match *bar_node {
+//                                 BarTypeNode::Bar(ref bar) => bar,
+//                                 BarTypeNode::RepeatBar => {
+//                                     previous_note_exists = false;
+//
+//                                     let mut previous_bar = None;
+//                                     let mut previous_index = index;
+//                                     while previous_index > 0 {
+//                                         previous_index -= 1;
+//                                         match stave_node.bars[previous_index] {
+//                                             BarTypeNode::Bar(ref bar) => {
+//                                                 previous_bar = Some(bar);
+//                                                 break;
+//                                             }
+//                                             BarTypeNode::RepeatBar => (),
+//                                         }
+//                                     }
+//
+//                                     previous_bar.ok_or_else(|| SequencingError {
+//                                         loc: stave_node.bar_locs[index].clone(),
+//                                         error: ErrorType::NothingToRepeat,
+//                                     })?
+//                                 }
+//                             };
 
                             let bar_node_length: u32 = bar_node
                                 .contents
@@ -193,18 +201,32 @@ pub fn sequence_pieces<'a>(
                                         cursor += length;
                                     }
                                     // TODO: these!
-                                    parse::StaveEventType::RepeatBars(_) => unimplemented!(),
+                                    parse::StaveEventType::RepeatBars(n) => {
+                                        let mut repeat_end = bar_index - 1;
+                                        while repeat_end > 0 {
+                                            let bar_has_repeats = false; // TODO: actually check
+                                            if bar_has_repeats {
+                                                repeat_end -= 1;
+                                            } else {
+                                                break
+                                            }
+                                        }
+                                        let repeat_start = repeat_end - (n-1);
+                                        let bars_to_repeat = stave.bars[repeat_start..(repeat_end+1)].iter().for_each(|bar| queued_repeats.push(bar));
+                                        stave_length -= 1; // TODO: horrible hack to stop counting a repeat bar as a bar, along with the repetition itself
+                                    }
                                     parse::StaveEventType::PlayPart(_) => unimplemented!(),
                                 }
                             }
+
+                            if !is_repeating {
+                                bar_index += 1;
+                            }
+                            stave_length += 1;
                         }
                     }
 
-                    bar_count += grand_stave
-                        .staves
-                        .iter()
-                        .map(|stave| stave.bars.len())
-                        .sum::<usize>();
+                    bar_count += grand_stave_length;
                 }
 
                 notes.sort_by_key(|note| note.position);
@@ -536,7 +558,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO
     fn repeat_bars() {
         voice_test(
             "voice A {} play A { :| A C | % | }",
