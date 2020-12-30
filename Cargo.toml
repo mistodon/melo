@@ -16,17 +16,17 @@ required-features = ["cli"]
 doc = false
 
 [dependencies]
-ansi_term = "~0.10.2"
-failure = "~0.1.1"
-rimd = "~0.0.1"
-lazy_static = "~1.0.0"
-regex = "~0.2.5"
-mktemp = { version = "~0.3.1", optional = true }
-structopt = { version = "~0.1.6", optional = true }
-structopt-derive = { version = "~0.1.6", optional = true }
+ansi_term = "0.12.1"
+failure = "0.1.8"
+rimd = "0.0.1"
+lazy_static = "1.4.0"
+regex = "1.4.2"
+mktemp = { version = "0.4.0", optional = true }
+structopt = { version = "0.3.21", optional = true }
+structopt-derive = { version = "0.4.14", optional = true }
 
 [dev-dependencies]
-pretty_assertions = "~0.4.1"
+pretty_assertions = "0.6.1"
 
 [features]
 default = ["cli", "color"]
