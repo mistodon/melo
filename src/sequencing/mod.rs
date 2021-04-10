@@ -3,15 +3,15 @@ pub mod error;
 
 use self::data::*;
 use self::error::{ErrorType, SequencingError};
-use error::SourceMap;
-use parsing::data::*;
-use trust::Trust;
+use crate::error::SourceMap;
+use crate::parsing::data::*;
+use crate::trust::Trust;
 
 pub fn sequence_pieces<'a>(
     parse_tree: &ParseTree<'a>,
     _source_map: &SourceMap,
 ) -> Result<Vec<Piece<'a>>, SequencingError> {
-    use notes::lcm;
+    use crate::notes::lcm;
 
     let mut pieces = Vec::new();
 
@@ -81,7 +81,8 @@ pub fn sequence_pieces<'a>(
                             BarTypeNode::RepeatBar => 1,
                         })
                     })
-                }).fold(1, lcm);
+                })
+                .fold(1, lcm);
 
             let mut notes: Vec<Note> = Vec::new();
             let mut debug_bar_info: Vec<DebugBarInfo> = Vec::new();

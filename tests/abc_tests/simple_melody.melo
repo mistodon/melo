@@ -1,7 +1,0 @@
-voice Lead { program: 33, octave: -1 }
-
-play Lead
-{
-    : | C D E F | G F E D | C |
-}
-

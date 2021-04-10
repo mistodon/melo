@@ -1,7 +1,0 @@
-voice Drums { channel: 5, program: 1 }
-
-play Drums
-{
-    C:  | x |
-}
-

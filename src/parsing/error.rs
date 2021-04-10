@@ -1,8 +1,11 @@
-use error::{self, SourceLoc};
-use lexing::data::MetaToken;
 use std::fmt::{Display, Error, Formatter};
 
-#[derive(Debug, Fail, PartialEq, Eq)]
+use thiserror::Error;
+
+use crate::error::{self, SourceLoc};
+use crate::lexing::data::MetaToken;
+
+#[derive(Debug, Error, PartialEq, Eq)]
 pub struct ParsingError {
     pub loc: SourceLoc,
     pub error: ErrorType,
@@ -78,42 +81,38 @@ impl Display for ParsingError {
 
             Ok(())
         } else {
-            use notes::{MAX_SHARP, MIN_SHARP};
+            use crate::notes::{MAX_SHARP, MIN_SHARP};
 
-            let error_message = match self.error
-            {
+            let error_message = match self.error {
                 UnexpectedToken {
                     ref token,
                     context,
                     ref expected,
-                } =>
-                {
-                    format!("Unexpected token `{}` {}. Expected {}.",
-                            token,
-                            context,
-                            expected)
+                } => {
+                    format!(
+                        "Unexpected token `{}` {}. Expected {}.",
+                        token, context, expected
+                    )
                 }
 
                 UnexpectedEOF {
                     context,
                     ref expected,
-                } =>
-                {
-                    format!("Unexpected end of input {}. Expected {}.",
-                            context,
-                            expected)
+                } => {
+                    format!(
+                        "Unexpected end of input {}. Expected {}.",
+                        context, expected
+                    )
                 }
 
-                InvalidNote { ref note } =>
-                {
-                    format!("Note `{}` is out of range. Must be between `{}` and `{}`.",
-                            note,
-                            MIN_SHARP,
-                            MAX_SHARP)
+                InvalidNote { ref note } => {
+                    format!(
+                        "Note `{}` is out of range. Must be between `{}` and `{}`.",
+                        note, MIN_SHARP, MAX_SHARP
+                    )
                 }
 
-                InvalidHit { ref stave_prefix } =>
-                {
+                InvalidHit { ref stave_prefix } => {
                     format!("Hit markers (`x`) cannot be used in `{}:` staves. They are only valid in single-note staves.",
                             stave_prefix)
                 }
@@ -124,32 +123,31 @@ impl Display for ParsingError {
                     structure,
                 } => format!("Invalid attribute `{}` for `{}`.", attribute, structure),
 
-                InvalidOctave { octave } =>
-                {
+                InvalidOctave { octave } => {
                     format!("Invalid octave `{}` would throw every note out of range. Must be in the range [-10, 10].",
                             octave)
                 }
 
-                UndeclaredStave { ref stave_prefix } =>
-                {
+                UndeclaredStave { ref stave_prefix } => {
                     format!("The `{}:` stave wasn't declared at the start of the `play` block. All staves must be declared before the first blank line.",
                             stave_prefix)
                 }
 
-                InvalidLength { ref length } =>
-                {
-                    format!("Invalid note length `{}`. Lengths must be between 0 and 255.",
-                            length)
+                InvalidLength { ref length } => {
+                    format!(
+                        "Invalid note length `{}`. Lengths must be between 0 and 255.",
+                        length
+                    )
                 }
 
-                UnexpectedLength { ref length } =>
-                {
-                    format!("Unexpected note length `{}`. Lengths must follow a note or rest.",
-                            length)
+                UnexpectedLength { ref length } => {
+                    format!(
+                        "Unexpected note length `{}`. Lengths must follow a note or rest.",
+                        length
+                    )
                 }
 
-                ExcessNotesInRepeatBar { placement } =>
-                {
+                ExcessNotesInRepeatBar { placement } => {
                     format!("Unexpected notes {} repeat sign `%`. Bars with repeat signs should contain nothing else.", placement)
                 }
 

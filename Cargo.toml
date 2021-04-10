@@ -1,13 +1,14 @@
 [package]
 name = "melo"
-version = "0.1.0"
-authors = ["***Realname*** ***Lastname*** <***realname***.***lastname***.000@gmail.com>"]
+version = "0.2.0"
+authors = ["Vi <violet@hey.com>"]
 description = "A music notation language and compiler to MIDI."
-repository = "https://github.com/Pirh/melo"
+repository = "https://github.com/mistodon/melo"
 readme = "README.md"
 keywords = ["music", "notation", "language", "midi"]
 categories = ["command-line-utilities", "multimedia::audio"]
-license = "MIT"
+license = "CC0-1.0"
+edition = "2018"
 
 [[bin]]
 name = "melo"
@@ -16,20 +17,20 @@ required-features = ["cli"]
 doc = false
 
 [dependencies]
-ansi_term = "~0.10.2"
-failure = "~0.1.1"
+ansi_term = "~0.12.1"
+eyre = "~0.6.5"
+lazy_static = "~1.4.0"
+mktemp = { version = "~0.4.1", optional = true }
+regex = "~1.4.5"
 rimd = "~0.0.1"
-lazy_static = "~1.0.0"
-regex = "~0.2.5"
-mktemp = { version = "~0.3.1", optional = true }
-structopt = { version = "~0.1.6", optional = true }
-structopt-derive = { version = "~0.1.6", optional = true }
+structopt = { version = "~0.3.21", optional = true }
+thiserror = "~1.0.24"
 
 [dev-dependencies]
-pretty_assertions = "~0.4.1"
+pretty_assertions = "~0.7.1"
 
 [features]
 default = ["cli", "color"]
-cli = ["mktemp", "structopt", "structopt-derive"]
+cli = ["mktemp", "structopt"]
 color = []
 

@@ -4,9 +4,9 @@ pub mod error;
 use self::data::*;
 use self::error::{ErrorType, LexingError};
 
-use error::{SourceInfo, SourceLoc, SourceMap};
+use crate::error::{SourceInfo, SourceLoc, SourceMap};
+use crate::trust::Trust;
 use regex::Regex;
-use trust::Trust;
 
 // TODO(***realname***): This code assumes that a newline is a single byte
 fn line_col_at(source: &str, position: usize) -> (usize, usize) {
@@ -21,7 +21,7 @@ fn line_col_at(source: &str, position: usize) -> (usize, usize) {
     (1, source.len())
 }
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref STRUCTURE_REGEX: Regex = Regex::new(
         "\
          (?P<keyword>part|piece|play|section|voice)|\

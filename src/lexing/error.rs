@@ -1,7 +1,10 @@
-use error::{self, SourceLoc};
 use std::fmt::{Display, Error, Formatter};
 
-#[derive(Debug, Fail, PartialEq, Eq)]
+use thiserror::Error;
+
+use crate::error::{self, SourceLoc};
+
+#[derive(Debug, Error, PartialEq, Eq)]
 pub struct LexingError {
     pub loc: SourceLoc,
     pub error: ErrorType,

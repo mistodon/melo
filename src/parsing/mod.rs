@@ -4,14 +4,14 @@ pub mod error;
 use self::data::*;
 use self::error::{ErrorType, ParsingError};
 
-use error::SourceMap;
-use lexing::data::Token::*;
-use lexing::data::*;
-use notes::Midi;
+use crate::error::SourceMap;
+use crate::lexing::data::Token::*;
+use crate::lexing::data::*;
+use crate::notes::Midi;
+use crate::trust::Trust;
 use std::borrow::Cow;
 use std::iter::Peekable;
 use std::slice::Iter;
-use trust::Trust;
 
 type TokenStream<'a> = Peekable<Iter<'a, MetaToken<'a>>>;
 

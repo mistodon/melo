@@ -1,8 +1,0 @@
-voice Drums { drums }
-
-play Drums
-{
-    F#: | xxxxxx xxxxxx xxxxxx xxxxxx |
-    C:  | xxxx |
-}
-

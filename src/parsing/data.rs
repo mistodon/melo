@@ -1,5 +1,5 @@
-use error::SourceLoc;
-use notes::Midi;
+use crate::error::SourceLoc;
+use crate::notes::Midi;
 use std::borrow::Cow;
 
 #[derive(Debug, PartialEq, Eq)]
