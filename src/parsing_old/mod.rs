@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub mod data;
 pub mod error;
 
@@ -547,9 +549,8 @@ fn parse_play<'a>(stream: &mut TokenStream<'a>) -> Result<PlayNode<'a>, ParsingE
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_helpers::{midi, stave};
+    use crate::test_helpers::{midi, stave};
 
-    // TODO(***realname***): Clearly need a better way of carriaging errors
     fn doctor(parse_tree: &mut ParseTree) {
         for piece in &mut parse_tree.pieces {
             for play in &mut piece.plays {
@@ -569,7 +570,7 @@ mod tests {
     }
 
     fn parsetest(source: &str, expected: PieceNode) {
-        use lexing;
+        use crate::lexing;
 
         let (tokens, source_map) = lexing::lex(source, None).unwrap();
         let mut result = parse(&tokens, &source_map).unwrap();
@@ -581,14 +582,14 @@ mod tests {
     }
 
     fn parsefailtest(source: &str) {
-        use lexing;
+        use crate::lexing;
 
         let (tokens, source_map) = lexing::lex(source, None).unwrap();
         assert!(parse(&tokens, &source_map).is_err());
     }
 
     fn multiparsetest(source: &str, expected: Vec<PieceNode>) {
-        use lexing;
+        use crate::lexing;
 
         let (tokens, source_map) = lexing::lex(source, None).unwrap();
         let mut result = parse(&tokens, &source_map).unwrap();
@@ -625,10 +626,10 @@ mod tests {
     #[test]
     fn parse_attributes_in_piece() {
         parsetest(
-            "title: \"The Title of the Piece\", composer: ***Realname***, beats: 5, tempo: 123",
+            "title: \"The Title of the Piece\", composer: Composer, beats: 5, tempo: 123",
             PieceNode {
                 title: Some("The Title of the Piece"),
-                composer: Some("***Realname***"),
+                composer: Some("Composer"),
                 beats: Some(5),
                 tempo: Some(123),
                 ..Default::default()

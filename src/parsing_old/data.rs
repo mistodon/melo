@@ -1,6 +1,9 @@
-use crate::error::SourceLoc;
-use crate::notes::Midi;
 use std::borrow::Cow;
+
+use crate::{
+    error::SourceLoc,
+    notes::Midi,
+};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseTree<'a> {
@@ -61,7 +64,6 @@ pub enum NoteNode {
 }
 
 impl NoteNode {
-    // TODO(***realname***): This is an inelegant way to have a common field.
     pub fn length(self) -> u32 {
         match self {
             NoteNode::Rest { length }

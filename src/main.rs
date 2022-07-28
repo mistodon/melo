@@ -1,11 +1,13 @@
 use std::path::Path;
 
 use ansi_term::Style;
-use eyre::{eyre, Result};
+use color_eyre::eyre::{eyre, Result};
 use structopt::StructOpt;
 
-use melo::colors::{CYAN, RED, WHITE};
-use melo::MidiGenerationOptions;
+use melo::{
+    colors::{CYAN, RED, WHITE},
+    MidiGenerationOptions,
+};
 
 #[derive(Debug, StructOpt)]
 enum MeloCommand {

@@ -1,11 +1,16 @@
 pub mod data;
 pub mod error;
 
-use self::data::*;
-use self::error::{ErrorType, SequencingError};
-use crate::error::SourceMap;
-use crate::parsing::data::*;
-use crate::trust::Trust;
+use crate::{
+    error::SourceMap,
+    parsing_old::data::*,
+    trust::Trust,
+};
+
+use self::{
+    data::*,
+    error::{ErrorType, SequencingError},
+};
 
 pub fn sequence_pieces<'a>(
     parse_tree: &ParseTree<'a>,
@@ -211,26 +216,26 @@ pub fn sequence_pieces<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lexing;
-    use parsing;
-    use test_helpers::midi;
+    use crate::lexing;
+    use crate::parsing_old;
+    use crate::test_helpers::midi;
 
     fn sequence_test(source: &str, expected: Piece) {
         let (tokens, source_map) = lexing::lex(source, None).expect("ERROR IN LEXER");
-        let parse_tree = parsing::parse(&tokens, &source_map).expect("ERROR IN PARSER");
+        let parse_tree = parsing_old::parse(&tokens, &source_map).expect("ERROR IN PARSER");
         let piece = &sequence_pieces(&parse_tree, &source_map).unwrap()[0];
         assert_eq!(piece, &expected);
     }
 
     fn sequence_test_fail(source: &str) {
         let (tokens, source_map) = lexing::lex(source, None).expect("ERROR IN LEXER");
-        let parse_tree = parsing::parse(&tokens, &source_map).expect("ERROR IN PARSER");
+        let parse_tree = parsing_old::parse(&tokens, &source_map).expect("ERROR IN PARSER");
         assert!(sequence_pieces(&parse_tree, &source_map).is_err());
     }
 
     fn voice_test(source: &str, expected_notes: Vec<Note>) {
         let (tokens, source_map) = lexing::lex(source, None).expect("ERROR IN LEXER");
-        let parse_tree = parsing::parse(&tokens, &source_map).expect("ERROR IN PARSER");
+        let parse_tree = parsing_old::parse(&tokens, &source_map).expect("ERROR IN PARSER");
         let piece = &sequence_pieces(&parse_tree, &source_map).unwrap()[0];
         assert_eq!(piece.voices[0].notes, expected_notes);
     }
